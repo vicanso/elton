@@ -15,3 +15,12 @@ var (
 		http.MethodTrace,
 	}
 )
+
+const (
+	// HeaderXForwardedFor x-forwarded-for
+	HeaderXForwardedFor = "X-Forwarded-For"
+	// HeaderXRealIp x-real-ip
+	HeaderXRealIp = "X-Real-Ip"
+	// HeaderSetCookie Set-Cookie
+	HeaderSetCookie = "Set-Cookie"
+)

@@ -1,7 +1,6 @@
 package cod
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -84,7 +83,7 @@ func (d *Cod) Handle(method, path string, handleList ...Handle) {
 		err := c.Next()
 		// TODO 如果有未处理出错了 emit error
 		if err != nil {
-			fmt.Println(err)
+			d.Error(err, c)
 		}
 	})
 }
@@ -159,6 +158,14 @@ func (d *Cod) Add(handle Handle) {
 func (d *Cod) NotFound(resp http.ResponseWriter, req *http.Request) {
 	resp.WriteHeader(http.StatusNotFound)
 	resp.Write([]byte("Not found"))
+}
+
+// Error error handle
+func (d *Cod) Error(err error, c *Context) {
+	// TODO error的处理优化
+	resp := c.Response
+	resp.WriteHeader(http.StatusInternalServerError)
+	resp.Write([]byte(err.Error()))
 }
 
 func (g *Group) merge(s2 []Handle) []Handle {
