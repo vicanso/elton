@@ -10,7 +10,6 @@ var (
 		http.MethodPatch,
 		http.MethodDelete,
 		http.MethodHead,
-		http.MethodConnect,
 		http.MethodOptions,
 		http.MethodTrace,
 	}

@@ -118,11 +118,6 @@ func (d *Cod) HEAD(path string, handleList ...Handle) {
 	d.Handle(http.MethodHead, path, handleList...)
 }
 
-// CONNECT add http connect method handle
-func (d *Cod) CONNECT(path string, handleList ...Handle) {
-	d.Handle(http.MethodConnect, path, handleList...)
-}
-
 // OPTIONS add http options method handle
 func (d *Cod) OPTIONS(path string, handleList ...Handle) {
 	d.Handle(http.MethodOptions, path, handleList...)
@@ -150,8 +145,8 @@ func (d *Cod) Group(path string, handleList ...Handle) (g *Group) {
 }
 
 // Add add middleware function handle
-func (d *Cod) Add(handle Handle) {
-	d.Middlewares = append(d.Middlewares, handle)
+func (d *Cod) Add(handleList ...Handle) {
+	d.Middlewares = append(d.Middlewares, handleList...)
 }
 
 // NotFound not found handle
@@ -180,63 +175,61 @@ func (g *Group) merge(s2 []Handle) []Handle {
 func (g *Group) GET(path string, handleList ...Handle) {
 	p := g.Path + path
 	fns := g.merge(handleList)
-	g.Cod.Handle(http.MethodGet, p, fns...)
+	g.Cod.GET(p, fns...)
 }
 
 // POST add group http post method handl
 func (g *Group) POST(path string, handleList ...Handle) {
 	p := g.Path + path
 	fns := g.merge(handleList)
-	g.Cod.Handle(http.MethodPost, p, fns...)
+	g.Cod.POST(p, fns...)
+}
+
+// PUT add group http put method handl
+func (g *Group) PUT(path string, handleList ...Handle) {
+	p := g.Path + path
+	fns := g.merge(handleList)
+	g.Cod.PUT(p, fns...)
 }
 
 // PATCH add group http patch method handl
 func (g *Group) PATCH(path string, handleList ...Handle) {
 	p := g.Path + path
 	fns := g.merge(handleList)
-	g.Cod.Handle(http.MethodPatch, p, fns...)
+	g.Cod.PATCH(p, fns...)
 }
 
 // DELETE add group http delete method handl
 func (g *Group) DELETE(path string, handleList ...Handle) {
 	p := g.Path + path
 	fns := g.merge(handleList)
-	g.Cod.Handle(http.MethodDelete, p, fns...)
+	g.Cod.DELETE(p, fns...)
 }
 
 // HEAD add group http head method handl
 func (g *Group) HEAD(path string, handleList ...Handle) {
 	p := g.Path + path
 	fns := g.merge(handleList)
-	g.Cod.Handle(http.MethodHead, p, fns...)
-}
-
-// CONNECT add group http connect method handl
-func (g *Group) CONNECT(path string, handleList ...Handle) {
-	p := g.Path + path
-	fns := g.merge(handleList)
-	g.Cod.Handle(http.MethodConnect, p, fns...)
+	g.Cod.HEAD(p, fns...)
 }
 
 // OPTIONS add group http options method handl
 func (g *Group) OPTIONS(path string, handleList ...Handle) {
 	p := g.Path + path
 	fns := g.merge(handleList)
-	g.Cod.Handle(http.MethodOptions, p, fns...)
+	g.Cod.OPTIONS(p, fns...)
 }
 
 // TRACE add group http trace method handl
 func (g *Group) TRACE(path string, handleList ...Handle) {
 	p := g.Path + path
 	fns := g.merge(handleList)
-	g.Cod.Handle(http.MethodTrace, p, fns...)
+	g.Cod.TRACE(p, fns...)
 }
 
 // ALL add group http all method handl
 func (g *Group) ALL(path string, handleList ...Handle) {
 	p := g.Path + path
 	fns := g.merge(handleList)
-	for _, method := range methods {
-		g.Cod.Handle(method, p, fns...)
-	}
+	g.Cod.ALL(p, fns...)
 }

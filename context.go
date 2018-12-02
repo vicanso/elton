@@ -22,7 +22,10 @@ type (
 		Status int
 		// Body http response's body
 		Body interface{}
-		m    map[string]interface{}
+		// RequestBody http request body
+		RequestBody []byte
+		// store for context
+		m map[string]interface{}
 	}
 )
 
@@ -33,6 +36,7 @@ func (c *Context) Reset() {
 	c.Route = ""
 	c.Next = nil
 	c.Params = nil
+	c.RequestBody = nil
 	c.m = nil
 }
 
