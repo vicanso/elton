@@ -22,4 +22,20 @@ const (
 	HeaderXRealIp = "X-Real-Ip"
 	// HeaderSetCookie Set-Cookie
 	HeaderSetCookie = "Set-Cookie"
+	// HeaderLocation Location
+	HeaderLocation = "Location"
+	// HeaderContentType Content-Type
+	HeaderContentType = "Content-Type"
+
+	// MinRedirectCode min redirect code
+	MinRedirectCode = 300
+	// MaxRedirectCode max redirect code
+	MaxRedirectCode = 308
+
+	// MIMETextPlain text plain
+	MIMETextPlain = "text/plain;charset=UTF-8"
+	// MIMEApplicationJSON application json
+	MIMEApplicationJSON = "application/json;charset=UTF-8"
+	// MIMEBinary binary data
+	MIMEBinary = "application/octet-stream"
 )

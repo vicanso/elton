@@ -26,6 +26,8 @@ type (
 		RequestBody []byte
 		// store for context
 		m map[string]interface{}
+		// cod instance
+		cod *Cod
 	}
 )
 
@@ -37,6 +39,7 @@ func (c *Context) Reset() {
 	c.Next = nil
 	c.Params = nil
 	c.RequestBody = nil
+	c.Status = 0
 	c.m = nil
 }
 
@@ -72,11 +75,6 @@ func (c *Context) QueryParam(name string) string {
 	return values[0]
 }
 
-// Redirect redirect the http request
-func (c *Context) Redirect() {
-	// TODO 设置重定向
-}
-
 // Query get the query map.
 // It will return map[string]string, not the same as url.Values
 func (c *Context) Query() map[string]string {
@@ -86,6 +84,18 @@ func (c *Context) Query() map[string]string {
 		m[key] = values[0]
 	}
 	return m
+}
+
+// Redirect redirect the http request
+func (c *Context) Redirect(code int, url string) (err error) {
+	// TODO 设置重定向
+	if code < MinRedirectCode || code > MaxRedirectCode {
+		err = ErrInvalidRedirect
+		return
+	}
+	c.Status = code
+	c.SetHeader(HeaderLocation, url)
+	return
 }
 
 // Set set the value
@@ -101,9 +111,15 @@ func (c *Context) Header(key string) string {
 	return c.Request.Header.Get(key)
 }
 
-// SetHeader set the http response header
+// SetHeader set header to the http response
 func (c *Context) SetHeader(key, value string) {
+	// TODO 是否需要创建新的header来临时保存相关header
 	c.Response.Header().Set(key, value)
+}
+
+// AddHeader add header to the http response
+func (c *Context) AddHeader(key, value string) {
+	c.Response.Header().Add(key, value)
 }
 
 // Cookie get cookie from http request
@@ -113,7 +129,7 @@ func (c *Context) Cookie(name string) (*http.Cookie, error) {
 
 // SetCookie set the cookie for the response
 func (c *Context) SetCookie(cookie *http.Cookie) {
-	c.Response.Header().Add(HeaderSetCookie, cookie.String())
+	c.AddHeader(HeaderSetCookie, cookie.String())
 }
 
 // Get get the value
@@ -122,6 +138,23 @@ func (c *Context) Get(key string) interface{} {
 		return nil
 	}
 	return c.m[key]
+}
+
+// NoContent no content for response
+func (c *Context) NoContent() {
+	c.Status = http.StatusNoContent
+	c.Body = nil
+}
+
+// Created created for response
+func (c *Context) Created(body interface{}) {
+	c.Status = http.StatusCreated
+	c.Body = body
+}
+
+// Cod get cod instance
+func (c *Context) Cod() *Cod {
+	return c.cod
 }
 
 var contextPool = sync.Pool{

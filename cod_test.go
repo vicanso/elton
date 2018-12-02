@@ -22,11 +22,11 @@ func TestHandle(t *testing.T) {
 	t.Run("group", func(t *testing.T) {
 		key := "count"
 		countValue := 4
-		d.Add(func(c *Context) error {
+		d.Use(func(c *Context) error {
 			c.Set(key, 1)
 			return c.Next()
 		})
-		d.Add(func(c *Context) error {
+		d.Use(func(c *Context) error {
 			v := c.Get(key).(int)
 			c.Set(key, v+1)
 			return c.Next()
@@ -202,8 +202,20 @@ func TestHandle(t *testing.T) {
 		}
 	})
 
+	t.Run("params", func(t *testing.T) {
+		d.GET("/params/:id", func(c *Context) error {
+			if c.Param("id") == "" {
+				t.Fatalf("set params fail")
+			}
+			return nil
+		})
+		req := httptest.NewRequest("GET", "https://aslant.site/params/1", nil)
+		resp := httptest.NewRecorder()
+		d.ServeHTTP(resp, req)
+	})
+
 	t.Run("not found", func(t *testing.T) {
-		req := httptest.NewRequest("GEET", "https://aslant.site/not-found", nil)
+		req := httptest.NewRequest("GET", "https://aslant.site/not-found", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
 		if resp.Code != http.StatusNotFound ||
@@ -225,4 +237,17 @@ func TestHandle(t *testing.T) {
 			t.Fatalf("default error handle fail")
 		}
 	})
+}
+
+func TestOnError(t *testing.T) {
+	d := New()
+	c := NewContext(nil, nil)
+	cutstomErr := errors.New("abc")
+	d.EmitError(c, cutstomErr)
+	d.OnError(func(_ *Context, err error) {
+		if err != cutstomErr {
+			t.Fatalf("on error fail")
+		}
+	})
+	d.EmitError(c, cutstomErr)
 }

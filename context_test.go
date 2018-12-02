@@ -92,6 +92,9 @@ func TestQuery(t *testing.T) {
 
 func TestSetGet(t *testing.T) {
 	c := Context{}
+	if c.Get("name") != nil {
+		t.Fatalf("should return nil when store is not inited")
+	}
 	c.Set("name", "tree.xie")
 	if c.Get("name").(string) != "tree.xie" {
 		t.Fatalf("set/get fail")
@@ -151,6 +154,50 @@ func TestCookie(t *testing.T) {
 			t.Fatalf("set cookie fail")
 		}
 	})
+}
+
+func TestRedirect(t *testing.T) {
+	resp := httptest.NewRecorder()
+	c := NewContext(resp, nil)
+	err := c.Redirect(299, "")
+	if err != ErrInvalidRedirect {
+		t.Fatalf("invalid redirect code should return error")
+	}
+
+	url := "https://aslant.site/"
+	err = c.Redirect(302, url)
+	if err != nil {
+		t.Fatalf("redirect fail, %v", err)
+	}
+	if c.Response.Header()[HeaderLocation][0] != url {
+		t.Fatalf("set location fail")
+	}
+}
+
+func TestCreate(t *testing.T) {
+	body := "abc"
+	c := NewContext(nil, nil)
+	c.Created(body)
+	if c.Status != http.StatusCreated ||
+		c.Body.(string) != body {
+		t.Fatalf("create for response fail")
+	}
+}
+
+func TestNoContent(t *testing.T) {
+	c := NewContext(nil, nil)
+	c.NoContent()
+	if c.Status != http.StatusNoContent {
+		t.Fatalf("set no content fail")
+	}
+}
+
+func TestGetCod(t *testing.T) {
+	c := NewContext(nil, nil)
+	c.cod = &Cod{}
+	if c.Cod() == nil {
+		t.Fatalf("get cod instance fail")
+	}
 }
 func TestNewContext(t *testing.T) {
 	req := httptest.NewRequest("GET", "https://aslant.site/", nil)

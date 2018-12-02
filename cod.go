@@ -9,9 +9,10 @@ import (
 type (
 	// Cod web framework instance
 	Cod struct {
-		Server      *http.Server
-		Router      *httprouter.Router
-		Middlewares []Handle
+		Server          *http.Server
+		Router          *httprouter.Router
+		Middlewares     []Handle
+		errorLinsteners []ErrorLinstener
 	}
 	// Group group router
 	Group struct {
@@ -20,7 +21,9 @@ type (
 		Cod        *Cod
 	}
 	// Handle cod handle function
-	Handle func(c *Context) error
+	Handle func(*Context) error
+	// ErrorLinstener error listener function
+	ErrorLinstener func(*Context, error)
 )
 
 // New create a cod instance
@@ -69,6 +72,7 @@ func (d *Cod) Handle(method, path string, handleList ...Handle) {
 			c.Params[item.Key] = item.Value
 		}
 		c.Route = path
+		c.cod = d
 		mids := d.Middlewares
 		maxMid := len(mids)
 		index := -1
@@ -144,8 +148,8 @@ func (d *Cod) Group(path string, handleList ...Handle) (g *Group) {
 	}
 }
 
-// Add add middleware function handle
-func (d *Cod) Add(handleList ...Handle) {
+// Use add middleware function handle
+func (d *Cod) Use(handleList ...Handle) {
 	d.Middlewares = append(d.Middlewares, handleList...)
 }
 
@@ -161,6 +165,22 @@ func (d *Cod) Error(err error, c *Context) {
 	resp := c.Response
 	resp.WriteHeader(http.StatusInternalServerError)
 	resp.Write([]byte(err.Error()))
+}
+
+// EmitError emit error function
+func (d *Cod) EmitError(c *Context, err error) {
+	lns := d.errorLinsteners
+	for _, ln := range lns {
+		ln(c, err)
+	}
+}
+
+// OnError on error function
+func (d *Cod) OnError(ln ErrorLinstener) {
+	if d.errorLinsteners == nil {
+		d.errorLinsteners = make([]ErrorLinstener, 0)
+	}
+	d.errorLinsteners = append(d.errorLinsteners, ln)
 }
 
 func (g *Group) merge(s2 []Handle) []Handle {
