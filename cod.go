@@ -163,8 +163,14 @@ func (d *Cod) NotFound(resp http.ResponseWriter, req *http.Request) {
 func (d *Cod) Error(err error, c *Context) {
 	// TODO error的处理优化
 	resp := c.Response
-	resp.WriteHeader(http.StatusInternalServerError)
-	resp.Write([]byte(err.Error()))
+	he, ok := err.(*HTTPError)
+	if ok {
+		resp.WriteHeader(he.Code)
+		resp.Write([]byte(he.Error()))
+	} else {
+		resp.WriteHeader(http.StatusInternalServerError)
+		resp.Write([]byte(err.Error()))
+	}
 }
 
 // EmitError emit error function

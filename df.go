@@ -26,6 +26,10 @@ const (
 	HeaderLocation = "Location"
 	// HeaderContentType Content-Type
 	HeaderContentType = "Content-Type"
+	// HeaderAuthorization Authorization
+	HeaderAuthorization = "Authorization"
+	// HeaderWWWAuthenticate WWW-Authenticate
+	HeaderWWWAuthenticate = "WWW-Authenticate"
 
 	// MinRedirectCode min redirect code
 	MinRedirectCode = 300

@@ -48,16 +48,15 @@ func NewResponder(conf ResponderConfig) cod.Handle {
 			respHeader.Set(ct, cod.MIMEApplicationJSON)
 		}
 
-		status := c.Status
-		if status == 0 {
-			status = http.StatusOK
-		}
-
 		hadContentType := false
-
 		// 判断是否已设置响应头的Content-Type
 		if respHeader.Get(ct) != "" {
 			hadContentType = true
+		}
+
+		status := c.Status
+		if status == 0 {
+			status = http.StatusOK
 		}
 
 		var body []byte
