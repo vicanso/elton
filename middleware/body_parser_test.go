@@ -64,10 +64,10 @@ func TestBodyParser(t *testing.T) {
 		}
 		err := bodyParser(c)
 		if err != nil {
-			t.Fatalf("json parse fail, %v", err)
+			t.Fatalf("body parse fail, %v", err)
 		}
 		if !done {
-			t.Fatalf("json parse fail")
+			t.Fatalf("body parse fail")
 		}
 	})
 
@@ -92,6 +92,55 @@ func TestBodyParser(t *testing.T) {
 		err := bodyParser(c)
 		if err == nil {
 			t.Fatalf("body over size should return error")
+		}
+	})
+
+	t.Run("ignore json and content type is json", func(t *testing.T) {
+		bodyParser := NewBodyParser(BodyParserConfig{
+			IgnoreJSON: true,
+		})
+		req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader("abc"))
+		req.Header.Set(cod.HeaderContentType, "application/json")
+		c := cod.NewContext(nil, req)
+		done := false
+		c.Next = func() error {
+			done = true
+			return nil
+		}
+		err := bodyParser(c)
+		if err != nil {
+			t.Fatalf("body parse fail, %v", err)
+		}
+		if !done {
+			t.Fatalf("body parse fail")
+		}
+		if len(c.RequestBody) != 0 {
+			t.Fatalf("body parse shoudl be pass")
+		}
+	})
+
+	t.Run("ignore form url encoded and content type is form url encoded", func(t *testing.T) {
+		bodyParser := NewBodyParser(BodyParserConfig{
+			IgnoreFormURLEncoded: true,
+		})
+		body := `name=tree.xie&type=1`
+		req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(body))
+		req.Header.Set(cod.HeaderContentType, "application/x-www-form-urlencoded")
+		c := cod.NewContext(nil, req)
+		done := false
+		c.Next = func() error {
+			done = true
+			return nil
+		}
+		err := bodyParser(c)
+		if err != nil {
+			t.Fatalf("form url encoded parse fail, %v", err)
+		}
+		if !done {
+			t.Fatalf("form url encoded parse fail")
+		}
+		if len(c.RequestBody) != 0 {
+			t.Fatalf("body parse shoudl be pass")
 		}
 	})
 

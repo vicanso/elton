@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,6 +14,9 @@ func TestBasicAuth(t *testing.T) {
 		Validate: func(account, pwd string, c *cod.Context) (bool, error) {
 			if account == "tree.xie" || pwd == "password" {
 				return true, nil
+			}
+			if account == "n" {
+				return false, errors.New("account is invalid")
 			}
 			return false, nil
 		},
@@ -62,6 +66,13 @@ func TestBasicAuth(t *testing.T) {
 		if resp.Code != http.StatusUnauthorized ||
 			resp.Body.String() != "category=cod-basic-auth, status=401, message=unAuthorized" {
 			t.Fatalf("validate fail error is invalid")
+		}
+		req.Header.Set(cod.HeaderAuthorization, "basic bjph")
+		resp = httptest.NewRecorder()
+		d.ServeHTTP(resp, req)
+		if resp.Code != http.StatusBadRequest ||
+			resp.Body.String() != "category=cod-basic-auth, status=400, message=account is invalid" {
+			t.Fatalf("validate return error is fail")
 		}
 	})
 

@@ -12,6 +12,8 @@ type (
 	Context struct {
 		Request  *http.Request
 		Response http.ResponseWriter
+		// ID request id
+		ID string
 		// Route route path
 		Route string
 		// Next next function
@@ -22,6 +24,8 @@ type (
 		Status int
 		// Body http response's body
 		Body interface{}
+		// BodyBytes http response's body byte
+		BodyBytes []byte
 		// RequestBody http request body
 		RequestBody []byte
 		// store for context
@@ -40,7 +44,9 @@ func (c *Context) Reset() {
 	c.Params = nil
 	c.RequestBody = nil
 	c.Status = 0
+	c.BodyBytes = nil
 	c.m = nil
+	c.ID = ""
 }
 
 // RealIP get the real ip

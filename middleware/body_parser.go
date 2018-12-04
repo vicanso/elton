@@ -27,6 +27,14 @@ type (
 	}
 )
 
+var (
+	validMethods = []string{
+		http.MethodPost,
+		http.MethodPatch,
+		http.MethodPut,
+	}
+)
+
 // NewBodyParser new json parser
 func NewBodyParser(config BodyParserConfig) cod.Handle {
 	limit := defaultRequestBodyLimit
@@ -37,9 +45,13 @@ func NewBodyParser(config BodyParserConfig) cod.Handle {
 		method := c.Request.Method
 
 		// 对于非提交数据的method跳过
-		if method != http.MethodPost &&
-			method != http.MethodPatch &&
-			method != http.MethodPut {
+		valid := false
+		for _, item := range validMethods {
+			if !valid && item == method {
+				valid = true
+			}
+		}
+		if !valid {
 			return c.Next()
 		}
 		ct := c.Request.Header.Get(cod.HeaderContentType)

@@ -251,3 +251,20 @@ func TestOnError(t *testing.T) {
 	})
 	d.EmitError(c, cutstomErr)
 }
+
+func TestGenerateID(t *testing.T) {
+	d := New()
+	randID := "abc"
+	d.GenerateID = func() string {
+		return randID
+	}
+	d.GET("/", func(c *Context) error {
+		if c.ID != randID {
+			t.Fatalf("generate id fail")
+		}
+		return nil
+	})
+	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
+	resp := httptest.NewRecorder()
+	d.ServeHTTP(resp, req)
+}

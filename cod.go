@@ -13,6 +13,8 @@ type (
 		Router          *httprouter.Router
 		Middlewares     []Handle
 		errorLinsteners []ErrorLinstener
+		ErrorHandle     ErrorHandle
+		GenerateID      GenerateID
 	}
 	// Group group router
 	Group struct {
@@ -20,6 +22,10 @@ type (
 		HandleList []Handle
 		Cod        *Cod
 	}
+	// ErrorHandle error handle function
+	ErrorHandle func(error, *Context)
+	// GenerateID generate id
+	GenerateID func() string
 	// Handle cod handle function
 	Handle func(*Context) error
 	// ErrorLinstener error listener function
@@ -71,6 +77,9 @@ func (d *Cod) Handle(method, path string, handleList ...Handle) {
 		for _, item := range params {
 			c.Params[item.Key] = item.Value
 		}
+		if d.GenerateID != nil {
+			c.ID = d.GenerateID()
+		}
 		c.Route = path
 		c.cod = d
 		mids := d.Middlewares
@@ -85,9 +94,13 @@ func (d *Cod) Handle(method, path string, handleList ...Handle) {
 			return mids[index](c)
 		}
 		err := c.Next()
-		// TODO 如果有未处理出错了 emit error
 		if err != nil {
-			d.Error(err, c)
+			d.EmitError(c, err)
+			fn := d.ErrorHandle
+			if fn == nil {
+				fn = d.Error
+			}
+			fn(err, c)
 		}
 	})
 }

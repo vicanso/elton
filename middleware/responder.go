@@ -18,7 +18,7 @@ type (
 )
 
 // NewResponder create a responder
-func NewResponder(conf ResponderConfig) cod.Handle {
+func NewResponder(config ResponderConfig) cod.Handle {
 	return func(c *cod.Context) error {
 		e := c.Next()
 		var err *cod.HTTPError
@@ -86,6 +86,7 @@ func NewResponder(conf ResponderConfig) cod.Handle {
 				}
 			}
 		}
+		c.BodyBytes = body
 		c.Response.WriteHeader(status)
 		_, responseErr := resp.Write(body)
 
