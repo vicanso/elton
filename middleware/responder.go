@@ -54,10 +54,10 @@ func NewResponder(config ResponderConfig) cod.Handle {
 			hadContentType = true
 		}
 
-		status := c.Status
-		if status == 0 {
-			status = http.StatusOK
+		if c.Status == 0 {
+			c.Status = http.StatusOK
 		}
+		status := c.Status
 
 		var body []byte
 		if c.Body != nil {

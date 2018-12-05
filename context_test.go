@@ -192,6 +192,34 @@ func TestNoContent(t *testing.T) {
 	}
 }
 
+func TestCacheControl(t *testing.T) {
+	checkCacheControl := func(resp *httptest.ResponseRecorder, value string, t *testing.T) {
+		if resp.HeaderMap["Cache-Control"][0] != value {
+			t.Fatalf("cache control should be " + value)
+		}
+	}
+	t.Run("no cache", func(t *testing.T) {
+		resp := httptest.NewRecorder()
+		c := NewContext(resp, nil)
+		c.NoCache()
+		checkCacheControl(resp, "no-cache, max-age=0", t)
+	})
+
+	t.Run("no store", func(t *testing.T) {
+		resp := httptest.NewRecorder()
+		c := NewContext(resp, nil)
+		c.NoCache()
+		checkCacheControl(resp, "no-store", t)
+	})
+
+	t.Run("set cache max age", func(t *testing.T) {
+		resp := httptest.NewRecorder()
+		c := NewContext(resp, nil)
+		c.CacheMaxAge("1m")
+		checkCacheControl(resp, "public, max-age=60", t)
+	})
+}
+
 func TestGetCod(t *testing.T) {
 	c := NewContext(nil, nil)
 	c.cod = &Cod{}

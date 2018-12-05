@@ -25,8 +25,10 @@ const (
 	userAgent        = "userAgent"
 	when             = "when"
 	whenISO          = "when-iso"
+	whenUTCISO       = "when-utc-iso"
 	whenUnix         = "when-unix"
 	whenISOMs        = "when-iso-ms"
+	whenUTCISOMs     = "when-utc-iso-ms"
 	size             = "size"
 	sizeHuman        = "size-human"
 	status           = "status"
@@ -196,9 +198,13 @@ func format(c *cod.Context, tags []*Tag, startedAt time.Time) string {
 		case when:
 			return time.Now().Format(time.RFC1123Z)
 		case whenISO:
-			return time.Now().UTC().Format(time.RFC3339)
+			return time.Now().Format(time.RFC3339)
+		case whenUTCISO:
+			return time.Now().UTC().Format("2006-01-02T15:04:05Z")
 		case whenISOMs:
-			return time.Now().UTC().Format("2006-01-02T15:04:05.999Z07:00")
+			return time.Now().Format("2006-01-02T15:04:05.999Z07:00")
+		case whenUTCISOMs:
+			return time.Now().UTC().Format("2006-01-02T15:04:05.999Z")
 		case whenUnix:
 			return strconv.FormatInt(time.Now().Unix(), 10)
 		case status:

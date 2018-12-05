@@ -77,9 +77,9 @@ func TestLogger(t *testing.T) {
 
 	t.Run("when", func(t *testing.T) {
 		config := LoggerConfig{
-			Format: "{when}  {when-iso}  {when-unix}  {when-iso-ms}",
+			Format: "{when}  {when-iso}  {when-utc-iso}  {when-unix}  {when-iso-ms}  {when-utc-iso-ms}",
 			OnLog: func(log string, _ *cod.Context) {
-				if len(strings.Split(log, "  ")) != 4 {
+				if len(strings.Split(log, "  ")) != 6 {
 					t.Fatalf("get when fail")
 				}
 			},

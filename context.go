@@ -3,8 +3,10 @@ package cod
 import (
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type (
@@ -150,6 +152,23 @@ func (c *Context) Get(key string) interface{} {
 func (c *Context) NoContent() {
 	c.Status = http.StatusNoContent
 	c.Body = nil
+}
+
+// NoCache set http no cache
+func (c *Context) NoCache() {
+	c.SetHeader(HeaderCacheControl, "no-cache, max-age=0")
+}
+
+// NoStore set http no store
+func (c *Context) NoStore() {
+	c.SetHeader(HeaderCacheControl, "no-store")
+}
+
+// CacheMaxAge set http cache for max age
+func (c *Context) CacheMaxAge(age string) {
+	d, _ := time.ParseDuration(age)
+	cache := "public, max-age=" + strconv.Itoa(int(d.Seconds()))
+	c.SetHeader(HeaderCacheControl, cache)
 }
 
 // Created created for response

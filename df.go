@@ -30,6 +30,8 @@ const (
 	HeaderAuthorization = "Authorization"
 	// HeaderWWWAuthenticate WWW-Authenticate
 	HeaderWWWAuthenticate = "WWW-Authenticate"
+	// HeaderCacheControl Cache-Control
+	HeaderCacheControl = "Cache-Control"
 
 	// MinRedirectCode min redirect code
 	MinRedirectCode = 300
