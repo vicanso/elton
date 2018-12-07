@@ -27,7 +27,7 @@ func NewResponder(config ResponderConfig) cod.Handle {
 			he, ok := e.(*cod.HTTPError)
 			if !ok {
 				he = &cod.HTTPError{
-					Code:    http.StatusInternalServerError,
+					Status:  http.StatusInternalServerError,
 					Message: e.Error(),
 				}
 			}
@@ -38,12 +38,12 @@ func NewResponder(config ResponderConfig) cod.Handle {
 		}
 
 		resp := c.Response
-		respHeader := resp.Header()
+		respHeader := c.Headers
 		ct := cod.HeaderContentType
 
 		if err != nil {
 
-			c.Status = err.Code
+			c.Status = err.Status
 			c.Body, _ = json.Marshal(err)
 			respHeader.Set(ct, cod.MIMEApplicationJSON)
 		}
@@ -87,11 +87,10 @@ func NewResponder(config ResponderConfig) cod.Handle {
 			}
 		}
 		c.BodyBytes = body
-		c.Response.WriteHeader(status)
+		resp.WriteHeader(status)
 		_, responseErr := resp.Write(body)
 
 		if responseErr != nil {
-			// TODO 如何触发实例error
 			c.Cod().EmitError(c, responseErr)
 		}
 

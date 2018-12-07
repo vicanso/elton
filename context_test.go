@@ -208,7 +208,7 @@ func TestCacheControl(t *testing.T) {
 	t.Run("no store", func(t *testing.T) {
 		resp := httptest.NewRecorder()
 		c := NewContext(resp, nil)
-		c.NoCache()
+		c.NoStore()
 		checkCacheControl(resp, "no-store", t)
 	})
 

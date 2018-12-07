@@ -47,7 +47,6 @@ func New() *Cod {
 
 // ListenAndServe listen and serve for http server
 func (d *Cod) ListenAndServe(addr string) error {
-	// TODO 调整可以指定Server的相关参数
 	d.Server.Addr = addr
 	return d.Server.ListenAndServe()
 }
@@ -174,11 +173,10 @@ func (d *Cod) NotFound(resp http.ResponseWriter, req *http.Request) {
 
 // Error error handle
 func (d *Cod) Error(err error, c *Context) {
-	// TODO error的处理优化
 	resp := c.Response
 	he, ok := err.(*HTTPError)
 	if ok {
-		resp.WriteHeader(he.Code)
+		resp.WriteHeader(he.Status)
 		resp.Write([]byte(he.Error()))
 	} else {
 		resp.WriteHeader(http.StatusInternalServerError)

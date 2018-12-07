@@ -6,7 +6,7 @@ import (
 
 func TestError(t *testing.T) {
 	err := &HTTPError{
-		Code:     400,
+		Status:   400,
 		Category: "custom",
 		Message:  "error",
 	}

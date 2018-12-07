@@ -27,9 +27,9 @@ var (
 	errUnauthorized = getBasicAuthError("unAuthorized", http.StatusUnauthorized)
 )
 
-func getBasicAuthError(message string, code int) *cod.HTTPError {
+func getBasicAuthError(message string, status int) *cod.HTTPError {
 	return &cod.HTTPError{
-		Code:     code,
+		Status:   status,
 		Message:  message,
 		Category: errBasicAuthCategory,
 	}

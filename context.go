@@ -14,6 +14,7 @@ type (
 	Context struct {
 		Request  *http.Request
 		Response http.ResponseWriter
+		Headers  http.Header
 		// ID request id
 		ID string
 		// Route route path
@@ -96,7 +97,6 @@ func (c *Context) Query() map[string]string {
 
 // Redirect redirect the http request
 func (c *Context) Redirect(code int, url string) (err error) {
-	// TODO 设置重定向
 	if code < MinRedirectCode || code > MaxRedirectCode {
 		err = ErrInvalidRedirect
 		return
@@ -121,13 +121,12 @@ func (c *Context) Header(key string) string {
 
 // SetHeader set header to the http response
 func (c *Context) SetHeader(key, value string) {
-	// TODO 是否需要创建新的header来临时保存相关header
-	c.Response.Header().Set(key, value)
+	c.Headers.Set(key, value)
 }
 
 // AddHeader add header to the http response
 func (c *Context) AddHeader(key, value string) {
-	c.Response.Header().Add(key, value)
+	c.Headers.Add(key, value)
 }
 
 // Cookie get cookie from http request
@@ -194,6 +193,9 @@ func NewContext(resp http.ResponseWriter, req *http.Request) *Context {
 	c.Reset()
 	c.Request = req
 	c.Response = resp
+	if resp != nil {
+		c.Headers = resp.Header()
+	}
 	return c
 }
 

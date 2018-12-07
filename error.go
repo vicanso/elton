@@ -19,16 +19,18 @@ var (
 type (
 	// HTTPError http error
 	HTTPError struct {
-		Code     int                    `json:"code,omitempty"`
-		Category string                 `json:"category,omitempty"`
-		Message  string                 `json:"message,omitempty"`
-		Extra    map[string]interface{} `json:"extra,omitempty"`
+		Status    int                    `json:"status,omitempty"`
+		Code      string                 `json:"code,omitempty"`
+		Category  string                 `json:"category,omitempty"`
+		Message   string                 `json:"message,omitempty"`
+		Exception bool                   `json:"exception,omitempty"`
+		Extra     map[string]interface{} `json:"extra,omitempty"`
 	}
 )
 
 // Error error interface
 func (e *HTTPError) Error() string {
-	str := fmt.Sprintf("status=%d, message=%s", e.Code, e.Message)
+	str := fmt.Sprintf("status=%d, message=%s", e.Status, e.Message)
 	if e.Category == "" {
 		return str
 	}
@@ -36,9 +38,9 @@ func (e *HTTPError) Error() string {
 }
 
 // NewError create an error
-func NewError(code int, message, category string) *HTTPError {
+func NewError(status int, message, category string) *HTTPError {
 	return &HTTPError{
-		Code:     code,
+		Status:   status,
 		Message:  message,
 		Category: category,
 	}

@@ -76,7 +76,7 @@ func NewBodyParser(config BodyParserConfig) cod.Handle {
 		body, e := ioutil.ReadAll(c.Request.Body)
 		if e != nil {
 			err = &cod.HTTPError{
-				Code:     http.StatusBadRequest,
+				Status:   http.StatusBadRequest,
 				Message:  e.Error(),
 				Category: errBodyParserCategory,
 			}
@@ -84,7 +84,7 @@ func NewBodyParser(config BodyParserConfig) cod.Handle {
 		}
 		if limit > 0 && len(body) > limit {
 			err = &cod.HTTPError{
-				Code:     http.StatusBadRequest,
+				Status:   http.StatusBadRequest,
 				Message:  fmt.Sprintf("requst body is %d bytes, it should be <= %d", len(body), limit),
 				Category: errBodyParserCategory,
 			}
