@@ -48,7 +48,7 @@ func TestLogger(t *testing.T) {
 		c := cod.NewContext(resp, req)
 		c.BodyBytes = []byte("response-body")
 		c.RequestBody = []byte("request-body")
-		c.Status = 200
+		c.StatusCode = 200
 		c.Next = func() error {
 			return nil
 		}

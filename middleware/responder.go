@@ -27,13 +27,13 @@ func NewResponder(config ResponderConfig) cod.Handle {
 			he, ok := e.(*cod.HTTPError)
 			if !ok {
 				he = &cod.HTTPError{
-					Status:  http.StatusInternalServerError,
-					Message: e.Error(),
+					StatusCode: http.StatusInternalServerError,
+					Message:    e.Error(),
 				}
 			}
 			err = he
-		} else if c.Status == 0 && c.Body == nil {
-			// 如果status与body都为空，则为非法响应
+		} else if c.StatusCode == 0 && c.Body == nil {
+			// 如果status code与body都为空，则为非法响应
 			err = cod.ErrInvalidResponse
 		}
 
@@ -43,7 +43,7 @@ func NewResponder(config ResponderConfig) cod.Handle {
 
 		if err != nil {
 
-			c.Status = err.Status
+			c.StatusCode = err.StatusCode
 			c.Body, _ = json.Marshal(err)
 			respHeader.Set(ct, cod.MIMEApplicationJSON)
 		}
@@ -54,10 +54,10 @@ func NewResponder(config ResponderConfig) cod.Handle {
 			hadContentType = true
 		}
 
-		if c.Status == 0 {
-			c.Status = http.StatusOK
+		if c.StatusCode == 0 {
+			c.StatusCode = http.StatusOK
 		}
-		status := c.Status
+		statusCode := c.StatusCode
 
 		var body []byte
 		if c.Body != nil {
@@ -76,7 +76,7 @@ func NewResponder(config ResponderConfig) cod.Handle {
 				// 转换为json
 				buf, err := json.Marshal(c.Body)
 				if err != nil {
-					status = http.StatusInternalServerError
+					statusCode = http.StatusInternalServerError
 					body = []byte(err.Error())
 				} else {
 					if !hadContentType {
@@ -87,7 +87,7 @@ func NewResponder(config ResponderConfig) cod.Handle {
 			}
 		}
 		c.BodyBytes = body
-		resp.WriteHeader(status)
+		resp.WriteHeader(statusCode)
 		_, responseErr := resp.Write(body)
 
 		if responseErr != nil {

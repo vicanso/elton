@@ -6,9 +6,9 @@ import (
 
 func TestError(t *testing.T) {
 	err := &HTTPError{
-		Status:   400,
-		Category: "custom",
-		Message:  "error",
+		StatusCode: 400,
+		Category:   "custom",
+		Message:    "error",
 	}
 	if err.Error() != "category=custom, status=400, message=error" {
 		t.Fatalf("get error fail")

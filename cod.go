@@ -176,7 +176,7 @@ func (d *Cod) Error(err error, c *Context) {
 	resp := c.Response
 	he, ok := err.(*HTTPError)
 	if ok {
-		resp.WriteHeader(he.Status)
+		resp.WriteHeader(he.StatusCode)
 		resp.Write([]byte(he.Error()))
 	} else {
 		resp.WriteHeader(http.StatusInternalServerError)

@@ -208,7 +208,7 @@ func format(c *cod.Context, tags []*Tag, startedAt time.Time) string {
 		case whenUnix:
 			return strconv.FormatInt(time.Now().Unix(), 10)
 		case status:
-			return strconv.Itoa(c.Status)
+			return strconv.Itoa(c.StatusCode)
 		case payloadSize:
 			return strconv.Itoa(len(c.RequestBody))
 		case payloadSizeHuman:

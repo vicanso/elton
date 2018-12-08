@@ -178,7 +178,7 @@ func TestCreate(t *testing.T) {
 	body := "abc"
 	c := NewContext(nil, nil)
 	c.Created(body)
-	if c.Status != http.StatusCreated ||
+	if c.StatusCode != http.StatusCreated ||
 		c.Body.(string) != body {
 		t.Fatalf("create for response fail")
 	}
@@ -187,7 +187,7 @@ func TestCreate(t *testing.T) {
 func TestNoContent(t *testing.T) {
 	c := NewContext(nil, nil)
 	c.NoContent()
-	if c.Status != http.StatusNoContent {
+	if c.StatusCode != http.StatusNoContent {
 		t.Fatalf("set no content fail")
 	}
 }

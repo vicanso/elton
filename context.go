@@ -23,8 +23,8 @@ type (
 		Next func() error
 		// Params uri params
 		Params map[string]string
-		// Status http response's status
-		Status int
+		// StatusCode http response's status code
+		StatusCode int
 		// Body http response's body
 		Body interface{}
 		// BodyBytes http response's body byte
@@ -46,7 +46,7 @@ func (c *Context) Reset() {
 	c.Next = nil
 	c.Params = nil
 	c.RequestBody = nil
-	c.Status = 0
+	c.StatusCode = 0
 	c.BodyBytes = nil
 	c.m = nil
 	c.ID = ""
@@ -101,7 +101,7 @@ func (c *Context) Redirect(code int, url string) (err error) {
 		err = ErrInvalidRedirect
 		return
 	}
-	c.Status = code
+	c.StatusCode = code
 	c.SetHeader(HeaderLocation, url)
 	return
 }
@@ -149,7 +149,7 @@ func (c *Context) Get(key string) interface{} {
 
 // NoContent no content for response
 func (c *Context) NoContent() {
-	c.Status = http.StatusNoContent
+	c.StatusCode = http.StatusNoContent
 	c.Body = nil
 }
 
@@ -172,7 +172,7 @@ func (c *Context) CacheMaxAge(age string) {
 
 // Created created for response
 func (c *Context) Created(body interface{}) {
-	c.Status = http.StatusCreated
+	c.StatusCode = http.StatusCreated
 	c.Body = body
 }
 
