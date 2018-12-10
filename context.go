@@ -135,8 +135,9 @@ func (c *Context) Cookie(name string) (*http.Cookie, error) {
 }
 
 // SetCookie set the cookie for the response
-func (c *Context) SetCookie(cookie *http.Cookie) {
+func (c *Context) SetCookie(cookie *http.Cookie) error {
 	c.AddHeader(HeaderSetCookie, cookie.String())
+	return nil
 }
 
 // Get get the value
