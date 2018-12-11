@@ -19,7 +19,7 @@ var (
 type (
 	// HTTPError http error
 	HTTPError struct {
-		StatusCode int                    `json:"status_code,omitempty"`
+		StatusCode int                    `json:"statusCode,omitempty"`
 		Code       string                 `json:"code,omitempty"`
 		Category   string                 `json:"category,omitempty"`
 		Message    string                 `json:"message,omitempty"`

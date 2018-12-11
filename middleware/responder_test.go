@@ -39,7 +39,7 @@ func TestResponder(t *testing.T) {
 		})
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		checkResponse(t, resp, 500, `{"status_code":500,"category":"cod","message":"invalid response"}`)
+		checkResponse(t, resp, 500, `{"statusCode":500,"category":"cod","message":"invalid response"}`)
 		checkJSON(t, resp)
 	})
 
@@ -51,7 +51,7 @@ func TestResponder(t *testing.T) {
 		})
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		checkResponse(t, resp, 500, `{"status_code":500,"message":"abc"}`)
+		checkResponse(t, resp, 500, `{"statusCode":500,"message":"abc"}`)
 		checkJSON(t, resp)
 	})
 
@@ -67,7 +67,7 @@ func TestResponder(t *testing.T) {
 		})
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		checkResponse(t, resp, 400, `{"status_code":400,"category":"custom","message":"abc"}`)
+		checkResponse(t, resp, 400, `{"statusCode":400,"category":"custom","message":"abc"}`)
 		checkJSON(t, resp)
 	})
 
