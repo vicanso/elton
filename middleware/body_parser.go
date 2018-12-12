@@ -36,7 +36,7 @@ var (
 )
 
 // NewBodyParser new json parser
-func NewBodyParser(config BodyParserConfig) cod.Handle {
+func NewBodyParser(config BodyParserConfig) cod.Handler {
 	limit := defaultRequestBodyLimit
 	if config.Limit != 0 {
 		limit = config.Limit

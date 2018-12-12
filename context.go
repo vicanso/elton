@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -15,7 +14,7 @@ type (
 		Request  *http.Request
 		Response http.ResponseWriter
 		Headers  http.Header
-		// ID request id
+		// ID context id
 		ID string
 		// Route route path
 		Route string
@@ -42,14 +41,16 @@ type (
 func (c *Context) Reset() {
 	c.Request = nil
 	c.Response = nil
+	c.Headers = nil
+	c.ID = ""
 	c.Route = ""
 	c.Next = nil
 	c.Params = nil
-	c.RequestBody = nil
 	c.StatusCode = 0
+	c.Body = nil
 	c.BodyBytes = nil
+	c.RequestBody = nil
 	c.m = nil
-	c.ID = ""
 }
 
 // RealIP get the real ip
@@ -106,7 +107,7 @@ func (c *Context) Redirect(code int, url string) (err error) {
 	return
 }
 
-// Set set the value
+// Set store the value in the context
 func (c *Context) Set(key string, value interface{}) {
 	if c.m == nil {
 		c.m = make(map[string]interface{})
@@ -140,7 +141,7 @@ func (c *Context) SetCookie(cookie *http.Cookie) error {
 	return nil
 }
 
-// Get get the value
+// Get get the value from context
 func (c *Context) Get(key string) interface{} {
 	if c.m == nil {
 		return nil
@@ -154,17 +155,17 @@ func (c *Context) NoContent() {
 	c.Body = nil
 }
 
-// NoCache set http no cache
+// NoCache set http response no cache
 func (c *Context) NoCache() {
 	c.SetHeader(HeaderCacheControl, "no-cache, max-age=0")
 }
 
-// NoStore set http no store
+// NoStore set http response no store
 func (c *Context) NoStore() {
 	c.SetHeader(HeaderCacheControl, "no-store")
 }
 
-// CacheMaxAge set http cache for max age
+// CacheMaxAge set http response to cache for max age
 func (c *Context) CacheMaxAge(age string) {
 	d, _ := time.ParseDuration(age)
 	cache := "public, max-age=" + strconv.Itoa(int(d.Seconds()))
@@ -182,25 +183,13 @@ func (c *Context) Cod() *Cod {
 	return c.cod
 }
 
-var contextPool = sync.Pool{
-	New: func() interface{} {
-		return &Context{}
-	},
-}
-
 // NewContext new a context
 func NewContext(resp http.ResponseWriter, req *http.Request) *Context {
-	c := contextPool.Get().(*Context)
-	c.Reset()
+	c := &Context{}
 	c.Request = req
 	c.Response = resp
 	if resp != nil {
 		c.Headers = resp.Header()
 	}
 	return c
-}
-
-// ReleaseContext release context
-func ReleaseContext(c *Context) {
-	contextPool.Put(c)
 }

@@ -235,7 +235,7 @@ func format(c *cod.Context, tags []*Tag, startedAt time.Time) string {
 }
 
 // NewLogger create a logger
-func NewLogger(config LoggerConfig) cod.Handle {
+func NewLogger(config LoggerConfig) cod.Handler {
 	if config.Format == "" {
 		panic("logger require format")
 	}

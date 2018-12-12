@@ -17,6 +17,13 @@ func TestListenAndServe(t *testing.T) {
 	}
 }
 
+func TestNewWithoutServer(t *testing.T) {
+	d := NewWithoutServer()
+	if d.Server != nil {
+		t.Fatalf("new without server fail")
+	}
+}
+
 func TestHandle(t *testing.T) {
 	d := New()
 	t.Run("group", func(t *testing.T) {
@@ -237,6 +244,41 @@ func TestHandle(t *testing.T) {
 			t.Fatalf("default error handle fail")
 		}
 	})
+}
+
+func TestErrorHandler(t *testing.T) {
+	d := New()
+	d.GET("/", func(c *Context) error {
+		return errors.New("abc")
+	})
+
+	done := false
+	d.ErrorHandler = func(c *Context, err error) {
+		done = true
+	}
+	req := httptest.NewRequest("GET", "/", nil)
+	resp := httptest.NewRecorder()
+	d.ServeHTTP(resp, req)
+	if !done || resp.Code != http.StatusOK {
+		t.Fatalf("custom error handler is not called")
+	}
+}
+
+func TestNotFoundHandler(t *testing.T) {
+	d := New()
+	d.GET("/", func(c *Context) error {
+		return nil
+	})
+	done := false
+	d.NotFoundHandler = func(resp http.ResponseWriter, req *http.Request) {
+		done = true
+	}
+	req := httptest.NewRequest("GET", "/users/me", nil)
+	resp := httptest.NewRecorder()
+	d.ServeHTTP(resp, req)
+	if !done {
+		t.Fatalf("custom not found handler is not called")
+	}
 }
 
 func TestOnError(t *testing.T) {

@@ -18,7 +18,7 @@ type (
 )
 
 // NewResponder create a responder
-func NewResponder(config ResponderConfig) cod.Handle {
+func NewResponder(config ResponderConfig) cod.Handler {
 	return func(c *cod.Context) error {
 		e := c.Next()
 		var err *cod.HTTPError
@@ -41,8 +41,8 @@ func NewResponder(config ResponderConfig) cod.Handle {
 		respHeader := c.Headers
 		ct := cod.HeaderContentType
 
+		// 从出错中获取响应数据，响应状态码
 		if err != nil {
-
 			c.StatusCode = err.StatusCode
 			c.Body, _ = json.Marshal(err)
 			respHeader.Set(ct, cod.MIMEApplicationJSON)

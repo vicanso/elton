@@ -24,6 +24,7 @@ type (
 )
 
 var (
+	// errUnauthorized unauthorized err
 	errUnauthorized = getBasicAuthError("unAuthorized", http.StatusUnauthorized)
 )
 
@@ -36,7 +37,7 @@ func getBasicAuthError(message string, statusCode int) *cod.HTTPError {
 }
 
 // NewBasicAuth new basic auth
-func NewBasicAuth(config BasicAuthConfig) cod.Handle {
+func NewBasicAuth(config BasicAuthConfig) cod.Handler {
 	if config.Validate == nil {
 		panic("require validate function")
 	}
