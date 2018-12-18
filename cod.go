@@ -14,10 +14,16 @@ var (
 )
 
 type (
+	// RouterInfo router's info
+	RouterInfo struct {
+		Method string `json:"method,omitempty"`
+		Path   string `json:"path,omitempty"`
+	}
 	// Cod web framework instance
 	Cod struct {
-		Server *http.Server
-		Router *httprouter.Router
+		Server  *http.Server
+		Router  *httprouter.Router
+		Routers []*RouterInfo
 		// Middlewares middleware function
 		Middlewares     []Handler
 		errorLinsteners []ErrorLinstener
@@ -102,6 +108,13 @@ func (d *Cod) fillContext(c *Context, resp http.ResponseWriter, req *http.Reques
 
 // Handle add http handle function
 func (d *Cod) Handle(method, path string, handlerList ...Handler) {
+	if d.Routers == nil {
+		d.Routers = make([]*RouterInfo, 0)
+	}
+	d.Routers = append(d.Routers, &RouterInfo{
+		Method: method,
+		Path:   path,
+	})
 	d.Router.Handle(method, path, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		c := d.ctxPool.Get().(*Context)
 		d.fillContext(c, resp, req)

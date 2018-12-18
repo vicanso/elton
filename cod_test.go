@@ -244,6 +244,12 @@ func TestHandle(t *testing.T) {
 			t.Fatalf("default error handle fail")
 		}
 	})
+
+	t.Run("get routers", func(t *testing.T) {
+		if len(d.Routers) != 18 {
+			t.Fatalf("get routers fail")
+		}
+	})
 }
 
 func TestErrorHandler(t *testing.T) {
