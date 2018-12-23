@@ -5,6 +5,7 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/vicanso/cod"
+	"github.com/vicanso/errors"
 )
 
 var (
@@ -21,12 +22,12 @@ type (
 func NewResponder(config ResponderConfig) cod.Handler {
 	return func(c *cod.Context) error {
 		e := c.Next()
-		var err *cod.HTTPError
+		var err *errors.HTTPError
 		if e != nil {
 			// 如果出错，尝试转换为HTTPError
-			he, ok := e.(*cod.HTTPError)
+			he, ok := e.(*errors.HTTPError)
 			if !ok {
-				he = &cod.HTTPError{
+				he = &errors.HTTPError{
 					StatusCode: http.StatusInternalServerError,
 					Message:    e.Error(),
 				}

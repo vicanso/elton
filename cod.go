@@ -1,11 +1,11 @@
 package cod
 
 import (
-	"errors"
 	"net/http"
 	"sync"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/vicanso/errors"
 )
 
 var (
@@ -230,7 +230,7 @@ func (d *Cod) Error(c *Context, err error) {
 		return
 	}
 	resp := c.Response
-	he, ok := err.(*HTTPError)
+	he, ok := err.(*errors.HTTPError)
 	if ok {
 		resp.WriteHeader(he.StatusCode)
 		resp.Write([]byte(he.Error()))

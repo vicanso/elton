@@ -1,6 +1,10 @@
 package cod
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/vicanso/errors"
+)
 
 var (
 	methods = []string{
@@ -13,9 +17,24 @@ var (
 		http.MethodOptions,
 		http.MethodTrace,
 	}
+
+	// ErrInvalidRedirect invalid redirect
+	ErrInvalidRedirect = &errors.HTTPError{
+		StatusCode: 400,
+		Message:    "invalid redirect",
+		Category:   ErrCategoryCod,
+	}
+	// ErrInvalidResponse invalid response(body an status is nil)
+	ErrInvalidResponse = &errors.HTTPError{
+		StatusCode: 500,
+		Message:    "invalid response",
+		Category:   ErrCategoryCod,
+	}
 )
 
 const (
+	// ErrCategoryCod cod category
+	ErrCategoryCod = "cod"
 	// HeaderXForwardedFor x-forwarded-for
 	HeaderXForwardedFor = "X-Forwarded-For"
 	// HeaderXRealIp x-real-ip

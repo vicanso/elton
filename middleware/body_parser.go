@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/vicanso/cod"
+	"github.com/vicanso/errors"
 )
 
 const (
@@ -75,7 +76,7 @@ func NewBodyParser(config BodyParserConfig) cod.Handler {
 
 		body, e := ioutil.ReadAll(c.Request.Body)
 		if e != nil {
-			err = &cod.HTTPError{
+			err = &errors.HTTPError{
 				StatusCode: http.StatusBadRequest,
 				Message:    e.Error(),
 				Category:   errBodyParserCategory,
@@ -83,7 +84,7 @@ func NewBodyParser(config BodyParserConfig) cod.Handler {
 			return
 		}
 		if limit > 0 && len(body) > limit {
-			err = &cod.HTTPError{
+			err = &errors.HTTPError{
 				StatusCode: http.StatusBadRequest,
 				Message:    fmt.Sprintf("requst body is %d bytes, it should be <= %d", len(body), limit),
 				Category:   errBodyParserCategory,

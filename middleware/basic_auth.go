@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/vicanso/cod"
+	"github.com/vicanso/errors"
 )
 
 const (
@@ -28,8 +29,8 @@ var (
 	errUnauthorized = getBasicAuthError("unAuthorized", http.StatusUnauthorized)
 )
 
-func getBasicAuthError(message string, statusCode int) *cod.HTTPError {
-	return &cod.HTTPError{
+func getBasicAuthError(message string, statusCode int) *errors.HTTPError {
+	return &errors.HTTPError{
 		StatusCode: statusCode,
 		Message:    message,
 		Category:   errBasicAuthCategory,

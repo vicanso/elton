@@ -33,12 +33,21 @@
   revision = "4b7aa43c6742a2c18fdef89dd197aaae7dac7ccd"
   version = "1.0.1"
 
+[[projects]]
+  digest = "1:fb7d260cbd3ce035673cee715167fd1974b9760a04ddce403af270de0e96da01"
+  name = "github.com/vicanso/errors"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "d4901179c16c2f9df164cc9fa295982b9285db9d"
+  version = "0.0.2"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
     "github.com/json-iterator/go",
     "github.com/julienschmidt/httprouter",
+    "github.com/vicanso/errors",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

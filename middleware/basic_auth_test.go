@@ -49,7 +49,7 @@ func TestBasicAuth(t *testing.T) {
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
 		if resp.Code != http.StatusBadRequest ||
-			resp.Body.String() != "category=cod-basic-auth, status=400, message=illegal base64 data at input byte 0" {
+			resp.Body.String() != "category=cod-basic-auth, message=illegal base64 data at input byte 0" {
 			t.Fatalf("base64 decode fail error is invalid")
 		}
 	})
@@ -64,14 +64,14 @@ func TestBasicAuth(t *testing.T) {
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
 		if resp.Code != http.StatusUnauthorized ||
-			resp.Body.String() != "category=cod-basic-auth, status=401, message=unAuthorized" {
+			resp.Body.String() != "category=cod-basic-auth, message=unAuthorized" {
 			t.Fatalf("validate fail error is invalid")
 		}
 		req.Header.Set(cod.HeaderAuthorization, "basic bjph")
 		resp = httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
 		if resp.Code != http.StatusBadRequest ||
-			resp.Body.String() != "category=cod-basic-auth, status=400, message=account is invalid" {
+			resp.Body.String() != "category=cod-basic-auth, message=account is invalid" {
 			t.Fatalf("validate return error is fail")
 		}
 	})

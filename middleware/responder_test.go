@@ -1,11 +1,11 @@
 package middleware
 
 import (
-	"errors"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/vicanso/cod"
+	"github.com/vicanso/errors"
 )
 
 func checkResponse(t *testing.T, resp *httptest.ResponseRecorder, code int, data string) {
@@ -59,7 +59,7 @@ func TestResponder(t *testing.T) {
 		d := cod.New()
 		d.Use(m)
 		d.GET("/", func(c *cod.Context) error {
-			return &cod.HTTPError{
+			return &errors.HTTPError{
 				StatusCode: 400,
 				Message:    "abc",
 				Category:   "custom",
