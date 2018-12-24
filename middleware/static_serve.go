@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/vicanso/cod"
 	"github.com/vicanso/errors"
@@ -212,7 +211,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 		if !config.DisableLastModified {
 			fileInfo := staticFile.Stat(file)
 			if fileInfo != nil {
-				lmd := fileInfo.ModTime().UTC().Format(time.RFC1123)
+				lmd := fileInfo.ModTime().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT")
 				c.SetHeader(cod.HeaderLastModified, lmd)
 			}
 		}
