@@ -146,6 +146,25 @@ func TestStaticServe(t *testing.T) {
 		}
 	})
 
+	t.Run("not compresss", func(t *testing.T) {
+		fn := NewStaticServe(staticFile, StaticServeConfig{
+			Path:              staticPath,
+			Mount:             "/static",
+			Gzip:              true,
+			CompressMinLength: 1,
+		})
+		req := httptest.NewRequest("GET", "/static/banner.jpg", nil)
+		res := httptest.NewRecorder()
+		c := cod.NewContext(res, req)
+		c.Next = func() error {
+			return nil
+		}
+		err := fn(c)
+		if err != nil || c.Headers.Get(cod.HeaderContentEncoding) == "gzip" {
+			t.Fatalf("serve image fail, %v", err)
+		}
+	})
+
 	t.Run("get index.html", func(t *testing.T) {
 		fn := NewStaticServe(staticFile, StaticServeConfig{
 			Path:              staticPath,

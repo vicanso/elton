@@ -54,6 +54,12 @@ var (
 	errNotAllowQueryString = getStaticServeError("static serve not allow query string", http.StatusBadRequest)
 	errNotFound            = getStaticServeError("static file not found", http.StatusNotFound)
 	errOutOfPath           = getStaticServeError("out of path", http.StatusBadRequest)
+
+	defaultCompressTypes = []string{
+		"text",
+		"javascript",
+		"json",
+	}
 )
 
 func (fs *FS) outOfPath(file string) bool {
@@ -131,6 +137,19 @@ func doGzip(buf []byte, level int) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
+func isCompressable(contentType string) bool {
+	compressable := false
+	for _, v := range defaultCompressTypes {
+		if compressable {
+			break
+		}
+		if strings.Contains(contentType, v) {
+			compressable = true
+		}
+	}
+	return compressable
+}
+
 // NewStaticServe create a static servce middleware
 func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler {
 	if config.Path == "" {
@@ -197,7 +216,9 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 				c.SetHeader(cod.HeaderLastModified, lmd)
 			}
 		}
-		if config.Gzip && len(buf) >= config.CompressMinLength {
+		if config.Gzip &&
+			len(buf) >= config.CompressMinLength &&
+			isCompressable(contentType) {
 			gzipBuf, e := doGzip(buf, 0)
 			// 如果压缩成功，则使用压缩数据
 			// 失败则忽略
