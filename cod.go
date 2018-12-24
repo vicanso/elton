@@ -1,6 +1,7 @@
 package cod
 
 import (
+	"net"
 	"net/http"
 	"sync"
 
@@ -78,6 +79,14 @@ func (d *Cod) ListenAndServe(addr string) error {
 	}
 	d.Server.Addr = addr
 	return d.Server.ListenAndServe()
+}
+
+// Serve serve for http server
+func (d *Cod) Serve(l net.Listener) error {
+	if d.Server == nil {
+		panic("server is not inited")
+	}
+	return d.Server.Serve(l)
 }
 
 // Close close the http server
