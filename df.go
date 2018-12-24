@@ -51,6 +51,12 @@ const (
 	HeaderWWWAuthenticate = "WWW-Authenticate"
 	// HeaderCacheControl Cache-Control
 	HeaderCacheControl = "Cache-Control"
+	// HeaderETag ETag
+	HeaderETag = "ETag"
+	// HeaderLastModified last modified
+	HeaderLastModified = "Last-Modified"
+	// HeaderContentEncoding content encoding
+	HeaderContentEncoding = "Content-Encoding"
 
 	// MinRedirectCode min redirect code
 	MinRedirectCode = 300
