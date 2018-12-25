@@ -21,6 +21,7 @@ type (
 	BasicAuthConfig struct {
 		Realm    string
 		Validate Validate
+		Skipper  Skipper
 	}
 )
 
@@ -49,7 +50,14 @@ func NewBasicAuth(config BasicAuthConfig) cod.Handler {
 		realm = config.Realm
 	}
 	wwwAuthenticate := basic + " realm=" + realm
+	skiper := config.Skipper
+	if skiper == nil {
+		skiper = DefaultSkipper
+	}
 	return func(c *cod.Context) (err error) {
+		if skiper(c) {
+			return c.Next()
+		}
 		auth := c.Request.Header.Get(cod.HeaderAuthorization)
 		if len(auth) < basicLen+1 ||
 			strings.ToLower(auth[:basicLen]) != basic {

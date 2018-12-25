@@ -3,9 +3,6 @@ package middleware
 import (
 	"bytes"
 	"compress/gzip"
-	"crypto/sha1"
-	"encoding/base64"
-	"fmt"
 	"io/ioutil"
 	"mime"
 	"net/http"
@@ -38,6 +35,7 @@ type (
 		NotFoundNext        bool
 		Gzip                bool
 		CompressMinLength   int
+		Skipper             Skipper
 	}
 	// FS file system
 	FS struct {
@@ -109,18 +107,6 @@ func getStaticServeError(message string, statusCode int) *errors.HTTPError {
 	}
 }
 
-// genETag 获取数据对应的ETag
-func genETag(buf []byte) string {
-	size := len(buf)
-	if size == 0 {
-		return "\"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk=\""
-	}
-	h := sha1.New()
-	h.Write(buf)
-	hash := base64.URLEncoding.EncodeToString(h.Sum(nil))
-	return fmt.Sprintf("\"%x-%s\"", size, hash)
-}
-
 // doGzip 对数据压缩
 func doGzip(buf []byte, level int) ([]byte, error) {
 	var b bytes.Buffer
@@ -169,7 +155,14 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 	if len(cacheArr) > 1 {
 		cacheControl = strings.Join(cacheArr, ", ")
 	}
+	skiper := config.Skipper
+	if skiper == nil {
+		skiper = DefaultSkipper
+	}
 	return func(c *cod.Context) (err error) {
+		if skiper(c) {
+			return c.Next()
+		}
 		url := c.Request.URL
 
 		file := url.Path
@@ -205,7 +198,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 			return
 		}
 		if !config.DisableETag {
-			etag := genETag(buf)
+			etag := cod.GenerateETag(buf)
 			c.SetHeader(cod.HeaderETag, etag)
 		}
 		if !config.DisableLastModified {

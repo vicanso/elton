@@ -25,6 +25,7 @@ type (
 		Limit                int
 		IgnoreJSON           bool
 		IgnoreFormURLEncoded bool
+		Skipper              Skipper
 	}
 )
 
@@ -42,7 +43,14 @@ func NewBodyParser(config BodyParserConfig) cod.Handler {
 	if config.Limit != 0 {
 		limit = config.Limit
 	}
+	skiper := config.Skipper
+	if skiper == nil {
+		skiper = DefaultSkipper
+	}
 	return func(c *cod.Context) (err error) {
+		if skiper(c) {
+			return c.Next()
+		}
 		method := c.Request.Method
 
 		// 对于非提交数据的method跳过

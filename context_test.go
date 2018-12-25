@@ -192,6 +192,14 @@ func TestNoContent(t *testing.T) {
 	}
 }
 
+func TestNotModified(t *testing.T) {
+	c := NewContext(nil, nil)
+	c.NotModified()
+	if c.StatusCode != http.StatusNotModified {
+		t.Fatalf("set not modified fail")
+	}
+}
+
 func TestCacheControl(t *testing.T) {
 	checkCacheControl := func(resp *httptest.ResponseRecorder, value string, t *testing.T) {
 		if resp.HeaderMap["Cache-Control"][0] != value {

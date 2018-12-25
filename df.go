@@ -57,6 +57,10 @@ const (
 	HeaderLastModified = "Last-Modified"
 	// HeaderContentEncoding content encoding
 	HeaderContentEncoding = "Content-Encoding"
+	// HeaderIfModifiedSince if modified since
+	HeaderIfModifiedSince = "If-Modified-Since"
+	// HeaderIfNoneMatch if none match
+	HeaderIfNoneMatch = "If-None-Match"
 
 	// MinRedirectCode min redirect code
 	MinRedirectCode = 300

@@ -41,6 +41,14 @@
   revision = "d4901179c16c2f9df164cc9fa295982b9285db9d"
   version = "0.0.2"
 
+[[projects]]
+  digest = "1:09e4855a50c18ee416e0ddf1b64892bdcac56629ce55bb031d7566556caba7ba"
+  name = "github.com/vicanso/fresh"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "24960d803b8dfc3a0166644fac3239cb8385bd0a"
+  version = "0.1.0"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -48,6 +56,7 @@
     "github.com/json-iterator/go",
     "github.com/julienschmidt/httprouter",
     "github.com/vicanso/errors",
+    "github.com/vicanso/fresh",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

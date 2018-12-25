@@ -1,6 +1,9 @@
 package cod
 
 import (
+	"crypto/sha1"
+	"encoding/base64"
+	"fmt"
 	"net"
 	"net/http"
 	"sync"
@@ -142,20 +145,29 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 		index := -1
 		c.Next = func() error {
 			index++
+			var fn Handler
 			// 如果调用过多的next，则会导致panic
 			if index >= maxNext {
 				panic(ErrOutOfHandlerRange)
 			}
 			// 如果已执行完公共添加的中间件，执行handler list
 			if index >= maxMid {
-				return handlerList[index-maxMid](c)
+				fn = handlerList[index-maxMid]
+			} else {
+				fn = mids[index]
 			}
-			return mids[index](c)
+			return fn(c)
 		}
 		err := c.Next()
 		if err != nil {
 			d.EmitError(c, err)
 			d.Error(c, err)
+		} else if !c.Committed {
+			resp.WriteHeader(c.StatusCode)
+			_, responseErr := resp.Write(c.BodyBytes)
+			if responseErr != nil {
+				d.EmitError(c, responseErr)
+			}
 		}
 		d.ctxPool.Put(c)
 	})
@@ -334,4 +346,16 @@ func (g *Group) ALL(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.Cod.ALL(p, fns...)
+}
+
+// GenerateETag generate etag
+func GenerateETag(buf []byte) string {
+	size := len(buf)
+	if size == 0 {
+		return "\"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk=\""
+	}
+	h := sha1.New()
+	h.Write(buf)
+	hash := base64.URLEncoding.EncodeToString(h.Sum(nil))
+	return fmt.Sprintf("\"%x-%s\"", size, hash)
 }

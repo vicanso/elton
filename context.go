@@ -11,9 +11,10 @@ import (
 type (
 	// Context cod context
 	Context struct {
-		Request  *http.Request
-		Response http.ResponseWriter
-		Headers  http.Header
+		Request   *http.Request
+		Response  http.ResponseWriter
+		Headers   http.Header
+		Committed bool
 		// ID context id
 		ID string
 		// Route route path
@@ -42,6 +43,7 @@ func (c *Context) Reset() {
 	c.Request = nil
 	c.Response = nil
 	c.Headers = nil
+	c.Committed = false
 	c.ID = ""
 	c.Route = ""
 	c.Next = nil
@@ -153,6 +155,14 @@ func (c *Context) Get(key string) interface{} {
 func (c *Context) NoContent() {
 	c.StatusCode = http.StatusNoContent
 	c.Body = nil
+	c.BodyBytes = nil
+}
+
+// NotModified response not modified
+func (c *Context) NotModified() {
+	c.StatusCode = http.StatusNotModified
+	c.Body = nil
+	c.BodyBytes = nil
 }
 
 // NoCache set http response no cache

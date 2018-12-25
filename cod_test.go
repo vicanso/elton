@@ -265,7 +265,7 @@ func TestErrorHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	resp := httptest.NewRecorder()
 	d.ServeHTTP(resp, req)
-	if !done || resp.Code != http.StatusOK {
+	if !done {
 		t.Fatalf("custom error handler is not called")
 	}
 }
@@ -315,4 +315,15 @@ func TestGenerateID(t *testing.T) {
 	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
 	resp := httptest.NewRecorder()
 	d.ServeHTTP(resp, req)
+}
+
+func TestGenerateETag(t *testing.T) {
+	etag := GenerateETag([]byte(""))
+	if etag != `"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="` {
+		t.Fatalf("gen nil byte etag fail")
+	}
+	etag = GenerateETag([]byte("abc"))
+	if etag != `"3-qZk-NkcGgWq6PiVxeFDCbJzQ2J0="` {
+		t.Fatalf("gen abc etag fail")
+	}
 }

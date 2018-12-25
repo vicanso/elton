@@ -15,12 +15,20 @@ var (
 type (
 	// ResponderConfig response config
 	ResponderConfig struct {
+		Skipper Skipper
 	}
 )
 
 // NewResponder create a responder
 func NewResponder(config ResponderConfig) cod.Handler {
+	skiper := config.Skipper
+	if skiper == nil {
+		skiper = DefaultSkipper
+	}
 	return func(c *cod.Context) error {
+		if skiper(c) {
+			return c.Next()
+		}
 		e := c.Next()
 		var err *errors.HTTPError
 		if e != nil {
@@ -38,7 +46,6 @@ func NewResponder(config ResponderConfig) cod.Handler {
 			err = cod.ErrInvalidResponse
 		}
 
-		resp := c.Response
 		respHeader := c.Headers
 		ct := cod.HeaderContentType
 
@@ -88,12 +95,7 @@ func NewResponder(config ResponderConfig) cod.Handler {
 			}
 		}
 		c.BodyBytes = body
-		resp.WriteHeader(statusCode)
-		_, responseErr := resp.Write(body)
-
-		if responseErr != nil {
-			c.Cod().EmitError(c, responseErr)
-		}
+		c.StatusCode = statusCode
 
 		return nil
 	}

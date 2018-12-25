@@ -56,8 +56,9 @@ type (
 	OnLog func(string, *cod.Context)
 	// LoggerConfig logger config
 	LoggerConfig struct {
-		Format string
-		OnLog  OnLog
+		Format  string
+		OnLog   OnLog
+		Skipper Skipper
 	}
 )
 
@@ -243,7 +244,14 @@ func NewLogger(config LoggerConfig) cod.Handler {
 		panic("logger require on log function")
 	}
 	tags := parse([]byte(config.Format))
+	skiper := config.Skipper
+	if skiper == nil {
+		skiper = DefaultSkipper
+	}
 	return func(c *cod.Context) (err error) {
+		if skiper(c) {
+			return c.Next()
+		}
 		startedAt := time.Now()
 		err = c.Next()
 		str := format(c, tags, startedAt)
