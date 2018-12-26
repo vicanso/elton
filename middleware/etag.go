@@ -7,13 +7,13 @@ import (
 )
 
 type (
-	// ETagConfig etag config
+	// ETagConfig eTag config
 	ETagConfig struct {
 		Skipper Skipper
 	}
 )
 
-// NewETag create a etag middleware
+// NewETag create a eTag middleware
 func NewETag(config ETagConfig) cod.Handler {
 	skiper := config.Skipper
 	if skiper == nil {
@@ -25,7 +25,7 @@ func NewETag(config ETagConfig) cod.Handler {
 		}
 		err = c.Next()
 		respHeader := c.Headers
-		// 如果无内容或已设置etag，则跳过
+		// 如果无内容或已设置 eTag ，则跳过
 		if len(c.BodyBytes) == 0 ||
 			respHeader.Get(cod.HeaderETag) != "" {
 			return
@@ -35,8 +35,8 @@ func NewETag(config ETagConfig) cod.Handler {
 			c.StatusCode >= http.StatusMultipleChoices {
 			return
 		}
-		etag := cod.GenerateETag(c.BodyBytes)
-		c.SetHeader(cod.HeaderETag, etag)
+		eTag := cod.GenerateETag(c.BodyBytes)
+		c.SetHeader(cod.HeaderETag, eTag)
 		return
 	}
 }

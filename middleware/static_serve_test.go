@@ -64,7 +64,7 @@ func TestFS(t *testing.T) {
 	file := os.Args[0]
 	fs := FS{}
 	if !fs.Exists(file) {
-		t.Fatalf("file should be exitst")
+		t.Fatalf("file should be exists")
 	}
 	fileInfo := fs.Stat(file)
 	if fileInfo == nil {

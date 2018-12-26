@@ -36,7 +36,7 @@ func TestFresh(t *testing.T) {
 		if c.StatusCode != 304 ||
 			c.Body != nil ||
 			c.BodyBytes != nil {
-			t.Fatalf("fresh midlleware response fail")
+			t.Fatalf("fresh middleware response fail")
 		}
 	})
 
@@ -84,7 +84,7 @@ func TestFresh(t *testing.T) {
 		if c.StatusCode == 304 ||
 			c.Body == nil ||
 			c.BodyBytes == nil {
-			t.Fatalf("fresh midlleware response fail")
+			t.Fatalf("fresh middleware response fail")
 		}
 	})
 
@@ -113,7 +113,7 @@ func TestFresh(t *testing.T) {
 		if c.StatusCode == 304 ||
 			c.Body == nil ||
 			c.BodyBytes == nil {
-			t.Fatalf("fresh midlleware response fail")
+			t.Fatalf("fresh middleware response fail")
 		}
 	})
 

@@ -56,7 +56,7 @@ func TestRealIP(t *testing.T) {
 func TestParam(t *testing.T) {
 	c := Context{}
 	if c.Param("name") != "" {
-		t.Fatalf("params is not inited, it should be nil")
+		t.Fatalf("params is not initialized, it should be nil")
 	}
 	c.Params = map[string]string{
 		"name": "tree.xie",
@@ -93,7 +93,7 @@ func TestQuery(t *testing.T) {
 func TestSetGet(t *testing.T) {
 	c := Context{}
 	if c.Get("name") != nil {
-		t.Fatalf("should return nil when store is not inited")
+		t.Fatalf("should return nil when store is not initialized")
 	}
 	c.Set("name", "tree.xie")
 	if c.Get("name").(string) != "tree.xie" {

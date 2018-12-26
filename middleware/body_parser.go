@@ -68,7 +68,7 @@ func NewBodyParser(config BodyParserConfig) cod.Handler {
 		isJSON := strings.HasPrefix(ct, jsonContentType)
 		isFormURLEncoded := strings.HasPrefix(ct, formURLEncodedContentType)
 
-		// 如果不是json也不是form url encoded，则跳过
+		// 如果不是 json 也不是 form url encoded，则跳过
 		if !isJSON && !isFormURLEncoded {
 			return c.Next()
 		}
@@ -94,12 +94,12 @@ func NewBodyParser(config BodyParserConfig) cod.Handler {
 		if limit > 0 && len(body) > limit {
 			err = &errors.HTTPError{
 				StatusCode: http.StatusBadRequest,
-				Message:    fmt.Sprintf("requst body is %d bytes, it should be <= %d", len(body), limit),
+				Message:    fmt.Sprintf("request body is %d bytes, it should be <= %d", len(body), limit),
 				Category:   errBodyParserCategory,
 			}
 			return
 		}
-		// 将form url encoded数据转化为json
+		// 将form url encoded 数据转化为json
 		if isFormURLEncoded {
 			values := strings.Split(string(body), "&")
 			data := make([]string, len(values))

@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"reflect"
+	"runtime"
 	"sync"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/vicanso/errors"
@@ -29,13 +32,25 @@ type (
 		Router  *httprouter.Router
 		Routers []*RouterInfo
 		// Middlewares middleware function
-		Middlewares     []Handler
-		errorLinsteners []ErrorLinstener
-		ErrorHandler    ErrorHandler
+		Middlewares    []Handler
+		errorListeners []ErrorListener
+		traceListeners []TraceListener
+		// ErrorHandler error handler
+		ErrorHandler ErrorHandler
 		// NotFoundHandler not found handler
 		NotFoundHandler http.HandlerFunc
-		GenerateID      GenerateID
-		ctxPool         sync.Pool
+		// GenerateID generate id function
+		GenerateID GenerateID
+		// EnableTrace enable trace
+		EnableTrace bool
+		// functionInfos the function address:name map
+		functionInfos map[uintptr]string
+		ctxPool       sync.Pool
+	}
+	// TraceInfo trace's info
+	TraceInfo struct {
+		Name     string        `json:"name,omitempty"`
+		Duration time.Duration `json:"duration,omitempty"`
 	}
 	// Group group router
 	Group struct {
@@ -49,8 +64,10 @@ type (
 	GenerateID func() string
 	// Handler cod handle function
 	Handler func(*Context) error
-	// ErrorLinstener error listener function
-	ErrorLinstener func(*Context, error)
+	// ErrorListener error listener function
+	ErrorListener func(*Context, error)
+	// TraceListener trace listener
+	TraceListener func(*Context, []*TraceInfo)
 )
 
 // New create a cod instance
@@ -66,8 +83,9 @@ func New() *Cod {
 // NewWithoutServer create a cod instance without server
 func NewWithoutServer() *Cod {
 	d := &Cod{
-		Router:      httprouter.New(),
-		Middlewares: make([]Handler, 0),
+		Router:        httprouter.New(),
+		Middlewares:   make([]Handler, 0),
+		functionInfos: make(map[uintptr]string),
 	}
 	d.ctxPool.New = func() interface{} {
 		return &Context{}
@@ -75,10 +93,26 @@ func NewWithoutServer() *Cod {
 	return d
 }
 
+// SetFunctionName set function name
+func (d *Cod) SetFunctionName(fn interface{}, name string) {
+	p := reflect.ValueOf(fn).Pointer()
+	d.functionInfos[p] = name
+}
+
+// GetFunctionName get function name
+func (d *Cod) GetFunctionName(fn interface{}) string {
+	p := reflect.ValueOf(fn).Pointer()
+	name := d.functionInfos[p]
+	if name != "" {
+		return name
+	}
+	return runtime.FuncForPC(p).Name()
+}
+
 // ListenAndServe listen and serve for http server
 func (d *Cod) ListenAndServe(addr string) error {
 	if d.Server == nil {
-		panic("server is not inited")
+		panic("server is not initialized")
 	}
 	d.Server.Addr = addr
 	return d.Server.ListenAndServe()
@@ -87,7 +121,7 @@ func (d *Cod) ListenAndServe(addr string) error {
 // Serve serve for http server
 func (d *Cod) Serve(l net.Listener) error {
 	if d.Server == nil {
-		panic("server is not inited")
+		panic("server is not initialized")
 	}
 	return d.Server.Serve(l)
 }
@@ -120,6 +154,11 @@ func (d *Cod) fillContext(c *Context, resp http.ResponseWriter, req *http.Reques
 
 // Handle add http handle function
 func (d *Cod) Handle(method, path string, handlerList ...Handler) {
+	for _, fn := range handlerList {
+		name := d.GetFunctionName(fn)
+		d.SetFunctionName(fn, name)
+	}
+
 	if d.Routers == nil {
 		d.Routers = make([]*RouterInfo, 0)
 	}
@@ -143,6 +182,10 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 		maxMid := len(mids)
 		maxNext := maxMid + len(handlerList)
 		index := -1
+		var traceInfos []*TraceInfo
+		if d.EnableTrace {
+			traceInfos = make([]*TraceInfo, maxNext)
+		}
 		c.Next = func() error {
 			index++
 			var fn Handler
@@ -156,7 +199,17 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			} else {
 				fn = mids[index]
 			}
-			return fn(c)
+			if traceInfos == nil {
+				return fn(c)
+			}
+			startedAt := time.Now()
+			i := index
+			err := fn(c)
+			traceInfos[i] = &TraceInfo{
+				Name:     d.GetFunctionName(fn),
+				Duration: time.Since(startedAt),
+			}
+			return err
 		}
 		err := c.Next()
 		if err != nil {
@@ -168,6 +221,9 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			if responseErr != nil {
 				d.EmitError(c, responseErr)
 			}
+		}
+		if traceInfos != nil {
+			d.EmitTrace(c, traceInfos)
 		}
 		d.ctxPool.Put(c)
 	})
@@ -231,6 +287,10 @@ func (d *Cod) Group(path string, handlerList ...Handler) (g *Group) {
 
 // Use add middleware function handle
 func (d *Cod) Use(handlerList ...Handler) {
+	for _, fn := range handlerList {
+		name := d.GetFunctionName(fn)
+		d.SetFunctionName(fn, name)
+	}
 	d.Middlewares = append(d.Middlewares, handlerList...)
 }
 
@@ -263,18 +323,34 @@ func (d *Cod) Error(c *Context, err error) {
 
 // EmitError emit error function
 func (d *Cod) EmitError(c *Context, err error) {
-	lns := d.errorLinsteners
+	lns := d.errorListeners
 	for _, ln := range lns {
 		ln(c, err)
 	}
 }
 
 // OnError on error function
-func (d *Cod) OnError(ln ErrorLinstener) {
-	if d.errorLinsteners == nil {
-		d.errorLinsteners = make([]ErrorLinstener, 0)
+func (d *Cod) OnError(ln ErrorListener) {
+	if d.errorListeners == nil {
+		d.errorListeners = make([]ErrorListener, 0)
 	}
-	d.errorLinsteners = append(d.errorLinsteners, ln)
+	d.errorListeners = append(d.errorListeners, ln)
+}
+
+// EmitTrace emit trace
+func (d *Cod) EmitTrace(c *Context, infos []*TraceInfo) {
+	lns := d.traceListeners
+	for _, ln := range lns {
+		ln(c, infos)
+	}
+}
+
+// OnTrace on trace function
+func (d *Cod) OnTrace(ln TraceListener) {
+	if d.traceListeners == nil {
+		d.traceListeners = make([]TraceListener, 0)
+	}
+	d.traceListeners = append(d.traceListeners, ln)
 }
 
 func (g *Group) merge(s2 []Handler) []Handler {
@@ -285,70 +361,70 @@ func (g *Group) merge(s2 []Handler) []Handler {
 	return fns
 }
 
-// GET add group http get method handl
+// GET add group http get method handler
 func (g *Group) GET(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.Cod.GET(p, fns...)
 }
 
-// POST add group http post method handl
+// POST add group http post method handler
 func (g *Group) POST(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.Cod.POST(p, fns...)
 }
 
-// PUT add group http put method handl
+// PUT add group http put method handler
 func (g *Group) PUT(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.Cod.PUT(p, fns...)
 }
 
-// PATCH add group http patch method handl
+// PATCH add group http patch method handler
 func (g *Group) PATCH(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.Cod.PATCH(p, fns...)
 }
 
-// DELETE add group http delete method handl
+// DELETE add group http delete method handler
 func (g *Group) DELETE(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.Cod.DELETE(p, fns...)
 }
 
-// HEAD add group http head method handl
+// HEAD add group http head method handler
 func (g *Group) HEAD(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.Cod.HEAD(p, fns...)
 }
 
-// OPTIONS add group http options method handl
+// OPTIONS add group http options method handler
 func (g *Group) OPTIONS(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.Cod.OPTIONS(p, fns...)
 }
 
-// TRACE add group http trace method handl
+// TRACE add group http trace method handler
 func (g *Group) TRACE(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.Cod.TRACE(p, fns...)
 }
 
-// ALL add group http all method handl
+// ALL add group http all method handler
 func (g *Group) ALL(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.Cod.ALL(p, fns...)
 }
 
-// GenerateETag generate etag
+// GenerateETag generate eTag
 func GenerateETag(buf []byte) string {
 	size := len(buf)
 	if size == 0 {

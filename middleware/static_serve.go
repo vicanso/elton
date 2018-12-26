@@ -135,7 +135,7 @@ func isCompressable(contentType string) bool {
 	return compressable
 }
 
-// NewStaticServe create a static servce middleware
+// NewStaticServe create a static serve middleware
 func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler {
 	if config.Path == "" {
 		panic("require static path")
@@ -198,8 +198,8 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 			return
 		}
 		if !config.DisableETag {
-			etag := cod.GenerateETag(buf)
-			c.SetHeader(cod.HeaderETag, etag)
+			eTag := cod.GenerateETag(buf)
+			c.SetHeader(cod.HeaderETag, eTag)
 		}
 		if !config.DisableLastModified {
 			fileInfo := staticFile.Stat(file)

@@ -300,6 +300,31 @@ func TestOnError(t *testing.T) {
 	d.EmitError(c, cutstomErr)
 }
 
+func TestOnTrace(t *testing.T) {
+	d := New()
+	d.EnableTrace = true
+	done := false
+	d.OnTrace(func(c *Context, infos []*TraceInfo) {
+		if len(infos) != 2 {
+			t.Fatalf("trace count should be 2")
+		}
+		done = true
+	})
+	d.Use(func(c *Context) error {
+		return c.Next()
+	})
+	d.GET("/users/me", func(c *Context) error {
+		return nil
+	})
+	req := httptest.NewRequest("GET", "/users/me", nil)
+	resp := httptest.NewRecorder()
+	d.ServeHTTP(resp, req)
+	if !done {
+		t.Fatalf("trace fail")
+	}
+
+}
+
 func TestGenerateID(t *testing.T) {
 	d := New()
 	randID := "abc"
@@ -318,12 +343,22 @@ func TestGenerateID(t *testing.T) {
 }
 
 func TestGenerateETag(t *testing.T) {
-	etag := GenerateETag([]byte(""))
-	if etag != `"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="` {
-		t.Fatalf("gen nil byte etag fail")
+	eTag := GenerateETag([]byte(""))
+	if eTag != `"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="` {
+		t.Fatalf("gen nil byte eTag fail")
 	}
-	etag = GenerateETag([]byte("abc"))
-	if etag != `"3-qZk-NkcGgWq6PiVxeFDCbJzQ2J0="` {
-		t.Fatalf("gen abc etag fail")
+	eTag = GenerateETag([]byte("abc"))
+	if eTag != `"3-qZk-NkcGgWq6PiVxeFDCbJzQ2J0="` {
+		t.Fatalf("gen abc eTag fail")
+	}
+}
+
+func TestGetSetFunctionName(t *testing.T) {
+	fn := func() {}
+	d := New()
+	fnName := "test"
+	d.SetFunctionName(fn, "test")
+	if d.GetFunctionName(fn) != fnName {
+		t.Fatalf("get function name fail")
 	}
 }

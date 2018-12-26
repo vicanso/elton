@@ -42,7 +42,7 @@ func NewResponder(config ResponderConfig) cod.Handler {
 			}
 			err = he
 		} else if c.StatusCode == 0 && c.Body == nil {
-			// 如果status code与body都为空，则为非法响应
+			// 如果status code 与 body 都为空，则为非法响应
 			err = cod.ErrInvalidResponse
 		}
 

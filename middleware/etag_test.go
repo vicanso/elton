@@ -17,10 +17,10 @@ func TestETag(t *testing.T) {
 		}
 		err := fn(c)
 		if err != nil {
-			t.Fatalf("etag middleware fail, %v", err)
+			t.Fatalf("eTag middleware fail, %v", err)
 		}
 		if c.Headers.Get(cod.HeaderETag) != "" {
-			t.Fatalf("no body should not gen etag")
+			t.Fatalf("no body should not gen eTag")
 		}
 	})
 
@@ -37,14 +37,14 @@ func TestETag(t *testing.T) {
 		}
 		err := fn(c)
 		if err != nil {
-			t.Fatalf("etag middleware fail, %v", err)
+			t.Fatalf("eTag middleware fail, %v", err)
 		}
 		if c.Headers.Get(cod.HeaderETag) != "" {
-			t.Fatalf("error status should not gen etag")
+			t.Fatalf("error status should not gen eTag")
 		}
 	})
 
-	t.Run("gen etag", func(t *testing.T) {
+	t.Run("gen eTag", func(t *testing.T) {
 		resp := httptest.NewRecorder()
 		c := cod.NewContext(resp, nil)
 		c.Next = func() error {
@@ -57,10 +57,10 @@ func TestETag(t *testing.T) {
 		}
 		err := fn(c)
 		if err != nil {
-			t.Fatalf("etag middleware fail, %v", err)
+			t.Fatalf("eTag middleware fail, %v", err)
 		}
 		if c.Headers.Get(cod.HeaderETag) != `"13-yo9YroUOjW1obRvVoXfrCiL2JGE="` {
-			t.Fatalf("gen etag fail")
+			t.Fatalf("gen eTag fail")
 		}
 	})
 }

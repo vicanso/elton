@@ -17,3 +17,13 @@ func BenchmarkRoutes(b *testing.B) {
 		d.ServeHTTP(resp, req)
 	}
 }
+
+func BenchmarkGetFunctionName(b *testing.B) {
+	b.ReportAllocs()
+	fn := func() {}
+	d := New()
+	d.SetFunctionName(fn, "test-fn")
+	for i := 0; i < b.N; i++ {
+		d.GetFunctionName(fn)
+	}
+}

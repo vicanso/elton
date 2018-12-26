@@ -35,13 +35,13 @@ func TestLogger(t *testing.T) {
 		config := LoggerConfig{
 			Format: "{host} {remote} {real-ip} {method} {path} {proto} {query} {scheme} {uri} {referer} {userAgent} {size} {size-human} {status} {payload-size} {payload-size-human}",
 			OnLog: func(log string, _ *cod.Context) {
-				if log != "aslant.iste 192.0.2.1:1234 192.0.2.1 GET / HTTP/1.1 a=1&b=2 HTTPS https://aslant.iste/?a=1&b=2 https://aslant.site/ test-agent 13 13B 200 12 12B" {
+				if log != "aslant.site 192.0.2.1:1234 192.0.2.1 GET / HTTP/1.1 a=1&b=2 HTTPS https://aslant.site/?a=1&b=2 https://aslant.site/ test-agent 13 13B 200 12 12B" {
 					t.Fatalf("log format fail")
 				}
 			},
 		}
 		m := NewLogger(config)
-		req := httptest.NewRequest("GET", "https://aslant.iste/?a=1&b=2", nil)
+		req := httptest.NewRequest("GET", "https://aslant.site/?a=1&b=2", nil)
 		req.Header.Set("Referer", "https://aslant.site/")
 		req.Header.Set("User-Agent", "test-agent")
 		resp := httptest.NewRecorder()
