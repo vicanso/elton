@@ -11,5 +11,5 @@ type (
 
 // DefaultSkipper default skiper function(not skip)
 func DefaultSkipper(c *cod.Context) bool {
-	return false
+	return c.Committed
 }
