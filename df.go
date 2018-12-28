@@ -61,6 +61,8 @@ const (
 	HeaderIfModifiedSince = "If-Modified-Since"
 	// HeaderIfNoneMatch if none match
 	HeaderIfNoneMatch = "If-None-Match"
+	// HeaderAcceptEncoding accept encoding
+	HeaderAcceptEncoding = "Accept-Encoding"
 
 	// MinRedirectCode min redirect code
 	MinRedirectCode = 300

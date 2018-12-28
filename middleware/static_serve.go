@@ -1,8 +1,6 @@
 package middleware
 
 import (
-	"bytes"
-	"compress/gzip"
 	"io/ioutil"
 	"mime"
 	"net/http"
@@ -22,7 +20,7 @@ type (
 		Get(string) ([]byte, error)
 		Stat(string) os.FileInfo
 	}
-	// StaticServeConfig static servce config
+	// StaticServeConfig static serve config
 	StaticServeConfig struct {
 		Path                string
 		Mount               string
@@ -33,8 +31,6 @@ type (
 		DisableETag         bool
 		DisableLastModified bool
 		NotFoundNext        bool
-		Gzip                bool
-		CompressMinLength   int
 		Skipper             Skipper
 	}
 	// FS file system
@@ -51,12 +47,6 @@ var (
 	errNotAllowQueryString = getStaticServeError("static serve not allow query string", http.StatusBadRequest)
 	errNotFound            = getStaticServeError("static file not found", http.StatusNotFound)
 	errOutOfPath           = getStaticServeError("out of path", http.StatusBadRequest)
-
-	defaultCompressTypes = []string{
-		"text",
-		"javascript",
-		"json",
-	}
 )
 
 func (fs *FS) outOfPath(file string) bool {
@@ -105,34 +95,6 @@ func getStaticServeError(message string, statusCode int) *errors.HTTPError {
 		Message:    message,
 		Category:   errStaticServeCategory,
 	}
-}
-
-// doGzip 对数据压缩
-func doGzip(buf []byte, level int) ([]byte, error) {
-	var b bytes.Buffer
-	if level <= 0 {
-		level = gzip.DefaultCompression
-	}
-	w, _ := gzip.NewWriterLevel(&b, level)
-	_, err := w.Write(buf)
-	if err != nil {
-		return nil, err
-	}
-	w.Close()
-	return b.Bytes(), nil
-}
-
-func isCompressable(contentType string) bool {
-	compressable := false
-	for _, v := range defaultCompressTypes {
-		if compressable {
-			break
-		}
-		if strings.Contains(contentType, v) {
-			compressable = true
-		}
-	}
-	return compressable
 }
 
 // NewStaticServe create a static serve middleware
@@ -208,17 +170,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 				c.SetHeader(cod.HeaderLastModified, lmd)
 			}
 		}
-		if config.Gzip &&
-			len(buf) >= config.CompressMinLength &&
-			isCompressable(contentType) {
-			gzipBuf, e := doGzip(buf, 0)
-			// 如果压缩成功，则使用压缩数据
-			// 失败则忽略
-			if e == nil {
-				buf = gzipBuf
-				c.SetHeader(cod.HeaderContentEncoding, "gzip")
-			}
-		}
+
 		for k, v := range config.Header {
 			c.SetHeader(k, v)
 		}

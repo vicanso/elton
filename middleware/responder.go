@@ -30,6 +30,9 @@ func NewResponder(config ResponderConfig) cod.Handler {
 			return c.Next()
 		}
 		e := c.Next()
+		if c.BodyBytes != nil {
+			return e
+		}
 		var err *errors.HTTPError
 		if e != nil {
 			// 如果出错，尝试转换为HTTPError

@@ -148,10 +148,8 @@ func TestStaticServe(t *testing.T) {
 
 	t.Run("not compresss", func(t *testing.T) {
 		fn := NewStaticServe(staticFile, StaticServeConfig{
-			Path:              staticPath,
-			Mount:             "/static",
-			Gzip:              true,
-			CompressMinLength: 1,
+			Path:  staticPath,
+			Mount: "/static",
 		})
 		req := httptest.NewRequest("GET", "/static/banner.jpg", nil)
 		res := httptest.NewRecorder()
@@ -167,10 +165,8 @@ func TestStaticServe(t *testing.T) {
 
 	t.Run("get index.html", func(t *testing.T) {
 		fn := NewStaticServe(staticFile, StaticServeConfig{
-			Path:              staticPath,
-			Mount:             "/static",
-			Gzip:              true,
-			CompressMinLength: 1,
+			Path:  staticPath,
+			Mount: "/static",
 		})
 		req := httptest.NewRequest("GET", "/static/index.html?a=1", nil)
 		res := httptest.NewRecorder()
@@ -185,11 +181,10 @@ func TestStaticServe(t *testing.T) {
 		h := c.Headers
 		if h.Get(cod.HeaderETag) != `"10-FKjW3bSjaJvr_QYzQcHNFRn-rxc="` ||
 			h.Get(cod.HeaderLastModified) == "" ||
-			h.Get(cod.HeaderContentEncoding) != "gzip" ||
 			h.Get("Content-Type") != "text/html; charset=utf-8" {
 			t.Fatalf("set header fail")
 		}
-		if len(c.Body.([]byte)) != 37 {
+		if len(c.Body.([]byte)) != 16 {
 			t.Fatalf("response body fail")
 		}
 	})
