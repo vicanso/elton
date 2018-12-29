@@ -121,13 +121,17 @@ func (c *Context) Set(key string, value interface{}) {
 	c.m[key] = value
 }
 
-// Header get from http request header
-func (c *Context) Header(key string) string {
+// GetRequestHeader get from http request header
+func (c *Context) GetRequestHeader(key string) string {
 	return c.Request.Header.Get(key)
 }
 
 // SetHeader set header to the http response
 func (c *Context) SetHeader(key, value string) {
+	if value == "" {
+		c.Headers.Del(key)
+		return
+	}
 	c.Headers.Set(key, value)
 }
 

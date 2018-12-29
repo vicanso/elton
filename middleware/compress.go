@@ -73,7 +73,7 @@ func NewCompresss(config CompressConfig) cod.Handler {
 			return
 		}
 
-		acceptEncoding := c.Header(cod.HeaderAcceptEncoding)
+		acceptEncoding := c.GetRequestHeader(cod.HeaderAcceptEncoding)
 		// 如果请求端不接受gzip，则返回
 		if !strings.Contains(acceptEncoding, gzipCompress) {
 			return

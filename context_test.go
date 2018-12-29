@@ -108,7 +108,7 @@ func TestGetSetHeader(t *testing.T) {
 	c := NewContext(resp, req)
 
 	t.Run("get header from request", func(t *testing.T) {
-		if c.Header("X-Token") != "abc" {
+		if c.GetRequestHeader("X-Token") != "abc" {
 			t.Fatalf("get header from request fail")
 		}
 	})
