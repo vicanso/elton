@@ -225,7 +225,7 @@ func TestCacheControl(t *testing.T) {
 		resp := httptest.NewRecorder()
 		c := NewContext(resp, nil)
 		c.NoCache()
-		checkCacheControl(resp, "no-cache, max-age=0", t)
+		checkCacheControl(resp, "no-cache", t)
 	})
 
 	t.Run("no store", func(t *testing.T) {

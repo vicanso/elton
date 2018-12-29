@@ -186,7 +186,7 @@ func (c *Context) NotModified() {
 
 // NoCache set http response no cache
 func (c *Context) NoCache() {
-	c.SetHeader(HeaderCacheControl, "no-cache, max-age=0")
+	c.SetHeader(HeaderCacheControl, "no-cache")
 }
 
 // NoStore set http response no store
