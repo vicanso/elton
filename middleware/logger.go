@@ -191,7 +191,7 @@ func format(c *cod.Context, tags []*Tag, startedAt time.Time) string {
 		case requestHeader:
 			return c.Request.Header.Get(tag.data)
 		case responseHeader:
-			return c.Headers.Get(tag.data)
+			return c.GetHeader(tag.data)
 		case referer:
 			return c.Request.Referer()
 		case userAgent:

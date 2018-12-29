@@ -19,7 +19,7 @@ func TestETag(t *testing.T) {
 		if err != nil {
 			t.Fatalf("eTag middleware fail, %v", err)
 		}
-		if c.Headers.Get(cod.HeaderETag) != "" {
+		if c.GetHeader(cod.HeaderETag) != "" {
 			t.Fatalf("no body should not gen eTag")
 		}
 	})
@@ -39,7 +39,7 @@ func TestETag(t *testing.T) {
 		if err != nil {
 			t.Fatalf("eTag middleware fail, %v", err)
 		}
-		if c.Headers.Get(cod.HeaderETag) != "" {
+		if c.GetHeader(cod.HeaderETag) != "" {
 			t.Fatalf("error status should not gen eTag")
 		}
 	})
@@ -59,7 +59,7 @@ func TestETag(t *testing.T) {
 		if err != nil {
 			t.Fatalf("eTag middleware fail, %v", err)
 		}
-		if c.Headers.Get(cod.HeaderETag) != `"13-yo9YroUOjW1obRvVoXfrCiL2JGE="` {
+		if c.GetHeader(cod.HeaderETag) != `"13-yo9YroUOjW1obRvVoXfrCiL2JGE="` {
 			t.Fatalf("gen eTag fail")
 		}
 	})

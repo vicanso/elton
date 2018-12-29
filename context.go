@@ -126,6 +126,16 @@ func (c *Context) GetRequestHeader(key string) string {
 	return c.Request.Header.Get(key)
 }
 
+// Header get headers of http response
+func (c *Context) Header() http.Header {
+	return c.Headers
+}
+
+// GetHeader get header from http response
+func (c *Context) GetHeader(key string) string {
+	return c.Headers.Get(key)
+}
+
 // SetHeader set header to the http response
 func (c *Context) SetHeader(key, value string) {
 	if value == "" {

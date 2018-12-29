@@ -158,7 +158,7 @@ func TestStaticServe(t *testing.T) {
 			return nil
 		}
 		err := fn(c)
-		if err != nil || c.Headers.Get(cod.HeaderContentEncoding) == "gzip" {
+		if err != nil || c.GetHeader(cod.HeaderContentEncoding) == "gzip" {
 			t.Fatalf("serve image fail, %v", err)
 		}
 	})
@@ -178,10 +178,9 @@ func TestStaticServe(t *testing.T) {
 		if err != nil {
 			t.Fatalf("serve index.html fail, %v", err)
 		}
-		h := c.Headers
-		if h.Get(cod.HeaderETag) != `"10-FKjW3bSjaJvr_QYzQcHNFRn-rxc="` ||
-			h.Get(cod.HeaderLastModified) == "" ||
-			h.Get("Content-Type") != "text/html; charset=utf-8" {
+		if c.GetHeader(cod.HeaderETag) != `"10-FKjW3bSjaJvr_QYzQcHNFRn-rxc="` ||
+			c.GetHeader(cod.HeaderLastModified) == "" ||
+			c.GetHeader("Content-Type") != "text/html; charset=utf-8" {
 			t.Fatalf("set header fail")
 		}
 		if len(c.Body.([]byte)) != 16 {
@@ -203,7 +202,7 @@ func TestStaticServe(t *testing.T) {
 			return nil
 		}
 		err := fn(c)
-		if err != nil || c.Headers.Get("X-IDC") != "GZ" {
+		if err != nil || c.GetHeader("X-IDC") != "GZ" {
 			t.Fatalf("set custom header fail, %v", err)
 		}
 	})
@@ -221,7 +220,7 @@ func TestStaticServe(t *testing.T) {
 			return nil
 		}
 		err := fn(c)
-		if err != nil || c.Headers.Get(cod.HeaderCacheControl) != "public, max-age=86400, s-maxage=300" {
+		if err != nil || c.GetHeader(cod.HeaderCacheControl) != "public, max-age=86400, s-maxage=300" {
 			t.Fatalf("set max age header fail, %v", err)
 		}
 	})

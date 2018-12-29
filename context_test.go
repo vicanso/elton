@@ -115,8 +115,23 @@ func TestGetSetHeader(t *testing.T) {
 
 	t.Run("set header to the response", func(t *testing.T) {
 		c.SetHeader("X-Response-Id", "1")
-		if c.Response.Header().Get("X-Response-Id") != "1" {
+		if c.GetHeader("X-Response-Id") != "1" {
 			t.Fatalf("set header to response fail")
+		}
+	})
+
+	t.Run("get header from response", func(t *testing.T) {
+		idc := "GZ"
+		key := "X-IDC"
+		c.SetHeader(key, idc)
+		if c.GetHeader(key) != idc {
+			t.Fatalf("get header from response fail")
+		}
+	})
+
+	t.Run("get header of response", func(t *testing.T) {
+		if c.Header() == nil {
+			t.Fatalf("header function fail")
 		}
 	})
 }
@@ -150,7 +165,7 @@ func TestCookie(t *testing.T) {
 			HttpOnly: true,
 		}
 		c.SetCookie(cookie)
-		if c.Response.Header().Get(HeaderSetCookie) != "a=b; Path=/; Max-Age=300; HttpOnly; Secure" {
+		if c.GetHeader(HeaderSetCookie) != "a=b; Path=/; Max-Age=300; HttpOnly; Secure" {
 			t.Fatalf("set cookie fail")
 		}
 	})
@@ -169,7 +184,7 @@ func TestRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("redirect fail, %v", err)
 	}
-	if c.Response.Header()[HeaderLocation][0] != url {
+	if c.GetHeader(HeaderLocation) != url {
 		t.Fatalf("set location fail")
 	}
 }

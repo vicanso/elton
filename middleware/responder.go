@@ -49,19 +49,18 @@ func NewResponder(config ResponderConfig) cod.Handler {
 			err = cod.ErrInvalidResponse
 		}
 
-		respHeader := c.Headers
 		ct := cod.HeaderContentType
 
 		// 从出错中获取响应数据，响应状态码
 		if err != nil {
 			c.StatusCode = err.StatusCode
 			c.Body, _ = json.Marshal(err)
-			respHeader.Set(ct, cod.MIMEApplicationJSON)
+			c.SetHeader(ct, cod.MIMEApplicationJSON)
 		}
 
 		hadContentType := false
 		// 判断是否已设置响应头的Content-Type
-		if respHeader.Get(ct) != "" {
+		if c.GetHeader(ct) != "" {
 			hadContentType = true
 		}
 
@@ -75,12 +74,12 @@ func NewResponder(config ResponderConfig) cod.Handler {
 			switch c.Body.(type) {
 			case string:
 				if !hadContentType {
-					respHeader.Set(ct, cod.MIMETextPlain)
+					c.SetHeader(ct, cod.MIMETextPlain)
 					body = []byte(c.Body.(string))
 				}
 			case []byte:
 				if !hadContentType {
-					respHeader.Set(ct, cod.MIMEBinary)
+					c.SetHeader(ct, cod.MIMEBinary)
 				}
 				body = c.Body.([]byte)
 			default:
@@ -91,7 +90,7 @@ func NewResponder(config ResponderConfig) cod.Handler {
 					body = []byte(err.Error())
 				} else {
 					if !hadContentType {
-						respHeader.Set(ct, cod.MIMEApplicationJSON)
+						c.SetHeader(ct, cod.MIMEApplicationJSON)
 					}
 					body = buf
 				}

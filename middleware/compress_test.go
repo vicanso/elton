@@ -34,7 +34,7 @@ func TestCompress(t *testing.T) {
 		req.Header.Set(cod.HeaderAcceptEncoding, "gzip")
 		resp := httptest.NewRecorder()
 		c := cod.NewContext(resp, req)
-		c.Headers.Set(cod.HeaderContentType, "text/html")
+		c.SetHeader(cod.HeaderContentType, "text/html")
 		c.BodyBytes = []byte("<html><body>" + randomString(8192) + "</body></html>")
 		originalSize := len(c.BodyBytes)
 		done := false
@@ -47,7 +47,7 @@ func TestCompress(t *testing.T) {
 			t.Fatalf("compress middleware fail, %v", err)
 		}
 		if len(c.BodyBytes) >= originalSize ||
-			c.Headers.Get(cod.HeaderContentEncoding) != "gzip" {
+			c.GetHeader(cod.HeaderContentEncoding) != "gzip" {
 			t.Fatalf("compress fail")
 		}
 	})
@@ -62,7 +62,7 @@ func TestCompress(t *testing.T) {
 		}
 		body := []byte(randomString(4096))
 		c.BodyBytes = body
-		c.Headers.Set(cod.HeaderContentEncoding, "gzip")
+		c.SetHeader(cod.HeaderContentEncoding, "gzip")
 		err := fn(c)
 		if err != nil {
 			t.Fatalf("compress fail, %v", err)
@@ -89,7 +89,7 @@ func TestCompress(t *testing.T) {
 			t.Fatalf("compress fail, %v", err)
 		}
 		if !bytes.Equal(c.BodyBytes, body) ||
-			c.Headers.Get(cod.HeaderContentEncoding) != "" {
+			c.GetHeader(cod.HeaderContentEncoding) != "" {
 			t.Fatalf("less than min length should not be compress")
 		}
 	})
@@ -101,7 +101,7 @@ func TestCompress(t *testing.T) {
 		req.Header.Set(cod.HeaderAcceptEncoding, "gzip")
 		resp := httptest.NewRecorder()
 		c := cod.NewContext(resp, req)
-		c.Headers.Set(cod.HeaderContentType, "image/jpeg")
+		c.SetHeader(cod.HeaderContentType, "image/jpeg")
 		c.Next = func() error {
 			return nil
 		}
@@ -112,7 +112,7 @@ func TestCompress(t *testing.T) {
 			t.Fatalf("compress fail, %v", err)
 		}
 		if !bytes.Equal(c.BodyBytes, body) ||
-			c.Headers.Get(cod.HeaderContentEncoding) != "" {
+			c.GetHeader(cod.HeaderContentEncoding) != "" {
 			t.Fatalf("image should not be compress")
 		}
 	})
@@ -123,7 +123,7 @@ func TestCompress(t *testing.T) {
 		req := httptest.NewRequest("GET", "/users/me", nil)
 		resp := httptest.NewRecorder()
 		c := cod.NewContext(resp, req)
-		c.Headers.Set(cod.HeaderContentType, "text/html")
+		c.SetHeader(cod.HeaderContentType, "text/html")
 		c.Next = func() error {
 			return nil
 		}
@@ -134,7 +134,7 @@ func TestCompress(t *testing.T) {
 			t.Fatalf("compress fail, %v", err)
 		}
 		if !bytes.Equal(c.BodyBytes, body) ||
-			c.Headers.Get(cod.HeaderContentEncoding) != "" {
+			c.GetHeader(cod.HeaderContentEncoding) != "" {
 			t.Fatalf("not accept gzip should not be compress")
 		}
 	})
@@ -144,7 +144,7 @@ func TestCompress(t *testing.T) {
 			Compresss: func(c *cod.Context) (done bool) {
 				// 假设做了 brotli 压缩
 				c.BodyBytes = []byte("abcd")
-				c.Headers.Set(cod.HeaderContentEncoding, "br")
+				c.SetHeader(cod.HeaderContentEncoding, "br")
 				fmt.Println(c.BodyBytes)
 				return true
 			},
@@ -153,7 +153,7 @@ func TestCompress(t *testing.T) {
 		req := httptest.NewRequest("GET", "/users/me", nil)
 		resp := httptest.NewRecorder()
 		c := cod.NewContext(resp, req)
-		c.Headers.Set(cod.HeaderContentType, "text/html")
+		c.SetHeader(cod.HeaderContentType, "text/html")
 		c.BodyBytes = []byte("<html><body>" + randomString(8192) + "</body></html>")
 		done := false
 		c.Next = func() error {
@@ -165,7 +165,7 @@ func TestCompress(t *testing.T) {
 			t.Fatalf("compress middleware fail, %v", err)
 		}
 		if len(c.BodyBytes) != 4 ||
-			c.Headers.Get(cod.HeaderContentEncoding) != "br" {
+			c.GetHeader(cod.HeaderContentEncoding) != "br" {
 			t.Fatalf("custom compress fail")
 		}
 	})
