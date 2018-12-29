@@ -122,6 +122,14 @@ func (c *Context) Set(key string, value interface{}) {
 	c.m[key] = value
 }
 
+// Get get the value from context
+func (c *Context) Get(key string) interface{} {
+	if c.m == nil {
+		return nil
+	}
+	return c.m[key]
+}
+
 // GetRequestHeader get from http request header
 func (c *Context) GetRequestHeader(key string) string {
 	return c.Request.Header.Get(key)
@@ -160,14 +168,6 @@ func (c *Context) Cookie(name string) (*http.Cookie, error) {
 func (c *Context) SetCookie(cookie *http.Cookie) error {
 	c.AddHeader(HeaderSetCookie, cookie.String())
 	return nil
-}
-
-// Get get the value from context
-func (c *Context) Get(key string) interface{} {
-	if c.m == nil {
-		return nil
-	}
-	return c.m[key]
 }
 
 // NoContent no content for response

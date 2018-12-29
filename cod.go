@@ -227,6 +227,11 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			}
 		}
 		if traceInfos != nil {
+			// 如果非所有handler都执行了
+			// 则裁剪数组
+			if index < len(traceInfos)-1 {
+				traceInfos = traceInfos[:index+1]
+			}
 			d.EmitTrace(c, traceInfos)
 		}
 		d.ctxPool.Put(c)
