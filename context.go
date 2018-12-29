@@ -11,10 +11,14 @@ import (
 type (
 	// Context cod context
 	Context struct {
-		Request   *http.Request
-		Response  http.ResponseWriter
-		Headers   http.Header
+		Request  *http.Request
+		Response http.ResponseWriter
+		// Headers http response's header
+		Headers http.Header
+		// Committed commit the data to response
 		Committed bool
+		// IgnoreNext ignore next middleware function
+		IgnoreNext bool
 		// ID context id
 		ID string
 		// Route route path

@@ -187,6 +187,10 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			traceInfos = make([]*TraceInfo, maxNext)
 		}
 		c.Next = func() error {
+			// 如果设置为ignore next，则后续的所有handler都无需要执行
+			if c.IgnoreNext {
+				return nil
+			}
 			index++
 			var fn Handler
 			// 如果调用过多的next，则会导致panic
