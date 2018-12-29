@@ -2,16 +2,45 @@ package cod
 
 import (
 	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestListenAndServe(t *testing.T) {
 	d := New()
 	go d.ListenAndServe("")
+	time.Sleep(10 * time.Millisecond)
+	req := httptest.NewRequest("GET", "/users/me", nil)
+	resp := httptest.NewRecorder()
+	d.ServeHTTP(resp, req)
+	if resp.Code != http.StatusNotFound {
+		t.Fatalf("status code should be 404")
+	}
 	err := d.Close()
+	if err != nil {
+		t.Fatalf("close server fail, %v", err)
+	}
+}
+
+func TestServe(t *testing.T) {
+	d := New()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("serve fail, %v", err)
+	}
+	go d.Serve(ln)
+	time.Sleep(10 * time.Millisecond)
+	req := httptest.NewRequest("GET", "/users/me", nil)
+	resp := httptest.NewRecorder()
+	d.ServeHTTP(resp, req)
+	if resp.Code != http.StatusNotFound {
+		t.Fatalf("status code should be 404")
+	}
+	err = d.Close()
 	if err != nil {
 		t.Fatalf("close server fail, %v", err)
 	}
@@ -21,6 +50,32 @@ func TestNewWithoutServer(t *testing.T) {
 	d := NewWithoutServer()
 	if d.Server != nil {
 		t.Fatalf("new without server fail")
+	}
+}
+
+func TestIngoreNext(t *testing.T) {
+	d := New()
+	pass := false
+
+	d.Use(func(c *Context) error {
+		pass = true
+		c.IgnoreNext = true
+		return c.Next()
+	})
+
+	d.Use(func(c *Context) error {
+		pass = false
+		return c.Next()
+	})
+	d.GET("/", func(c *Context) error {
+		pass = false
+		return nil
+	})
+	req := httptest.NewRequest("GET", "/", nil)
+	resp := httptest.NewRecorder()
+	d.ServeHTTP(resp, req)
+	if !pass || resp.Code != 0 {
+		t.Fatalf("ingore next fail")
 	}
 }
 

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	Errors "errors"
 	"net/http/httptest"
 	"testing"
 
@@ -47,7 +48,7 @@ func TestResponder(t *testing.T) {
 		d := cod.New()
 		d.Use(m)
 		d.GET("/", func(c *cod.Context) error {
-			return errors.New("abc")
+			return Errors.New("abc")
 		})
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
