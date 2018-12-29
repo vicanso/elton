@@ -48,6 +48,7 @@ func (c *Context) Reset() {
 	c.Response = nil
 	c.Headers = nil
 	c.Committed = false
+	c.IgnoreNext = false
 	c.ID = ""
 	c.Route = ""
 	c.Next = nil
