@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"fmt"
 	"math/rand"
 	"net/http/httptest"
 	"testing"
@@ -45,7 +46,8 @@ func TestCompress(t *testing.T) {
 		if err != nil || !done {
 			t.Fatalf("compress middleware fail, %v", err)
 		}
-		if len(c.BodyBytes) >= originalSize {
+		if len(c.BodyBytes) >= originalSize ||
+			c.Headers.Get(cod.HeaderContentEncoding) != "gzip" {
 			t.Fatalf("compress fail")
 		}
 	})
@@ -134,6 +136,37 @@ func TestCompress(t *testing.T) {
 		if !bytes.Equal(c.BodyBytes, body) ||
 			c.Headers.Get(cod.HeaderContentEncoding) != "" {
 			t.Fatalf("not accept gzip should not be compress")
+		}
+	})
+
+	t.Run("custom compress", func(t *testing.T) {
+		fn := NewCompresss(CompressConfig{
+			Compresss: func(c *cod.Context) (done bool) {
+				// 假设做了 brotli 压缩
+				c.BodyBytes = []byte("abcd")
+				c.Headers.Set(cod.HeaderContentEncoding, "br")
+				fmt.Println(c.BodyBytes)
+				return true
+			},
+		})
+
+		req := httptest.NewRequest("GET", "/users/me", nil)
+		resp := httptest.NewRecorder()
+		c := cod.NewContext(resp, req)
+		c.Headers.Set(cod.HeaderContentType, "text/html")
+		c.BodyBytes = []byte("<html><body>" + randomString(8192) + "</body></html>")
+		done := false
+		c.Next = func() error {
+			done = true
+			return nil
+		}
+		err := fn(c)
+		if err != nil || !done {
+			t.Fatalf("compress middleware fail, %v", err)
+		}
+		if len(c.BodyBytes) != 4 ||
+			c.Headers.Get(cod.HeaderContentEncoding) != "br" {
+			t.Fatalf("custom compress fail")
 		}
 	})
 }

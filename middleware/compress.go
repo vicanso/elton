@@ -17,6 +17,8 @@ const (
 )
 
 type (
+	// CustomCompress custom compress function
+	CustomCompress func(*cod.Context) bool
 	// CompressConfig compress config
 	CompressConfig struct {
 		// Level 压缩率级别
@@ -24,8 +26,9 @@ type (
 		// MinLength 最小压缩长度
 		MinLength int
 		// Checker 校验数据是否可压缩
-		Checker *regexp.Regexp
-		Skipper Skipper
+		Checker   *regexp.Regexp
+		Skipper   Skipper
+		Compresss CustomCompress
 	}
 )
 
@@ -43,6 +46,7 @@ func NewCompresss(config CompressConfig) cod.Handler {
 	if checker == nil {
 		checker = defaultCompressRegexp
 	}
+	customCompress := config.Compresss
 	return func(c *cod.Context) (err error) {
 		if skiper(c) {
 			return c.Next()
@@ -64,12 +68,16 @@ func NewCompresss(config CompressConfig) cod.Handler {
 			return
 		}
 
+		// 如果有自定义压缩函数，并处理结果为已完成
+		if customCompress != nil && customCompress(c) {
+			return
+		}
+
 		acceptEncoding := c.Header(cod.HeaderAcceptEncoding)
 		// 如果请求端不接受gzip，则返回
 		if !strings.Contains(acceptEncoding, gzipCompress) {
 			return
 		}
-
 		gzipBuf, e := doGzip(buf, config.Level)
 		// 如果压缩成功，则使用压缩数据
 		// 失败则忽略
