@@ -220,7 +220,9 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			d.EmitError(c, err)
 			d.Error(c, err)
 		} else if !c.Committed {
-			resp.WriteHeader(c.StatusCode)
+			if c.StatusCode != 0 {
+				resp.WriteHeader(c.StatusCode)
+			}
 			_, responseErr := resp.Write(c.BodyBytes)
 			if responseErr != nil {
 				d.EmitError(c, responseErr)
