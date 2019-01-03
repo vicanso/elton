@@ -117,7 +117,7 @@ func (c *Context) Redirect(code int, url string) (err error) {
 // Set store the value in the context
 func (c *Context) Set(key string, value interface{}) {
 	if c.m == nil {
-		c.m = make(map[string]interface{})
+		c.m = make(map[string]interface{}, 5)
 	}
 	c.m[key] = value
 }

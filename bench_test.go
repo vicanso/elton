@@ -27,3 +27,21 @@ func BenchmarkGetFunctionName(b *testing.B) {
 		d.GetFunctionName(fn)
 	}
 }
+
+func BenchmarkContextGet(b *testing.B) {
+	b.ReportAllocs()
+	key := "id"
+	c := NewContext(nil, nil)
+
+	for i := 0; i < b.N; i++ {
+		c.Set(key, "abc")
+		_ = c.Get(key).(string)
+	}
+}
+
+func BenchmarkContextNewMap(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_ = make(map[string]interface{})
+	}
+}

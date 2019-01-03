@@ -74,7 +74,7 @@ func TestIngoreNext(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	resp := httptest.NewRecorder()
 	d.ServeHTTP(resp, req)
-	if !pass || resp.Code != 0 {
+	if !pass {
 		t.Fatalf("ingore next fail")
 	}
 }
