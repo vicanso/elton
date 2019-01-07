@@ -98,7 +98,7 @@ func TestHandle(t *testing.T) {
 			return c.Next()
 		})
 		userGroupPath := "/users"
-		userGroup := d.Group(userGroupPath, func(c *Context) error {
+		userGroup := NewGroup(userGroupPath, func(c *Context) error {
 			if !strings.HasPrefix(c.Request.URL.Path, userGroupPath) {
 				t.Fatalf("group handle fail")
 			}
@@ -116,6 +116,7 @@ func TestHandle(t *testing.T) {
 			doneCount++
 			return
 		})
+		d.AddGroup(userGroup)
 		for _, method := range methods {
 			req := httptest.NewRequest(method, "https://aslant.site/users/me", nil)
 			resp := httptest.NewRecorder()
@@ -126,10 +127,10 @@ func TestHandle(t *testing.T) {
 		}
 	})
 
-	sysGroup := d.Group("/system")
 	route := "/system/info"
 	t.Run("get", func(t *testing.T) {
 		done := false
+		sysGroup := NewGroup("/system")
 		sysGroup.GET("/info", func(c *Context) (err error) {
 			if c.Route != route {
 				t.Fatalf("route param fail")
@@ -137,6 +138,7 @@ func TestHandle(t *testing.T) {
 			done = true
 			return
 		})
+		d.AddGroup(sysGroup)
 		req := httptest.NewRequest("GET", "https://aslant.site/system/info", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
@@ -147,6 +149,7 @@ func TestHandle(t *testing.T) {
 
 	t.Run("post", func(t *testing.T) {
 		done := false
+		sysGroup := NewGroup("/system")
 		sysGroup.POST("/info", func(c *Context) (err error) {
 			if c.Route != route {
 				t.Fatalf("route param fail")
@@ -154,6 +157,7 @@ func TestHandle(t *testing.T) {
 			done = true
 			return
 		})
+		d.AddGroup(sysGroup)
 		req := httptest.NewRequest("POST", "https://aslant.site/system/info", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
@@ -164,6 +168,7 @@ func TestHandle(t *testing.T) {
 
 	t.Run("put", func(t *testing.T) {
 		done := false
+		sysGroup := NewGroup("/system")
 		sysGroup.PUT("/info", func(c *Context) (err error) {
 			if c.Route != route {
 				t.Fatalf("route param fail")
@@ -171,6 +176,7 @@ func TestHandle(t *testing.T) {
 			done = true
 			return
 		})
+		d.AddGroup(sysGroup)
 		req := httptest.NewRequest("PUT", "https://aslant.site/system/info", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
@@ -181,6 +187,7 @@ func TestHandle(t *testing.T) {
 
 	t.Run("patch", func(t *testing.T) {
 		done := false
+		sysGroup := NewGroup("/system")
 		sysGroup.PATCH("/info", func(c *Context) (err error) {
 			if c.Route != route {
 				t.Fatalf("route param fail")
@@ -188,6 +195,7 @@ func TestHandle(t *testing.T) {
 			done = true
 			return
 		})
+		d.AddGroup(sysGroup)
 		req := httptest.NewRequest("PATCH", "https://aslant.site/system/info", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
@@ -198,6 +206,7 @@ func TestHandle(t *testing.T) {
 
 	t.Run("delete", func(t *testing.T) {
 		done := false
+		sysGroup := NewGroup("/system")
 		sysGroup.DELETE("/info", func(c *Context) (err error) {
 			if c.Route != route {
 				t.Fatalf("route param fail")
@@ -205,6 +214,7 @@ func TestHandle(t *testing.T) {
 			done = true
 			return
 		})
+		d.AddGroup(sysGroup)
 		req := httptest.NewRequest("DELETE", "https://aslant.site/system/info", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
@@ -215,6 +225,7 @@ func TestHandle(t *testing.T) {
 
 	t.Run("head", func(t *testing.T) {
 		done := false
+		sysGroup := NewGroup("/system")
 		sysGroup.HEAD("/info", func(c *Context) (err error) {
 			if c.Route != route {
 				t.Fatalf("route param fail")
@@ -222,6 +233,7 @@ func TestHandle(t *testing.T) {
 			done = true
 			return
 		})
+		d.AddGroup(sysGroup)
 		req := httptest.NewRequest("HEAD", "https://aslant.site/system/info", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
@@ -232,6 +244,7 @@ func TestHandle(t *testing.T) {
 
 	t.Run("options", func(t *testing.T) {
 		done := false
+		sysGroup := NewGroup("/system")
 		sysGroup.OPTIONS("/info", func(c *Context) (err error) {
 			if c.Route != route {
 				t.Fatalf("route param fail")
@@ -239,6 +252,7 @@ func TestHandle(t *testing.T) {
 			done = true
 			return
 		})
+		d.AddGroup(sysGroup)
 		req := httptest.NewRequest("OPTIONS", "https://aslant.site/system/info", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
@@ -249,6 +263,7 @@ func TestHandle(t *testing.T) {
 
 	t.Run("trace", func(t *testing.T) {
 		done := false
+		sysGroup := NewGroup("/system")
 		sysGroup.TRACE("/info", func(c *Context) (err error) {
 			if c.Route != route {
 				t.Fatalf("route param fail")
@@ -256,6 +271,7 @@ func TestHandle(t *testing.T) {
 			done = true
 			return
 		})
+		d.AddGroup(sysGroup)
 		req := httptest.NewRequest("TRACE", "https://aslant.site/system/info", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)

@@ -337,3 +337,16 @@ c.CacheMaxAge("1m")
 // map[Cache-Control:[public, max-age=60]]
 fmt.Println(c.Header())
 ```
+
+### SetFileContentType
+
+通过文件（文件后缀）设置Content-Type。
+
+```go
+req := httptest.NewRequest("GET", "/users/me", nil)
+resp := httptest.NewRecorder()
+c := cod.NewContext(resp, req)
+c.SetFileContentType("user.json")
+// map[Content-Type:[application/json]]
+fmt.Println(c.Header())
+```

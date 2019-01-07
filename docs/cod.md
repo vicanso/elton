@@ -2,6 +2,27 @@
 
 实现HTTP服务的监听、中间件的顺序调用以及路由的选择调用。
 
+
+## New
+
+创建一个Cod的实例，并初始化相应的http.Server。
+
+```go
+d := cod.New()
+```
+
+## NewWithoutServer
+
+创建一个Cod的实例，并未初始化相应的http.Server，可根据需要再初始化。
+
+```go
+d := cod.NewWithoutServer()
+s := &http.Server{
+	Handler: d,
+}
+d.Server = s
+```
+
 ### Server
 
 http.Server对象，在初始化Cod时，将创建一个默认的Server，可以再根据自己的应用场景调整Server的参数配置，如下：
@@ -122,27 +143,7 @@ d.GET("/ping", func(c *cod.Context) (err error) {
 d.ListenAndServe(":8001")
 ```
 
-## New
-
-创建一个Cod的实例，并初始化相应的http.Server。
-
-```go
-d := cod.New()
-```
-
-## NewWithoutServer
-
-创建一个Cod的实例，并未初始化相应的http.Server，可根据需要再初始化。
-
-```go
-d := cod.NewWithoutServer()
-s := &http.Server{
-	Handler: d,
-}
-d.Server = s
-```
-
-## SetFunctionName
+### SetFunctionName
 
 设置函数名字，主要用于trace中统计时的函数展示，如果需要统计Handler的处理时间，建议指定函数名称，便于统计信息的记录。
 
@@ -187,7 +188,7 @@ d.GET("/ping", func(c *cod.Context) (err error) {
 d.ListenAndServe(":8001")
 ```
 
-## ListenAndServe
+### ListenAndServe
 
 监听并提供HTTP服务。
 
@@ -197,7 +198,7 @@ d := cod.New()
 d.ListenAndServe(":8001")
 ```
 
-## Serve
+### Serve
 
 提供HTTP服务。
 
@@ -207,15 +208,15 @@ d := cod.New()
 d.Serve(ln)
 ```
 
-## Close
+### Close
 
 关闭HTTP服务。
 
-## ServeHTTP
+### ServeHTTP
 
 http.Handler Interface的实现，在此函数中根据HTTP请求的Method与URL.Path，从Router(httprouter)中选择符合的Handler，若无符合的，则触发404。
 
-## Handle
+### Handle
 
 添加Handler的处理函数，配置请求的Method与Path，添加相应的处理函数，Path的相关配置与[httprouter](https://github.com/julienschmidt/httprouter)一致。
 
@@ -262,7 +263,7 @@ d.GET("/ping", noop, func(c *cod.Context) (err error) {
 })
 ```
 
-## ALL
+### ALL
 
 添加8个Method的处理函数，包括GET，POST，PUT，PATCH，DELETE，HEAD，TRACE以及OPTIONS，尽量只根据路由需要，添加相应的Method，不建议直接使用此函数。
 
@@ -273,25 +274,8 @@ d.ALL("/ping", noop, func(c *cod.Context) (err error) {
 })
 ```
 
-## Group
 
-创建一个组，它包括Path的前缀以及组内公共中间件（非全局），适用于创建有相同前置校验条件的路由处理，如用户相关的操作。返回的Group对象包括`GET`，`POST`，`PUT`等方法，与Cod的似。
-
-```go
-userGroup := d.Group("/users", noop)
-userGroup.GET("/me", func(c *cod.Context) (err error) {
-	// 从session中读取用户信息...
-	c.Body = "user info"
-	return
-})
-userGroup.POST("/login", func(c *cod.Context) (err error) {
-	// 登录验证处理...
-	c.Body = "login success"
-	return
-})
-```
-
-## Use
+### Use
 
 添加全局中间件处理函数，对于所有路由都需要使用到的中间件，则使用此函数添加，若非所有路由都使用到，可以只添加到相应的Group或者就单独添加至Handler。特别需要注意的是，如session之类需要读取数据库的，如非必要，不要使用全局中间件形式。
 
@@ -317,7 +301,19 @@ d.GET("/ping", func(c *cod.Context) (err error) {
 d.ListenAndServe(":8001")
 ```
 
-## OnError
+### AddGroup
+
+将group中的所有路由处理添加至cod。
+
+```go
+d := cod.New()
+userGroup := NewGroup("/users", func(c *Context) error {
+	return c.Next()
+})
+d.AddGroup(userGroup)
+```
+
+### OnError
 
 添加Error的监听函数，如果当任一Handler的处理返回Error，并且其它的Handler并未将此Error处理，则会触发error事件。
 
@@ -337,4 +333,23 @@ d.GET("/ping", func(c *cod.Context) (err error) {
 })
 
 d.ListenAndServe(":8001")
+```
+
+
+## NewGroup 
+
+创建一个组，它包括Path的前缀以及组内公共中间件（非全局），适用于创建有相同前置校验条件的路由处理，如用户相关的操作。返回的Group对象包括`GET`，`POST`，`PUT`等方法，与Cod的似，之后可以通过`AddGroup`将所有路由处理添加至cod实例。
+
+```go
+userGroup := cod.NewGroup("/users", noop)
+userGroup.GET("/me", func(c *cod.Context) (err error) {
+	// 从session中读取用户信息...
+	c.Body = "user info"
+	return
+})
+userGroup.POST("/login", func(c *cod.Context) (err error) {
+	// 登录验证处理...
+	c.Body = "login success"
+	return
+})
 ```

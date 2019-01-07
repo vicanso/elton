@@ -16,7 +16,6 @@ package middleware
 
 import (
 	"io/ioutil"
-	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -164,10 +163,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 			return
 		}
 
-		contentType := mime.TypeByExtension(filepath.Ext(file))
-		if contentType != "" {
-			c.SetHeader(cod.HeaderContentType, contentType)
-		}
+		c.SetFileContentType(file)
 		buf, e := staticFile.Get(file)
 		if e != nil {
 			err = getStaticServeError(e.Error(), http.StatusInternalServerError)

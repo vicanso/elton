@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"bytes"
-	"fmt"
 	"math/rand"
 	"net/http/httptest"
 	"testing"
@@ -145,7 +144,6 @@ func TestCompress(t *testing.T) {
 				// 假设做了 brotli 压缩
 				c.BodyBytes = []byte("abcd")
 				c.SetHeader(cod.HeaderContentEncoding, "br")
-				fmt.Println(c.BodyBytes)
 				return true
 			},
 		})

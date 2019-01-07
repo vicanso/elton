@@ -15,8 +15,10 @@
 package cod
 
 import (
+	"mime"
 	"net"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -51,6 +53,8 @@ type (
 		RequestBody []byte
 		// store for context
 		m map[string]interface{}
+		// realIP the real ip
+		realIP string
 		// cod instance
 		cod *Cod
 	}
@@ -72,21 +76,26 @@ func (c *Context) Reset() {
 	c.BodyBytes = nil
 	c.RequestBody = nil
 	c.m = nil
+	c.realIP = ""
 }
 
 // RealIP get the real ip
 func (c *Context) RealIP() string {
+	if c.realIP != "" {
+		return c.realIP
+	}
 	h := c.Request.Header
 	ip := h.Get(HeaderXForwardedFor)
 	if ip != "" {
-		return strings.TrimSpace(strings.Split(ip, ",")[0])
+		c.realIP = strings.TrimSpace(strings.Split(ip, ",")[0])
+		return c.realIP
 	}
-	ip = h.Get(HeaderXRealIp)
-	if ip != "" {
-		return ip
+	c.realIP = h.Get(HeaderXRealIp)
+	if c.realIP != "" {
+		return c.realIP
 	}
-	ip, _, _ = net.SplitHostPort(c.Request.RemoteAddr)
-	return ip
+	c.realIP, _, _ = net.SplitHostPort(c.Request.RemoteAddr)
+	return c.realIP
 }
 
 // Param get the param value
@@ -219,6 +228,15 @@ func (c *Context) CacheMaxAge(age string) {
 func (c *Context) Created(body interface{}) {
 	c.StatusCode = http.StatusCreated
 	c.Body = body
+}
+
+// SetFileContentType set content type by file extname
+func (c *Context) SetFileContentType(file string) {
+	ext := filepath.Ext(file)
+	contentType := mime.TypeByExtension(ext)
+	if contentType != "" {
+		c.SetHeader(HeaderContentType, contentType)
+	}
 }
 
 // Cod get cod instance

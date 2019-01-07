@@ -36,6 +36,7 @@ func TestRealIP(t *testing.T) {
 		if c.RealIP() != "192.0.0.1" {
 			t.Fatalf("get real ip from x-forwarded-for fail")
 		}
+		c.realIP = ""
 	})
 
 	t.Run("get from x-real-ip", func(t *testing.T) {
@@ -44,12 +45,14 @@ func TestRealIP(t *testing.T) {
 		if c.RealIP() != "192.168.0.1" {
 			t.Fatalf("get real ip from x-real-ip fail")
 		}
+		c.realIP = ""
 	})
 
 	t.Run("get real ip from remote addr", func(t *testing.T) {
 		if c.RealIP() == "" {
 			t.Fatalf("get real ip from remote addr fail")
 		}
+		c.realIP = ""
 	})
 }
 
@@ -241,6 +244,35 @@ func TestCacheControl(t *testing.T) {
 		c.CacheMaxAge("1m")
 		checkCacheControl(resp, "public, max-age=60", t)
 	})
+}
+
+func TestSetFileContentType(t *testing.T) {
+	resp := httptest.NewRecorder()
+	c := NewContext(resp, nil)
+	headers := c.Header()
+
+	check := func(contentType string) {
+		v := headers.Get(HeaderContentType)
+		if v != contentType {
+			t.Fatalf("content type should be %s, but %s", contentType, v)
+		}
+	}
+	c.SetFileContentType(".html")
+	check("text/html; charset=utf-8")
+	c.SetHeader(HeaderContentType, "")
+
+	c.SetFileContentType("index.html")
+	check("text/html; charset=utf-8")
+	c.SetHeader(HeaderContentType, "")
+
+	c.SetFileContentType("")
+	check("")
+	c.SetHeader(HeaderContentType, "")
+
+	c.SetFileContentType("../abcd/index.html")
+	check("text/html; charset=utf-8")
+	c.SetHeader(HeaderContentType, "")
+
 }
 
 func TestGetCod(t *testing.T) {

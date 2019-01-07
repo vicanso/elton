@@ -66,10 +66,17 @@ type (
 		Name     string        `json:"name,omitempty"`
 		Duration time.Duration `json:"duration,omitempty"`
 	}
+	// Router router
+	Router struct {
+		Method     string
+		Path       string
+		HandleList []Handler
+	}
 	// Group group router
 	Group struct {
 		Path        string
 		HandlerList []Handler
+		routers     []*Router
 		Cod         *Cod
 	}
 	// ErrorHandler error handle function
@@ -105,6 +112,14 @@ func NewWithoutServer() *Cod {
 		return &Context{}
 	}
 	return d
+}
+
+// NewGroup new group
+func NewGroup(path string, handlerList ...Handler) *Group {
+	return &Group{
+		Path:        path,
+		HandlerList: handlerList,
+	}
 }
 
 // SetFunctionName set function name
@@ -301,15 +316,6 @@ func (d *Cod) ALL(path string, handlerList ...Handler) {
 	}
 }
 
-// Group create a http handle group
-func (d *Cod) Group(path string, handlerList ...Handler) (g *Group) {
-	return &Group{
-		Cod:         d,
-		Path:        path,
-		HandlerList: handlerList,
-	}
-}
-
 // Use add middleware function handle
 func (d *Cod) Use(handlerList ...Handler) {
 	for _, fn := range handlerList {
@@ -378,6 +384,13 @@ func (d *Cod) OnTrace(ln TraceListener) {
 	d.traceListeners = append(d.traceListeners, ln)
 }
 
+// AddGroup add the group to cod
+func (d *Cod) AddGroup(g *Group) {
+	for _, r := range g.routers {
+		d.Handle(r.Method, r.Path, r.HandleList...)
+	}
+}
+
 func (g *Group) merge(s2 []Handler) []Handler {
 	s1 := g.HandlerList
 	fns := make([]Handler, len(s1)+len(s2))
@@ -386,67 +399,80 @@ func (g *Group) merge(s2 []Handler) []Handler {
 	return fns
 }
 
+func (g *Group) add(method, path string, handlerList ...Handler) {
+	if g.routers == nil {
+		g.routers = make([]*Router, 0, 5)
+	}
+	g.routers = append(g.routers, &Router{
+		Method:     method,
+		Path:       path,
+		HandleList: handlerList,
+	})
+}
+
 // GET add group http get method handler
 func (g *Group) GET(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
-	g.Cod.GET(p, fns...)
+	g.add(http.MethodGet, p, fns...)
 }
 
 // POST add group http post method handler
 func (g *Group) POST(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
-	g.Cod.POST(p, fns...)
+	g.add(http.MethodPost, p, fns...)
 }
 
 // PUT add group http put method handler
 func (g *Group) PUT(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
-	g.Cod.PUT(p, fns...)
+	g.add(http.MethodPut, p, fns...)
 }
 
 // PATCH add group http patch method handler
 func (g *Group) PATCH(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
-	g.Cod.PATCH(p, fns...)
+	g.add(http.MethodPatch, p, fns...)
 }
 
 // DELETE add group http delete method handler
 func (g *Group) DELETE(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
-	g.Cod.DELETE(p, fns...)
+	g.add(http.MethodDelete, p, fns...)
 }
 
 // HEAD add group http head method handler
 func (g *Group) HEAD(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
-	g.Cod.HEAD(p, fns...)
+	g.add(http.MethodHead, p, fns...)
 }
 
 // OPTIONS add group http options method handler
 func (g *Group) OPTIONS(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
-	g.Cod.OPTIONS(p, fns...)
+	g.add(http.MethodOptions, p, fns...)
 }
 
 // TRACE add group http trace method handler
 func (g *Group) TRACE(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
-	g.Cod.TRACE(p, fns...)
+	g.add(http.MethodTrace, p, fns...)
 }
 
 // ALL add group http all method handler
 func (g *Group) ALL(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
-	g.Cod.ALL(p, fns...)
+	for _, method := range methods {
+		g.add(method, p, fns...)
+	}
 }
 
 // GenerateETag generate eTag
