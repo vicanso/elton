@@ -174,8 +174,10 @@ d := cod.New()
 d.EnableTrace = true
 d.OnTrace(func(c *cod.Context, traceInfos []*cod.TraceInfo) {
 	buf, _ := json.Marshal(traceInfos)
-	// [{"name":"responder","duration":19175},{"name":"main.main.func2","duration":1620}]
+	// [{"name":"responder","duration":21755},{"name":"main.main.func2","duration":1750}]
 	log.Println(string(buf))
+	// cod-0;dur=0.021755;desc="responder",cod-1;dur=0.00175;desc="main.main.func2"
+	log.Println(cod.ConvertToServerTiming(traceInfos, "cod-"))
 })
 fn := middleware.NewResponder(middleware.ResponderConfig{})
 d.Use(fn)
@@ -333,23 +335,4 @@ d.GET("/ping", func(c *cod.Context) (err error) {
 })
 
 d.ListenAndServe(":8001")
-```
-
-
-## NewGroup 
-
-创建一个组，它包括Path的前缀以及组内公共中间件（非全局），适用于创建有相同前置校验条件的路由处理，如用户相关的操作。返回的Group对象包括`GET`，`POST`，`PUT`等方法，与Cod的似，之后可以通过`AddGroup`将所有路由处理添加至cod实例。
-
-```go
-userGroup := cod.NewGroup("/users", noop)
-userGroup.GET("/me", func(c *cod.Context) (err error) {
-	// 从session中读取用户信息...
-	c.Body = "user info"
-	return
-})
-userGroup.POST("/login", func(c *cod.Context) (err error) {
-	// 登录验证处理...
-	c.Body = "login success"
-	return
-})
 ```

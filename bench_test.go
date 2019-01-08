@@ -2,7 +2,9 @@ package cod
 
 import (
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 )
 
 func BenchmarkRoutes(b *testing.B) {
@@ -43,5 +45,19 @@ func BenchmarkContextNewMap(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		_ = make(map[string]interface{})
+	}
+}
+
+func BenchmarkConvertServerTiming(b *testing.B) {
+	b.ReportAllocs()
+	traceInfos := make([]*TraceInfo, 0)
+	for _, name := range strings.Split("0123456789", "") {
+		traceInfos = append(traceInfos, &TraceInfo{
+			Name:     name,
+			Duration: time.Microsecond * 100,
+		})
+	}
+	for i := 0; i < b.N; i++ {
+		ConvertToServerTiming(traceInfos, "cod-")
 	}
 }

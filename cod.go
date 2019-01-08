@@ -15,6 +15,7 @@
 package cod
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 	"net/http"
 	"reflect"
 	"runtime"
+	"strconv"
 	"sync"
 	"time"
 
@@ -173,7 +175,6 @@ func (d *Cod) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 // fillContext fill the context
 func (d *Cod) fillContext(c *Context, resp http.ResponseWriter, req *http.Request) {
-	c.Reset()
 	c.Request = req
 	c.Response = resp
 	if resp != nil {
@@ -197,6 +198,10 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 	})
 	d.Router.Handle(method, path, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		c := d.ctxPool.Get().(*Context)
+		// 如果此context是复用，则需要重置
+		if c.Request != nil {
+			c.Reset()
+		}
 		d.fillContext(c, resp, req)
 		c.Params = make(map[string]string)
 		for _, item := range params {
@@ -245,6 +250,14 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			return err
 		}
 		err := c.Next()
+		if traceInfos != nil {
+			// 如果非所有handler都执行了
+			// 则裁剪数组
+			if index < len(traceInfos)-1 {
+				traceInfos = traceInfos[:index+1]
+			}
+			d.EmitTrace(c, traceInfos)
+		}
 		if err != nil {
 			d.EmitError(c, err)
 			d.Error(c, err)
@@ -256,14 +269,6 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			if responseErr != nil {
 				d.EmitError(c, responseErr)
 			}
-		}
-		if traceInfos != nil {
-			// 如果非所有handler都执行了
-			// 则裁剪数组
-			if index < len(traceInfos)-1 {
-				traceInfos = traceInfos[:index+1]
-			}
-			d.EmitTrace(c, traceInfos)
 		}
 		d.ctxPool.Put(c)
 	})
@@ -485,4 +490,56 @@ func GenerateETag(buf []byte) string {
 	h.Write(buf)
 	hash := base64.URLEncoding.EncodeToString(h.Sum(nil))
 	return fmt.Sprintf("\"%x-%s\"", size, hash)
+}
+
+func getMs(ns int) string {
+	microSecond := int(time.Microsecond)
+	milliSecond := int(time.Millisecond)
+	if ns < microSecond {
+		return "0"
+	}
+
+	// 计算ms的位
+	ms := ns / milliSecond
+	prefix := strconv.Itoa(ms)
+
+	// 计算micro seconds
+	offset := (ns % milliSecond) / microSecond
+	// 如果小于10，不展示小数点（取小数点两位）
+	unit := 10
+	if offset < unit {
+		return prefix
+	}
+	// 如果小于100，补一位0
+	if offset < 100 {
+		return prefix + ".0" + strconv.Itoa(offset/unit)
+	}
+	return prefix + "." + strconv.Itoa(offset/unit)
+}
+
+// ConvertToServerTiming convert trace infos to server timing
+func ConvertToServerTiming(traceInfos []*TraceInfo, prefix string) []byte {
+	size := len(traceInfos)
+	if size == 0 {
+		return nil
+	}
+	timings := make([][]byte, size)
+	prefixDesc := []byte(prefix)
+
+	for i, traceInfo := range traceInfos {
+		v := traceInfo.Duration.Nanoseconds()
+		dur := []byte(getMs(int(v)))
+		index := []byte(strconv.Itoa(i))
+
+		timings[i] = bytes.Join([][]byte{
+			prefixDesc,
+			index,
+			ServerTimingDur,
+			dur,
+			ServerTimingDesc,
+			[]byte(traceInfo.Name),
+			ServerTimingEnd,
+		}, nil)
+	}
+	return bytes.Join(timings, []byte(","))
 }

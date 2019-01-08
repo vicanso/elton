@@ -433,3 +433,25 @@ func TestGetSetFunctionName(t *testing.T) {
 		t.Fatalf("get function name fail")
 	}
 }
+
+func TestConvertToServerTiming(t *testing.T) {
+	traceInfos := make([]*TraceInfo, 0)
+	t.Run("empty trace infos", func(t *testing.T) {
+		if ConvertToServerTiming(traceInfos, "") != nil {
+			t.Fatalf("it should be nil")
+		}
+	})
+	t.Run("server timing", func(t *testing.T) {
+		traceInfos = append(traceInfos, &TraceInfo{
+			Name:     "a",
+			Duration: time.Microsecond * 10,
+		})
+		traceInfos = append(traceInfos, &TraceInfo{
+			Name:     "b",
+			Duration: time.Millisecond + time.Microsecond,
+		})
+		if string(ConvertToServerTiming(traceInfos, "cod-")) != `cod-0;dur=0.01;desc="a",cod-1;dur=1;desc="b"` {
+			t.Fatalf("convert server timing fail")
+		}
+	})
+}

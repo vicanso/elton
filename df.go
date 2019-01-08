@@ -77,6 +77,8 @@ const (
 	HeaderIfNoneMatch = "If-None-Match"
 	// HeaderAcceptEncoding accept encoding
 	HeaderAcceptEncoding = "Accept-Encoding"
+	// HeaderServerTiming server timing
+	HeaderServerTiming = "Server-Timing"
 
 	// MinRedirectCode min redirect code
 	MinRedirectCode = 300
@@ -89,4 +91,13 @@ const (
 	MIMEApplicationJSON = "application/json;charset=UTF-8"
 	// MIMEBinary binary data
 	MIMEBinary = "application/octet-stream"
+)
+
+var (
+	// ServerTimingDur server timing dur
+	ServerTimingDur = []byte(";dur=")
+	// ServerTimingDesc server timing desc
+	ServerTimingDesc = []byte(`;desc="`)
+	// ServerTimingEnd server timing end
+	ServerTimingEnd = []byte(`"`)
 )
