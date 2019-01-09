@@ -44,6 +44,8 @@ func NewResponder(config ResponderConfig) cod.Handler {
 			return c.Next()
 		}
 		e := c.Next()
+		// 如果已生成BodyBytes，则无跳过
+		// 无需要从 Body 中转换 BodyBytes
 		if c.BodyBytes != nil {
 			return e
 		}
@@ -58,7 +60,9 @@ func NewResponder(config ResponderConfig) cod.Handler {
 				}
 			}
 			err = he
-		} else if c.StatusCode == 0 && c.Body == nil {
+		}
+
+		if err == nil && c.StatusCode == 0 && c.Body == nil {
 			// 如果status code 与 body 都为空，则为非法响应
 			err = cod.ErrInvalidResponse
 		}
