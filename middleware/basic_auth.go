@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"github.com/vicanso/cod"
-	"github.com/vicanso/errors"
+	"github.com/vicanso/hes"
 )
 
 const (
@@ -44,8 +44,8 @@ var (
 	errUnauthorized = getBasicAuthError("unAuthorized", http.StatusUnauthorized)
 )
 
-func getBasicAuthError(message string, statusCode int) *errors.HTTPError {
-	return &errors.HTTPError{
+func getBasicAuthError(message string, statusCode int) *hes.Error {
+	return &hes.Error{
 		StatusCode: statusCode,
 		Message:    message,
 		Category:   errBasicAuthCategory,
@@ -88,8 +88,12 @@ func NewBasicAuth(config BasicAuthConfig) cod.Handler {
 
 		arr := strings.Split(string(v), ":")
 		valid, e := config.Validate(arr[0], arr[1], c)
+
 		if e != nil {
-			err = getBasicAuthError(e.Error(), http.StatusBadRequest)
+			err, ok := e.(*hes.Error)
+			if !ok {
+				err = getBasicAuthError(e.Error(), http.StatusBadRequest)
+			}
 			return err
 		}
 		if !valid {

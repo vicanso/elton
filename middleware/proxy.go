@@ -28,7 +28,6 @@ type (
 		URL       string
 		Host      string
 		Transport *http.Transport
-		Next      bool
 	}
 )
 
@@ -50,11 +49,7 @@ func NewProxy(config ProxyConfig) cod.Handler {
 		if config.Host != "" {
 			req.Host = config.Host
 		}
-		p.ServeHTTP(c.Response, req)
-		c.Committed = true
-		if config.Next {
-			return c.Next()
-		}
-		return
+		p.ServeHTTP(c, req)
+		return c.Next()
 	}
 }

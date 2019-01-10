@@ -31,8 +31,13 @@ const (
 )
 
 type (
-	// CustomCompress custom compress function
-	CustomCompress func(*cod.Context) bool
+	// Compress compress function
+	Compress func([]byte, int) ([]byte, error)
+	// Compression compression
+	Compression struct {
+		Type     string
+		Compress Compress
+	}
 	// CompressConfig compress config
 	CompressConfig struct {
 		// Level 压缩率级别
@@ -40,11 +45,28 @@ type (
 		// MinLength 最小压缩长度
 		MinLength int
 		// Checker 校验数据是否可压缩
-		Checker   *regexp.Regexp
-		Skipper   Skipper
-		Compresss CustomCompress
+		Checker         *regexp.Regexp
+		Skipper         Skipper
+		CompressionList []*Compression
 	}
 )
+
+func addGzip(items []*Compression) []*Compression {
+	found := false
+	for _, c := range items {
+		if c.Type == gzipCompress {
+			found = true
+		}
+	}
+	if !found {
+		items = append(items, &Compression{
+			Type:     gzipCompress,
+			Compress: doGzip,
+		})
+	}
+	return items
+
+}
 
 // NewCompresss create a new compress middleware
 func NewCompresss(config CompressConfig) cod.Handler {
@@ -60,7 +82,12 @@ func NewCompresss(config CompressConfig) cod.Handler {
 	if checker == nil {
 		checker = defaultCompressRegexp
 	}
-	customCompress := config.Compresss
+	compressionList := config.CompressionList
+	if compressionList == nil {
+		compressionList = make([]*Compression, 0)
+	}
+	// 添加默认的 gzip 压缩
+	compressionList = addGzip(compressionList)
 	return func(c *cod.Context) (err error) {
 		if skiper(c) {
 			return c.Next()
@@ -76,28 +103,38 @@ func NewCompresss(config CompressConfig) cod.Handler {
 			return
 		}
 		contentType := respHeader.Get(cod.HeaderContentType)
-		buf := c.BodyBytes
+		bodyBuf := c.BodyBuffer
+		// 如果数据为空，直接跳过
+		if bodyBuf == nil {
+			return
+		}
+		buf := bodyBuf.Bytes()
 		// 如果数据长度少于最小压缩长度或数据类型为非可压缩，则返回
 		if len(buf) < minLength || !checker.MatchString(contentType) {
 			return
 		}
 
-		// 如果有自定义压缩函数，并处理结果为已完成
-		if customCompress != nil && customCompress(c) {
-			return
-		}
-
 		acceptEncoding := c.GetRequestHeader(cod.HeaderAcceptEncoding)
-		// 如果请求端不接受gzip，则返回
-		if !strings.Contains(acceptEncoding, gzipCompress) {
-			return
-		}
-		gzipBuf, e := doGzip(buf, config.Level)
-		// 如果压缩成功，则使用压缩数据
-		// 失败则忽略
-		if e == nil {
-			c.SetHeader(cod.HeaderContentEncoding, gzipCompress)
-			c.BodyBytes = gzipBuf
+
+		done := false
+		for _, compression := range compressionList {
+			if done {
+				break
+			}
+			t := compression.Type
+			// 如果请求端不接受当前压缩的类型
+			if !strings.Contains(acceptEncoding, t) {
+				continue
+			}
+			newBuf, e := compression.Compress(buf, config.Level)
+			// 如果压缩成功，则使用压缩数据
+			// 失败则忽略
+			if e == nil {
+				c.SetHeader(cod.HeaderContentEncoding, t)
+				bodyBuf.Reset()
+				bodyBuf.Write(newBuf)
+				done = true
+			}
 		}
 
 		return

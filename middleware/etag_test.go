@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"bytes"
 	"net/http/httptest"
 	"testing"
 
@@ -32,7 +33,7 @@ func TestETag(t *testing.T) {
 				"name": "tree.xie",
 			}
 			c.StatusCode = 400
-			c.BodyBytes = []byte(`{"name":"tree.xie"}`)
+			c.BodyBuffer = bytes.NewBufferString(`{"name":"tree.xie"}`)
 			return nil
 		}
 		err := fn(c)
@@ -52,7 +53,7 @@ func TestETag(t *testing.T) {
 				"name": "tree.xie",
 			}
 			c.StatusCode = 200
-			c.BodyBytes = []byte(`{"name":"tree.xie"}`)
+			c.BodyBuffer = bytes.NewBufferString(`{"name":"tree.xie"}`)
 			return nil
 		}
 		err := fn(c)

@@ -46,9 +46,9 @@ HTTP响应码，设置HTTP请求处理结果的响应码。
 
 HTTP响应数据，此属性为interface{}，因此可以设置不同的数据类型（与koa类似）。注意：设置Body之后，还需要使用中间件`responder`来将此属性转换为字节，并设置相应的`Content-Type`，此中间件主要将各类的struct转换为json，对于具体的实现可以查阅代码，或者自己实现相应的responder。
 
-### BodyBytes
+### BodyBuffer
 
-HTTP的响应数据（字节），此数据为真正返回的响应体，responder中间件就是将Body转换为字节(BodyBytes)，并写入相应的`Content-Type`。
+HTTP的响应数据缓冲（字节），此数据为真正返回的响应体，responder中间件就是将Body转换为字节(BodyBuffer)，并写入相应的`Content-Type`。
 
 ### RequestBody
 

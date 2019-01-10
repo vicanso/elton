@@ -1,13 +1,15 @@
 package cod
 
 import (
-	"errors"
+	"bytes"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/vicanso/hes"
 )
 
 func TestListenAndServe(t *testing.T) {
@@ -81,6 +83,31 @@ func TestIngoreNext(t *testing.T) {
 
 func TestHandle(t *testing.T) {
 	d := New()
+	t.Run("all methods", func(t *testing.T) {
+		path := "/test-path"
+		d.GET(path)
+		d.POST(path)
+		d.PUT(path)
+		d.PATCH(path)
+		d.DELETE(path)
+		d.HEAD(path)
+		d.OPTIONS(path)
+		d.TRACE(path)
+		allMethods := "/all-methods"
+		d.ALL(allMethods)
+		for index, r := range d.Routers {
+			p := path
+			if index >= 8 {
+				p = allMethods
+			}
+			if r.Path != p {
+				t.Fatal("handle method fail")
+			}
+		}
+		if len(d.Routers) != 16 {
+			t.Fatal("handle method fail")
+		}
+	})
 	t.Run("group", func(t *testing.T) {
 		key := "count"
 		countValue := 4
@@ -132,6 +159,8 @@ func TestHandle(t *testing.T) {
 		done := false
 		sysGroup := NewGroup("/system")
 		sysGroup.GET("/info", func(c *Context) (err error) {
+			c.StatusCode = 201
+			c.BodyBuffer = bytes.NewBufferString("abcd")
 			if c.Route != route {
 				t.Fatalf("route param fail")
 			}
@@ -142,7 +171,7 @@ func TestHandle(t *testing.T) {
 		req := httptest.NewRequest("GET", "https://aslant.site/system/info", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		if !done {
+		if !done || resp.Code != 201 {
 			t.Fatalf("handle function is not call")
 		}
 	})
@@ -303,21 +332,21 @@ func TestHandle(t *testing.T) {
 	})
 
 	t.Run("error", func(t *testing.T) {
-		customErr := errors.New("abcd")
+		customErr := hes.New("abcd")
 		d.GET("/error", func(c *Context) error {
 			return customErr
 		})
 		req := httptest.NewRequest("GET", "https://aslant.site/error", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		if resp.Code != http.StatusInternalServerError ||
-			resp.Body.String() != "abcd" {
+		if resp.Code != http.StatusBadRequest ||
+			resp.Body.String() != "message=abcd" {
 			t.Fatalf("default error handle fail")
 		}
 	})
 
 	t.Run("get routers", func(t *testing.T) {
-		if len(d.Routers) != 18 {
+		if len(d.Routers) != 34 {
 			t.Fatalf("get routers fail")
 		}
 	})
@@ -326,7 +355,7 @@ func TestHandle(t *testing.T) {
 func TestErrorHandler(t *testing.T) {
 	d := New()
 	d.GET("/", func(c *Context) error {
-		return errors.New("abc")
+		return hes.New("abc")
 	})
 
 	done := false
@@ -361,7 +390,7 @@ func TestNotFoundHandler(t *testing.T) {
 func TestOnError(t *testing.T) {
 	d := New()
 	c := NewContext(nil, nil)
-	cutstomErr := errors.New("abc")
+	cutstomErr := hes.New("abc")
 	d.EmitError(c, cutstomErr)
 	d.OnError(func(_ *Context, err error) {
 		if err != cutstomErr {

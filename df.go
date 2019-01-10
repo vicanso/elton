@@ -17,7 +17,7 @@ package cod
 import (
 	"net/http"
 
-	"github.com/vicanso/errors"
+	"github.com/vicanso/hes"
 )
 
 var (
@@ -33,13 +33,13 @@ var (
 	}
 
 	// ErrInvalidRedirect invalid redirect
-	ErrInvalidRedirect = &errors.HTTPError{
+	ErrInvalidRedirect = &hes.Error{
 		StatusCode: 400,
 		Message:    "invalid redirect",
 		Category:   ErrCategoryCod,
 	}
 	// ErrInvalidResponse invalid response(body an status is nil)
-	ErrInvalidResponse = &errors.HTTPError{
+	ErrInvalidResponse = &hes.Error{
 		StatusCode: 500,
 		Message:    "invalid response",
 		Category:   ErrCategoryCod,

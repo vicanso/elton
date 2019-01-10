@@ -15,11 +15,12 @@
 package middleware
 
 import (
+	"bytes"
 	"net/http"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/vicanso/cod"
-	"github.com/vicanso/errors"
+	"github.com/vicanso/hes"
 )
 
 var (
@@ -44,17 +45,18 @@ func NewResponder(config ResponderConfig) cod.Handler {
 			return c.Next()
 		}
 		e := c.Next()
+		bodyBuf := c.BodyBuffer
 		// 如果已生成BodyBytes，则无跳过
 		// 无需要从 Body 中转换 BodyBytes
-		if c.BodyBytes != nil {
+		if bodyBuf != nil {
 			return e
 		}
-		var err *errors.HTTPError
+		var err *hes.Error
 		if e != nil {
 			// 如果出错，尝试转换为HTTPError
-			he, ok := e.(*errors.HTTPError)
+			he, ok := e.(*hes.Error)
 			if !ok {
-				he = &errors.HTTPError{
+				he = &hes.Error{
 					StatusCode: http.StatusInternalServerError,
 					Message:    e.Error(),
 				}
@@ -114,7 +116,7 @@ func NewResponder(config ResponderConfig) cod.Handler {
 				}
 			}
 		}
-		c.BodyBytes = body
+		c.BodyBuffer = bytes.NewBuffer(body)
 		c.StatusCode = statusCode
 
 		return nil

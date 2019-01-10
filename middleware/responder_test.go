@@ -1,12 +1,11 @@
 package middleware
 
 import (
-	Errors "errors"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/vicanso/cod"
-	"github.com/vicanso/errors"
+	"github.com/vicanso/hes"
 )
 
 func checkResponse(t *testing.T, resp *httptest.ResponseRecorder, code int, data string) {
@@ -48,11 +47,11 @@ func TestResponder(t *testing.T) {
 		d := cod.New()
 		d.Use(m)
 		d.GET("/", func(c *cod.Context) error {
-			return Errors.New("abc")
+			return hes.New("abc")
 		})
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		checkResponse(t, resp, 500, `{"statusCode":500,"message":"abc"}`)
+		checkResponse(t, resp, 400, `{"statusCode":400,"message":"abc"}`)
 		checkJSON(t, resp)
 	})
 
@@ -60,7 +59,7 @@ func TestResponder(t *testing.T) {
 		d := cod.New()
 		d.Use(m)
 		d.GET("/", func(c *cod.Context) error {
-			return &errors.HTTPError{
+			return &hes.Error{
 				StatusCode: 400,
 				Message:    "abc",
 				Category:   "custom",

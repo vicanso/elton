@@ -43,7 +43,8 @@ func NewFresh(config FreshConfig) cod.Handler {
 			return
 		}
 		// 如果空数据或者已经是304，则跳过
-		if len(c.BodyBytes) == 0 || c.StatusCode == http.StatusNotModified {
+		bodyBuf := c.BodyBuffer
+		if bodyBuf == nil || bodyBuf.Len() == 0 || c.StatusCode == http.StatusNotModified {
 			return
 		}
 

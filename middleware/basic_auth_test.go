@@ -1,12 +1,12 @@
 package middleware
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/vicanso/cod"
+	"github.com/vicanso/hes"
 )
 
 func TestBasicAuth(t *testing.T) {
@@ -16,7 +16,7 @@ func TestBasicAuth(t *testing.T) {
 				return true, nil
 			}
 			if account == "n" {
-				return false, errors.New("account is invalid")
+				return false, hes.New("account is invalid")
 			}
 			return false, nil
 		},
@@ -71,7 +71,7 @@ func TestBasicAuth(t *testing.T) {
 		resp = httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
 		if resp.Code != http.StatusBadRequest ||
-			resp.Body.String() != "category=cod-basic-auth, message=account is invalid" {
+			resp.Body.String() != "message=account is invalid" {
 			t.Fatalf("validate return error is fail")
 		}
 	})

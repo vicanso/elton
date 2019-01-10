@@ -28,12 +28,15 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/vicanso/errors"
+	"github.com/vicanso/hes"
 )
 
 var (
 	// ErrOutOfHandlerRange out of handler range (call next over handler's size)
-	ErrOutOfHandlerRange = errors.New("out of handler range")
+	ErrOutOfHandlerRange = &hes.Error{
+		StatusCode: http.StatusInternalServerError,
+		Message:    "out of handler range",
+	}
 )
 
 type (
@@ -265,9 +268,11 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			if c.StatusCode != 0 {
 				resp.WriteHeader(c.StatusCode)
 			}
-			_, responseErr := resp.Write(c.BodyBytes)
-			if responseErr != nil {
-				d.EmitError(c, responseErr)
+			if c.BodyBuffer != nil {
+				_, responseErr := resp.Write(c.BodyBuffer.Bytes())
+				if responseErr != nil {
+					d.EmitError(c, responseErr)
+				}
 			}
 		}
 		d.ctxPool.Put(c)
@@ -347,7 +352,7 @@ func (d *Cod) Error(c *Context, err error) {
 		return
 	}
 	resp := c.Response
-	he, ok := err.(*errors.HTTPError)
+	he, ok := err.(*hes.Error)
 	if ok {
 		resp.WriteHeader(he.StatusCode)
 		resp.Write([]byte(he.Error()))

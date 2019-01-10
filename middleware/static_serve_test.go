@@ -183,7 +183,7 @@ func TestStaticServe(t *testing.T) {
 			c.GetHeader("Content-Type") != "text/html; charset=utf-8" {
 			t.Fatalf("set header fail")
 		}
-		if len(c.Body.([]byte)) != 16 {
+		if c.BodyBuffer.Len() != 16 {
 			t.Fatalf("response body fail")
 		}
 	})

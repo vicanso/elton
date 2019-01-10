@@ -39,8 +39,9 @@ func NewETag(config ETagConfig) cod.Handler {
 		}
 		err = c.Next()
 		respHeader := c.Headers
+		bodyBuf := c.BodyBuffer
 		// 如果无内容或已设置 eTag ，则跳过
-		if len(c.BodyBytes) == 0 ||
+		if bodyBuf == nil || bodyBuf.Len() == 0 ||
 			respHeader.Get(cod.HeaderETag) != "" {
 			return
 		}
@@ -49,7 +50,7 @@ func NewETag(config ETagConfig) cod.Handler {
 			c.StatusCode >= http.StatusMultipleChoices {
 			return
 		}
-		eTag := cod.GenerateETag(c.BodyBytes)
+		eTag := cod.GenerateETag(bodyBuf.Bytes())
 		c.SetHeader(cod.HeaderETag, eTag)
 		return
 	}

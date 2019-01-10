@@ -15,6 +15,7 @@
 package cod
 
 import (
+	"bytes"
 	"mime"
 	"net"
 	"net/http"
@@ -47,8 +48,8 @@ type (
 		StatusCode int
 		// Body http response's body
 		Body interface{}
-		// BodyBytes http response's body byte
-		BodyBytes []byte
+		// BodyBuffer http response's body buffer
+		BodyBuffer *bytes.Buffer
 		// RequestBody http request body
 		RequestBody []byte
 		// store for context
@@ -73,7 +74,7 @@ func (c *Context) Reset() {
 	c.Params = nil
 	c.StatusCode = 0
 	c.Body = nil
-	c.BodyBytes = nil
+	c.BodyBuffer = nil
 	c.RequestBody = nil
 	c.m = nil
 	c.realIP = ""
@@ -163,6 +164,19 @@ func (c *Context) Header() http.Header {
 	return c.Headers
 }
 
+// WriteHeader set the http status code
+func (c *Context) WriteHeader(statusCode int) {
+	c.StatusCode = statusCode
+}
+
+// Write write the response body
+func (c *Context) Write(buf []byte) (int, error) {
+	if c.BodyBuffer == nil {
+		c.BodyBuffer = new(bytes.Buffer)
+	}
+	return c.BodyBuffer.Write(buf)
+}
+
 // GetHeader get header from http response
 func (c *Context) GetHeader(key string) string {
 	return c.Headers.Get(key)
@@ -197,14 +211,14 @@ func (c *Context) SetCookie(cookie *http.Cookie) error {
 func (c *Context) NoContent() {
 	c.StatusCode = http.StatusNoContent
 	c.Body = nil
-	c.BodyBytes = nil
+	c.BodyBuffer = nil
 }
 
 // NotModified response not modified
 func (c *Context) NotModified() {
 	c.StatusCode = http.StatusNotModified
 	c.Body = nil
-	c.BodyBytes = nil
+	c.BodyBuffer = nil
 }
 
 // NoCache set http response no cache

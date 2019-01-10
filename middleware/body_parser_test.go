@@ -1,13 +1,13 @@
 package middleware
 
 import (
-	"errors"
 	"io"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/vicanso/cod"
+	"github.com/vicanso/hes"
 )
 
 type (
@@ -73,7 +73,7 @@ func TestBodyParser(t *testing.T) {
 
 	t.Run("read body fail", func(t *testing.T) {
 		bodyParser := NewBodyParser(BodyParserConfig{})
-		req := httptest.NewRequest("POST", "https://aslant.site/", NewErrorReadCloser(errors.New("abc")))
+		req := httptest.NewRequest("POST", "https://aslant.site/", NewErrorReadCloser(hes.New("abc")))
 		req.Header.Set(cod.HeaderContentType, "application/json")
 		c := cod.NewContext(nil, req)
 		err := bodyParser(c)
@@ -154,7 +154,7 @@ func TestBodyParser(t *testing.T) {
 		c.Next = func() error {
 			done = true
 			if string(c.RequestBody) != body {
-				return errors.New("request body is invalid")
+				return hes.New("request body is invalid")
 			}
 			return nil
 		}
@@ -177,7 +177,7 @@ func TestBodyParser(t *testing.T) {
 		c.Next = func() error {
 			done = true
 			if string(c.RequestBody) != `{"name":"tree.xie","type":"1"}` {
-				return errors.New("request body is invalid")
+				return hes.New("request body is invalid")
 			}
 			return nil
 		}

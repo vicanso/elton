@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -25,7 +26,7 @@ func TestFresh(t *testing.T) {
 			c.Body = map[string]string{
 				"name": "tree.xie",
 			}
-			c.BodyBytes = []byte(`{"name":"tree.xie"}`)
+			c.BodyBuffer = bytes.NewBufferString(`{"name":"tree.xie"}`)
 			return nil
 		}
 		err := fn(c)
@@ -35,7 +36,7 @@ func TestFresh(t *testing.T) {
 
 		if c.StatusCode != 304 ||
 			c.Body != nil ||
-			c.BodyBytes != nil {
+			c.BodyBuffer != nil {
 			t.Fatalf("fresh middleware response fail")
 		}
 	})
@@ -73,7 +74,7 @@ func TestFresh(t *testing.T) {
 			c.Body = map[string]string{
 				"name": "tree.xie",
 			}
-			c.BodyBytes = []byte(`{"name":"tree.xie"}`)
+			c.BodyBuffer = bytes.NewBufferString(`{"name":"tree.xie"}`)
 			return nil
 		}
 		err := fn(c)
@@ -83,7 +84,7 @@ func TestFresh(t *testing.T) {
 
 		if c.StatusCode == 304 ||
 			c.Body == nil ||
-			c.BodyBytes == nil {
+			c.BodyBuffer == nil {
 			t.Fatalf("fresh middleware response fail")
 		}
 	})
@@ -102,7 +103,7 @@ func TestFresh(t *testing.T) {
 			c.Body = map[string]string{
 				"name": "tree.xie",
 			}
-			c.BodyBytes = []byte(`{"name":"tree.xie"}`)
+			c.BodyBuffer = bytes.NewBufferString(`{"name":"tree.xie"}`)
 			return nil
 		}
 		err := fn(c)
@@ -112,7 +113,7 @@ func TestFresh(t *testing.T) {
 
 		if c.StatusCode == 304 ||
 			c.Body == nil ||
-			c.BodyBytes == nil {
+			c.BodyBuffer == nil {
 			t.Fatalf("fresh middleware response fail")
 		}
 	})

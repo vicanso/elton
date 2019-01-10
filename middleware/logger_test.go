@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -46,7 +47,7 @@ func TestLogger(t *testing.T) {
 		req.Header.Set("User-Agent", "test-agent")
 		resp := httptest.NewRecorder()
 		c := cod.NewContext(resp, req)
-		c.BodyBytes = []byte("response-body")
+		c.BodyBuffer = bytes.NewBufferString("response-body")
 		c.RequestBody = []byte("request-body")
 		c.StatusCode = 200
 		c.Next = func() error {

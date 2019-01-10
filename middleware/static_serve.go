@@ -15,6 +15,7 @@
 package middleware
 
 import (
+	"bytes"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -23,7 +24,7 @@ import (
 	"strings"
 
 	"github.com/vicanso/cod"
-	"github.com/vicanso/errors"
+	"github.com/vicanso/hes"
 )
 
 type (
@@ -102,8 +103,8 @@ func (fs *FS) Get(file string) (buf []byte, err error) {
 }
 
 // getStaticServeError 获取static serve的出错
-func getStaticServeError(message string, statusCode int) *errors.HTTPError {
-	return &errors.HTTPError{
+func getStaticServeError(message string, statusCode int) *hes.Error {
+	return &hes.Error{
 		StatusCode: statusCode,
 		Message:    message,
 		Category:   errStaticServeCategory,
@@ -187,7 +188,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 		if cacheControl != "" {
 			c.SetHeader(cod.HeaderCacheControl, cacheControl)
 		}
-		c.Body = buf
+		c.BodyBuffer = bytes.NewBuffer(buf)
 		return c.Next()
 	}
 }

@@ -229,9 +229,17 @@ func format(c *cod.Context, tags []*Tag, startedAt time.Time) string {
 		case payloadSizeHuman:
 			return getHumanReadableSize(len(c.RequestBody))
 		case size:
-			return strconv.Itoa(len(c.BodyBytes))
+			bodyBuf := c.BodyBuffer
+			if bodyBuf == nil {
+				return "0"
+			}
+			return strconv.Itoa(bodyBuf.Len())
 		case sizeHuman:
-			return getHumanReadableSize(len(c.BodyBytes))
+			bodyBuf := c.BodyBuffer
+			if bodyBuf == nil {
+				return "0B"
+			}
+			return getHumanReadableSize(bodyBuf.Len())
 		case latency:
 			return time.Since(startedAt).String()
 		case latencyMs:

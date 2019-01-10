@@ -75,7 +75,7 @@ d.ErrorHandler = func(c *cod.Context, err error) {
 }
 
 d.GET("/ping", func(c *cod.Context) (err error) {
-  return errors.New("abcd")
+  return hes.New("abcd")
 })
 d.ListenAndServe(":8001")
 ```
@@ -94,7 +94,7 @@ d.NotFoundHandler = func(resp http.ResponseWriter, req *http.Request) {
 }
 
 d.GET("/ping", func(c *cod.Context) (err error) {
-  return errors.New("abcd")
+  return hes.New("abcd")
 })
 d.ListenAndServe(":8001")
 ```
