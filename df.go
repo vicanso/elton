@@ -91,6 +91,11 @@ const (
 	MIMEApplicationJSON = "application/json;charset=UTF-8"
 	// MIMEBinary binary data
 	MIMEBinary = "application/octet-stream"
+
+	// Gzip gzip compress
+	Gzip = "gzip"
+	// Br brotli compress
+	Br = "br"
 )
 
 var (

@@ -27,7 +27,6 @@ var (
 
 const (
 	defaultCompresMinLength = 1024
-	gzipCompress            = "gzip"
 )
 
 type (
@@ -54,13 +53,13 @@ type (
 func addGzip(items []*Compression) []*Compression {
 	found := false
 	for _, c := range items {
-		if c.Type == gzipCompress {
+		if c.Type == cod.Gzip {
 			found = true
 		}
 	}
 	if !found {
 		items = append(items, &Compression{
-			Type:     gzipCompress,
+			Type:     cod.Gzip,
 			Compress: doGzip,
 		})
 	}

@@ -73,9 +73,9 @@ type (
 	}
 	// Router router
 	Router struct {
-		Method     string
-		Path       string
-		HandleList []Handler
+		Method     string    `json:"method,omitempty"`
+		Path       string    `json:"path,omitempty"`
+		HandleList []Handler `json:"-"`
 	}
 	// Group group router
 	Group struct {
