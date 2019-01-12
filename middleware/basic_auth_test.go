@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -22,6 +23,29 @@ func TestBasicAuth(t *testing.T) {
 		},
 	})
 	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
+
+	t.Run("skip", func(t *testing.T) {
+		done := false
+		mSkip := NewBasicAuth(BasicAuthConfig{
+			Validate: func(account, pwd string, c *cod.Context) (bool, error) {
+				return false, nil
+			},
+			Skipper: func(c *cod.Context) bool {
+				return true
+			},
+		})
+		d := cod.New()
+		d.Use(mSkip)
+		d.GET("/", func(c *cod.Context) error {
+			done = true
+			return nil
+		})
+		resp := httptest.NewRecorder()
+		d.ServeHTTP(resp, req)
+		if !done {
+			t.Fatalf("skip fail")
+		}
+	})
 
 	t.Run("no auth header", func(t *testing.T) {
 		d := cod.New()
@@ -73,6 +97,25 @@ func TestBasicAuth(t *testing.T) {
 		if resp.Code != http.StatusBadRequest ||
 			resp.Body.String() != "message=account is invalid" {
 			t.Fatalf("validate return error is fail")
+		}
+	})
+
+	t.Run("validate error", func(t *testing.T) {
+		mValidateFail := NewBasicAuth(BasicAuthConfig{
+			Validate: func(account, pwd string, c *cod.Context) (bool, error) {
+				return false, errors.New("abcd")
+			},
+		})
+		d := cod.New()
+		d.Use(mValidateFail)
+		d.GET("/", func(c *cod.Context) error {
+			return nil
+		})
+		resp := httptest.NewRecorder()
+		d.ServeHTTP(resp, req)
+		if resp.Code != http.StatusBadRequest ||
+			resp.Body.String() != "category=cod-basic-auth, message=abcd" {
+			t.Fatalf("validate fail should return error")
 		}
 	})
 

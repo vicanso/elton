@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"errors"
 	"math/rand"
 	"net/http/httptest"
 	"testing"
@@ -22,7 +23,63 @@ func randomString(n int) string {
 	return string(b)
 }
 
+func TestAddGzip(t *testing.T) {
+	compressionList := make([]*Compression, 0)
+	compressionList = addGzip(compressionList)
+	compressionList = addGzip(compressionList)
+	if len(compressionList) != 1 {
+		t.Fatalf("add gzip fail")
+	}
+}
+
 func TestCompress(t *testing.T) {
+	t.Run("skip", func(t *testing.T) {
+		c := cod.NewContext(nil, nil)
+		done := false
+		c.Next = func() error {
+			done = true
+			return nil
+		}
+		fn := NewCompresss(CompressConfig{
+			Skipper: func(c *cod.Context) bool {
+				return true
+			},
+		})
+		err := fn(c)
+		if err != nil ||
+			!done {
+			t.Fatalf("skip fail")
+		}
+	})
+
+	t.Run("nil body", func(t *testing.T) {
+		c := cod.NewContext(nil, nil)
+		done := false
+		c.Next = func() error {
+			done = true
+			return nil
+		}
+		fn := NewCompresss(CompressConfig{})
+		err := fn(c)
+		if err != nil ||
+			!done {
+			t.Fatalf("nil body should skip")
+		}
+	})
+
+	t.Run("return error", func(t *testing.T) {
+		c := cod.NewContext(nil, nil)
+		customErr := errors.New("abccd")
+		c.Next = func() error {
+			return customErr
+		}
+		fn := NewCompresss(CompressConfig{})
+		err := fn(c)
+		if err != customErr {
+			t.Fatalf("it should return error")
+		}
+	})
+
 	t.Run("normal", func(t *testing.T) {
 		fn := NewCompresss(CompressConfig{
 			Level:     1,

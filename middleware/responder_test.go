@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"bytes"
+	"errors"
 	"net/http/httptest"
 	"testing"
 
@@ -30,6 +32,51 @@ func checkContentType(t *testing.T, resp *httptest.ResponseRecorder, contentType
 func TestResponder(t *testing.T) {
 	m := NewResponder(ResponderConfig{})
 	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
+
+	t.Run("skip", func(t *testing.T) {
+		c := cod.NewContext(nil, nil)
+		done := false
+		c.Next = func() error {
+			done = true
+			return nil
+		}
+		fn := NewResponder(ResponderConfig{
+			Skipper: func(c *cod.Context) bool {
+				return true
+			},
+		})
+		err := fn(c)
+		if err != nil ||
+			!done {
+			t.Fatalf("skip fail")
+		}
+	})
+
+	t.Run("return error", func(t *testing.T) {
+		c := cod.NewContext(nil, nil)
+		customErr := errors.New("abccd")
+		c.Next = func() error {
+			return customErr
+		}
+		fn := NewResponder(ResponderConfig{})
+		c.BodyBuffer = bytes.NewBuffer([]byte("abcd"))
+		err := fn(c)
+		if err != customErr {
+			t.Fatalf("it should return error")
+		}
+	})
+
+	t.Run("route return error", func(t *testing.T) {
+		d := cod.New()
+		d.Use(m)
+		d.GET("/", func(c *cod.Context) error {
+			return errors.New("abcd")
+		})
+		resp := httptest.NewRecorder()
+		d.ServeHTTP(resp, req)
+		checkResponse(t, resp, 500, `{"statusCode":500,"message":"abcd"}`)
+		checkJSON(t, resp)
+	})
 
 	t.Run("invalid response", func(t *testing.T) {
 		d := cod.New()

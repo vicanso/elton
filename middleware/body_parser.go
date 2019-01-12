@@ -62,7 +62,7 @@ func NewBodyParser(config BodyParserConfig) cod.Handler {
 		skiper = DefaultSkipper
 	}
 	return func(c *cod.Context) (err error) {
-		if skiper(c) {
+		if skiper(c) || len(c.RequestBody) != 0 {
 			return c.Next()
 		}
 		method := c.Request.Method
@@ -70,8 +70,9 @@ func NewBodyParser(config BodyParserConfig) cod.Handler {
 		// 对于非提交数据的method跳过
 		valid := false
 		for _, item := range validMethods {
-			if !valid && item == method {
+			if item == method {
 				valid = true
+				break
 			}
 		}
 		if !valid {

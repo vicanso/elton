@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"bytes"
 	"io"
 	"net/http/httptest"
 	"strings"
@@ -35,6 +36,53 @@ func NewErrorReadCloser(err error) io.ReadCloser {
 }
 
 func TestBodyParser(t *testing.T) {
+	t.Run("skip", func(t *testing.T) {
+		bodyParser := NewBodyParser(BodyParserConfig{
+			Skipper: func(c *cod.Context) bool {
+				return true
+			},
+		})
+
+		body := `{"name": "tree.xie"}`
+		req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(body))
+		req.Header.Set(cod.HeaderContentType, "application/json")
+		c := cod.NewContext(nil, req)
+		done := false
+		c.Next = func() error {
+			done = true
+			return nil
+		}
+		err := bodyParser(c)
+
+		if err != nil ||
+			!done ||
+			len(c.RequestBody) != 0 {
+			t.Fatalf("skip fail")
+		}
+	})
+
+	t.Run("request body is not nil", func(t *testing.T) {
+		bodyParser := NewBodyParser(BodyParserConfig{})
+
+		body := `{"name": "tree.xie"}`
+		req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(body))
+		req.Header.Set(cod.HeaderContentType, "application/json")
+		c := cod.NewContext(nil, req)
+		done := false
+		c.Next = func() error {
+			done = true
+			return nil
+		}
+		c.RequestBody = []byte("a")
+		err := bodyParser(c)
+
+		if err != nil ||
+			!done ||
+			!bytes.Equal(c.RequestBody, []byte("a")) {
+			t.Fatalf("request body nil should be pass")
+		}
+	})
+
 	t.Run("pass method", func(t *testing.T) {
 		bodyParser := NewBodyParser(BodyParserConfig{})
 		req := httptest.NewRequest("GET", "https://aslant.site/", nil)

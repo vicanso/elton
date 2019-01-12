@@ -95,6 +95,13 @@ func NewCompresss(config CompressConfig) cod.Handler {
 		if err != nil {
 			return
 		}
+
+		bodyBuf := c.BodyBuffer
+		// 如果数据为空，直接跳过
+		if bodyBuf == nil {
+			return
+		}
+
 		respHeader := c.Headers
 		encoding := respHeader.Get(cod.HeaderContentEncoding)
 		// encoding 不为空，已做处理，无需要压缩
@@ -102,11 +109,6 @@ func NewCompresss(config CompressConfig) cod.Handler {
 			return
 		}
 		contentType := respHeader.Get(cod.HeaderContentType)
-		bodyBuf := c.BodyBuffer
-		// 如果数据为空，直接跳过
-		if bodyBuf == nil {
-			return
-		}
 		buf := bodyBuf.Bytes()
 		// 如果数据长度少于最小压缩长度或数据类型为非可压缩，则返回
 		if len(buf) < minLength || !checker.MatchString(contentType) {
