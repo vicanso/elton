@@ -19,28 +19,49 @@ import (
 	"net/http/httputil"
 	"net/url"
 
+	"github.com/vicanso/hes"
+
 	"github.com/vicanso/cod"
 )
 
+var (
+	errTargetIsNil = hes.New("target can not be nil")
+)
+
 type (
+	// TargetPicker target picker function
+	TargetPicker func(c *cod.Context) (*url.URL, error)
 	// ProxyConfig proxy config
 	ProxyConfig struct {
-		URL       string
-		Host      string
-		Transport *http.Transport
+		Target       *url.URL
+		Host         string
+		Transport    *http.Transport
+		TargetPicker TargetPicker
 	}
 )
 
 // NewProxy create a proxy middleware
 func NewProxy(config ProxyConfig) cod.Handler {
-	if config.URL == "" {
-		panic("require url config")
+	if config.Target == nil && config.TargetPicker == nil {
+		panic("require target or targer picker")
 	}
-	target, err := url.Parse(config.URL)
-	if err != nil {
-		panic(err)
-	}
+	// TODO 增强proxy的方式，可以动态选择backend
+	// if config.URL == "" {
+	// 	panic("require url config")
+	// }
 	return func(c *cod.Context) (err error) {
+		target := config.Target
+		if target == nil {
+			target, err = config.TargetPicker(c)
+			if err != nil {
+				return
+			}
+		}
+		// 如果无target，则抛错
+		if target == nil {
+			err = errTargetIsNil
+			return
+		}
 		p := httputil.NewSingleHostReverseProxy(target)
 		if config.Transport != nil {
 			p.Transport = config.Transport

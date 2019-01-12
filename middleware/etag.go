@@ -41,6 +41,7 @@ func NewETag(config ETagConfig) cod.Handler {
 		respHeader := c.Headers
 		bodyBuf := c.BodyBuffer
 		// 如果无内容或已设置 eTag ，则跳过
+		// 因为没有内容生成 eTag 也没有意义了 (304也只是为了减少数据传输)
 		if bodyBuf == nil || bodyBuf.Len() == 0 ||
 			respHeader.Get(cod.HeaderETag) != "" {
 			return

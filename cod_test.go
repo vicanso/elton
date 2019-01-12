@@ -465,6 +465,14 @@ func TestGetSetFunctionName(t *testing.T) {
 
 func TestConvertToServerTiming(t *testing.T) {
 	traceInfos := make([]*TraceInfo, 0)
+
+	t.Run("get ms", func(t *testing.T) {
+		if getMs(10) != "0" ||
+			getMs(100000) != "0.10" {
+			t.Fatalf("get ms fail")
+		}
+	})
+
 	t.Run("empty trace infos", func(t *testing.T) {
 		if ConvertToServerTiming(traceInfos, "") != nil {
 			t.Fatalf("it should be nil")
