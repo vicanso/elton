@@ -32,6 +32,8 @@ func NewRecover() cod.Handler {
 				if !ok {
 					err = fmt.Errorf("%v", r)
 				}
+				// 如果已直接对Response写入数据，则将 Committed设置为 true
+				c.Committed = true
 				resp := c.Response
 				resp.WriteHeader(http.StatusInternalServerError)
 				resp.Write([]byte(err.Error()))

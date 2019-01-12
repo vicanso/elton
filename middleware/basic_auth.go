@@ -73,6 +73,7 @@ func NewBasicAuth(config BasicAuthConfig) cod.Handler {
 			return c.Next()
 		}
 		auth := c.Request.Header.Get(cod.HeaderAuthorization)
+		// 如果请求头无认证头，则返回出错
 		if len(auth) < basicLen+1 ||
 			strings.ToLower(auth[:basicLen]) != basic {
 			c.SetHeader(cod.HeaderWWWAuthenticate, wwwAuthenticate)
@@ -81,14 +82,17 @@ func NewBasicAuth(config BasicAuthConfig) cod.Handler {
 		}
 
 		v, e := base64.StdEncoding.DecodeString(auth[basicLen+1:])
+		// base64 decode 失败
 		if e != nil {
 			err = getBasicAuthError(e.Error(), http.StatusBadRequest)
 			return err
 		}
 
 		arr := strings.Split(string(v), ":")
+		// 调用校验函数
 		valid, e := config.Validate(arr[0], arr[1], c)
 
+		// 如果返回出错，则输出出错信息
 		if e != nil {
 			err, ok := e.(*hes.Error)
 			if !ok {
@@ -96,6 +100,8 @@ func NewBasicAuth(config BasicAuthConfig) cod.Handler {
 			}
 			return err
 		}
+
+		// 如果校验失败，设置认证头，客户重新输入
 		if !valid {
 			c.SetHeader(cod.HeaderWWWAuthenticate, wwwAuthenticate)
 			err = errUnauthorized
