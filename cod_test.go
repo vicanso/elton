@@ -492,3 +492,17 @@ func TestConvertToServerTiming(t *testing.T) {
 		}
 	})
 }
+
+func TestGenerateRewrites(t *testing.T) {
+	arr := []string{
+		"/api/*:/$1",
+		"/images/*:/static/$1",
+	}
+	regs, err := GenerateRewrites(arr)
+	if err != nil {
+		t.Fatalf("generate rewrites fail, %v", err)
+	}
+	if len(regs) != 2 {
+		t.Fatalf("generate rewriters fail")
+	}
+}

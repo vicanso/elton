@@ -22,8 +22,10 @@ import (
 	"net"
 	"net/http"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -531,6 +533,7 @@ func ConvertToServerTiming(traceInfos []*TraceInfo, prefix string) []byte {
 	timings := make([][]byte, size)
 	prefixDesc := []byte(prefix)
 
+	// 转换为 http server timing
 	for i, traceInfo := range traceInfos {
 		v := traceInfo.Duration.Nanoseconds()
 		dur := []byte(getMs(int(v)))
@@ -547,4 +550,29 @@ func ConvertToServerTiming(traceInfos []*TraceInfo, prefix string) []byte {
 		}, nil)
 	}
 	return bytes.Join(timings, []byte(","))
+}
+
+// GenerateRewrites generate rewrites
+func GenerateRewrites(rewrites []string) (m map[*regexp.Regexp]string, err error) {
+	if len(rewrites) == 0 {
+		return
+	}
+	m = make(map[*regexp.Regexp]string)
+
+	for _, value := range rewrites {
+		arr := strings.Split(value, ":")
+		if len(arr) != 2 {
+			continue
+		}
+		k := arr[0]
+		v := arr[1]
+		k = strings.Replace(k, "*", "(\\S*)", -1)
+		reg, e := regexp.Compile(k)
+		if e != nil {
+			err = e
+			break
+		}
+		m[reg] = v
+	}
+	return
 }

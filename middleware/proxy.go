@@ -18,6 +18,9 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"regexp"
+	"strconv"
+	"strings"
 
 	"github.com/vicanso/hes"
 
@@ -34,21 +37,46 @@ type (
 	// ProxyConfig proxy config
 	ProxyConfig struct {
 		Target       *url.URL
+		Rewrites     []string
 		Host         string
 		Transport    *http.Transport
 		TargetPicker TargetPicker
 	}
 )
 
+func captureTokens(pattern *regexp.Regexp, input string) *strings.Replacer {
+	groups := pattern.FindAllStringSubmatch(input, -1)
+	if groups == nil {
+		return nil
+	}
+	values := groups[0][1:]
+	replace := make([]string, 2*len(values))
+	for i, v := range values {
+		j := 2 * i
+		replace[j] = "$" + strconv.Itoa(i+1)
+		replace[j+1] = v
+	}
+	return strings.NewReplacer(replace...)
+}
+
+func rewrite(rewriteRegexp map[*regexp.Regexp]string, req *http.Request) {
+	for k, v := range rewriteRegexp {
+		replacer := captureTokens(k, req.URL.Path)
+		if replacer != nil {
+			req.URL.Path = replacer.Replace(v)
+		}
+	}
+}
+
 // NewProxy create a proxy middleware
 func NewProxy(config ProxyConfig) cod.Handler {
 	if config.Target == nil && config.TargetPicker == nil {
 		panic("require target or targer picker")
 	}
-	// TODO 增强proxy的方式，可以动态选择backend
-	// if config.URL == "" {
-	// 	panic("require url config")
-	// }
+	regs, err := cod.GenerateRewrites(config.Rewrites)
+	if err != nil {
+		panic(err)
+	}
 	return func(c *cod.Context) (err error) {
 		target := config.Target
 		if target == nil {
@@ -67,6 +95,9 @@ func NewProxy(config ProxyConfig) cod.Handler {
 			p.Transport = config.Transport
 		}
 		req := c.Request
+		if regs != nil {
+			rewrite(regs, req)
+		}
 		if config.Host != "" {
 			req.Host = config.Host
 		}
