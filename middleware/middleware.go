@@ -18,7 +18,12 @@ import (
 	"bytes"
 	"compress/gzip"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/vicanso/cod"
+)
+
+var (
+	json = jsoniter.ConfigCompatibleWithStandardLibrary
 )
 
 type (

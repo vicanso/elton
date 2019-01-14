@@ -67,8 +67,8 @@ func addGzip(items []*Compression) []*Compression {
 
 }
 
-// NewCompresss create a new compress middleware
-func NewCompresss(config CompressConfig) cod.Handler {
+// NewCompress create a new compress middleware
+func NewCompress(config CompressConfig) cod.Handler {
 	minLength := config.MinLength
 	if minLength == 0 {
 		minLength = defaultCompresMinLength

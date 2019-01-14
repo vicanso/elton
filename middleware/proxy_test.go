@@ -23,6 +23,8 @@ func TestProxy(t *testing.T) {
 		}
 		fn := NewProxy(config)
 		req := httptest.NewRequest("GET", "http://127.0.0.1/api/", nil)
+		originalPath := req.URL.Path
+		originalHost := req.Host
 		resp := httptest.NewRecorder()
 		c := cod.NewContext(resp, req)
 		done := false
@@ -31,6 +33,13 @@ func TestProxy(t *testing.T) {
 			return nil
 		}
 		fn(c)
+		if c.Request.URL.Path != originalPath {
+			t.Fatalf("request path should be reverted")
+		}
+		if req.Host != originalHost {
+			t.Fatalf("request host should be reverted")
+		}
+
 		if !done || c.StatusCode != http.StatusOK {
 			t.Fatalf("http proxy fail")
 		}

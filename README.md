@@ -20,7 +20,10 @@ import (
 )
 
 func main() {
+
 	d := cod.New()
+
+	d.Use(middleware.NewRecover())
 
 	// 请求处理时长
 	d.Use(func(c *cod.Context) (err error) {
@@ -30,13 +33,25 @@ func main() {
 		return
 	})
 
+	// fresh与etag，fresh在etag前添加
+	d.Use(middleware.NewFresh(middleware.FreshConfig{}))
+	d.Use(middleware.NewETag(middleware.ETagConfig{}))
+
+	d.Use(middleware.NewCompress(middleware.CompressConfig{
+		// 最小压缩长度设置为1（测试需要，实际可根据实际场景配置或不配置）
+		MinLength: 1,
+	}))
+
 	// 针对出错error生成相应的HTTP响应数据（http状态码以及响应数据）
 	// 或者成功处理的Body生成相应的HTTP响应数据
 	d.Use(middleware.NewResponder(middleware.ResponderConfig{}))
 
-	// 路由处理函数，响应pong字符串
-	d.GET("/ping", func(c *cod.Context) (err error) {
-		c.Body = "pong"
+	d.GET("/users/me", func(c *cod.Context) (err error) {
+		c.Body = &struct {
+			Name string `json:"name"`
+		}{
+			"tree.xie",
+		}
 		return
 	})
 	d.ListenAndServe(":8001")

@@ -75,6 +75,22 @@ func TestFS(t *testing.T) {
 	if err != nil || len(buf) == 0 {
 		t.Fatalf("get file fail, %v", err)
 	}
+
+	t.Run("out of path", func(t *testing.T) {
+		tfs := FS{
+			Path: "/a",
+		}
+		if tfs.Stat("/b") != nil {
+			t.Fatalf("out of path should return nil stat")
+		}
+		if tfs.Exists("/b") {
+			t.Fatalf("file is not exists")
+		}
+		_, err := tfs.Get("/b")
+		if err != errOutOfPath {
+			t.Fatalf("should return out of path")
+		}
+	})
 }
 func TestStaticServe(t *testing.T) {
 	staticFile := &MockStaticFile{}

@@ -167,7 +167,12 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 		c.SetFileContentType(file)
 		buf, e := staticFile.Get(file)
 		if e != nil {
-			err = getStaticServeError(e.Error(), http.StatusInternalServerError)
+			he, ok := e.(*hes.Error)
+			if ok {
+				err = he
+			} else {
+				err = getStaticServeError(e.Error(), http.StatusInternalServerError)
+			}
 			return
 		}
 		if !config.DisableETag {

@@ -18,13 +18,8 @@ import (
 	"bytes"
 	"net/http"
 
-	jsoniter "github.com/json-iterator/go"
 	"github.com/vicanso/cod"
 	"github.com/vicanso/hes"
-)
-
-var (
-	json = jsoniter.ConfigCompatibleWithStandardLibrary
 )
 
 type (

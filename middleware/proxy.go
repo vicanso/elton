@@ -95,13 +95,22 @@ func NewProxy(config ProxyConfig) cod.Handler {
 			p.Transport = config.Transport
 		}
 		req := c.Request
+		var originalPath, originalHost string
 		if regs != nil {
+			originalPath = req.URL.Path
 			rewrite(regs, req)
 		}
 		if config.Host != "" {
+			originalHost = req.Host
 			req.Host = config.Host
 		}
 		p.ServeHTTP(c, req)
+		if originalPath != "" {
+			req.URL.Path = originalPath
+		}
+		if originalHost != "" {
+			req.Host = originalHost
+		}
 		return c.Next()
 	}
 }

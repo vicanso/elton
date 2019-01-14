@@ -40,7 +40,7 @@ func TestCompress(t *testing.T) {
 			done = true
 			return nil
 		}
-		fn := NewCompresss(CompressConfig{
+		fn := NewCompress(CompressConfig{
 			Skipper: func(c *cod.Context) bool {
 				return true
 			},
@@ -59,7 +59,7 @@ func TestCompress(t *testing.T) {
 			done = true
 			return nil
 		}
-		fn := NewCompresss(CompressConfig{})
+		fn := NewCompress(CompressConfig{})
 		err := fn(c)
 		if err != nil ||
 			!done {
@@ -73,7 +73,7 @@ func TestCompress(t *testing.T) {
 		c.Next = func() error {
 			return customErr
 		}
-		fn := NewCompresss(CompressConfig{})
+		fn := NewCompress(CompressConfig{})
 		err := fn(c)
 		if err != customErr {
 			t.Fatalf("it should return error")
@@ -81,7 +81,7 @@ func TestCompress(t *testing.T) {
 	})
 
 	t.Run("normal", func(t *testing.T) {
-		fn := NewCompresss(CompressConfig{
+		fn := NewCompress(CompressConfig{
 			Level:     1,
 			MinLength: 1,
 		})
@@ -109,7 +109,7 @@ func TestCompress(t *testing.T) {
 	})
 
 	t.Run("encoding done", func(t *testing.T) {
-		fn := NewCompresss(CompressConfig{})
+		fn := NewCompress(CompressConfig{})
 		req := httptest.NewRequest("GET", "/users/me", nil)
 		resp := httptest.NewRecorder()
 		c := cod.NewContext(resp, req)
@@ -129,7 +129,7 @@ func TestCompress(t *testing.T) {
 	})
 
 	t.Run("body size is less than min length", func(t *testing.T) {
-		fn := NewCompresss(CompressConfig{})
+		fn := NewCompress(CompressConfig{})
 
 		req := httptest.NewRequest("GET", "/users/me", nil)
 		req.Header.Set(cod.HeaderAcceptEncoding, "gzip")
@@ -151,7 +151,7 @@ func TestCompress(t *testing.T) {
 	})
 
 	t.Run("image should not be compress", func(t *testing.T) {
-		fn := NewCompresss(CompressConfig{})
+		fn := NewCompress(CompressConfig{})
 
 		req := httptest.NewRequest("GET", "/users/me", nil)
 		req.Header.Set(cod.HeaderAcceptEncoding, "gzip")
@@ -174,7 +174,7 @@ func TestCompress(t *testing.T) {
 	})
 
 	t.Run("not accept gzip should not compress", func(t *testing.T) {
-		fn := NewCompresss(CompressConfig{})
+		fn := NewCompress(CompressConfig{})
 
 		req := httptest.NewRequest("GET", "/users/me", nil)
 		resp := httptest.NewRecorder()
@@ -204,17 +204,9 @@ func TestCompress(t *testing.T) {
 		}
 		compressionList := make([]*Compression, 0)
 		compressionList = append(compressionList, brCompress)
-		fn := NewCompresss(CompressConfig{
+		fn := NewCompress(CompressConfig{
 			CompressionList: compressionList,
 		})
-		// fn := NewCompresss(CompressConfig{
-		// 	Compresss: func(c *cod.Context) (done bool) {
-		// 		// 假设做了 brotli 压缩
-		// 		c.BodyBuffer = bytes.NewBufferString("abcd")
-		// 		c.SetHeader(cod.HeaderContentEncoding, "br")
-		// 		return true
-		// 	},
-		// })
 
 		req := httptest.NewRequest("GET", "/users/me", nil)
 		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
