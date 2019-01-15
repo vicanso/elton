@@ -208,10 +208,13 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			c.Reset()
 		}
 		d.fillContext(c, resp, req)
-		c.Params = make(map[string]string)
-		for _, item := range params {
-			c.Params[item.Key] = item.Value
+		if len(params) != 0 {
+			c.Params = make(map[string]string)
+			for _, item := range params {
+				c.Params[item.Key] = item.Value
+			}
 		}
+
 		if d.GenerateID != nil {
 			c.ID = d.GenerateID()
 		}

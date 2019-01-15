@@ -19,3 +19,13 @@ func DefaultSkipper(c *cod.Context) bool {
 }
 ```
 
+- [basic auth](./basic_auth.md)
+- [body parser](./body_parser.md)
+- [compress](./compress.md)
+- [concurrent limiter](./concurrent_limiter.md)
+- [etag](./etag.md)
+- [fresh](./fresh.md)
+- [proxy](./proxy.md)
+- [recover](./recover.md)
+- [responder](./responder.md)
+- [stats](./stats.md)

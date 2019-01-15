@@ -120,6 +120,9 @@ func (c *Context) QueryParam(name string) string {
 // It will return map[string]string, not the same as url.Values
 func (c *Context) Query() map[string]string {
 	values := c.Request.URL.Query()
+	if len(values) == 0 {
+		return nil
+	}
 	m := make(map[string]string)
 	for key, values := range values {
 		m[key] = values[0]

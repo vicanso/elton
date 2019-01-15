@@ -25,6 +25,13 @@ func main() {
 
 	d.Use(middleware.NewRecover())
 
+	d.Use(middleware.NewStats(middleware.StatsConfig{
+		// 返回接口处理时长、状态码等
+		OnStats: func(stats *middleware.StatsInfo, _ *cod.Context) {
+			log.Println(stats)
+		},
+	}))
+
 	// 请求处理时长
 	d.Use(func(c *cod.Context) (err error) {
 		started := time.Now()
