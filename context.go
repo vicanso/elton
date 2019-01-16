@@ -34,8 +34,6 @@ type (
 		Headers http.Header
 		// Committed commit the data to response
 		Committed bool
-		// IgnoreNext ignore next middleware function
-		IgnoreNext bool
 		// ID context id
 		ID string
 		// Route route path
@@ -67,7 +65,6 @@ func (c *Context) Reset() {
 	c.Response = nil
 	c.Headers = nil
 	c.Committed = false
-	c.IgnoreNext = false
 	c.ID = ""
 	c.Route = ""
 	c.Next = nil

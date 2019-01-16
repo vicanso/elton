@@ -41,6 +41,7 @@ type (
 		Host         string
 		Transport    *http.Transport
 		TargetPicker TargetPicker
+		Skipper      Skipper
 	}
 )
 
@@ -77,7 +78,14 @@ func NewProxy(config ProxyConfig) cod.Handler {
 	if err != nil {
 		panic(err)
 	}
+	skiper := config.Skipper
+	if skiper == nil {
+		skiper = DefaultSkipper
+	}
 	return func(c *cod.Context) (err error) {
+		if skiper(c) {
+			return c.Next()
+		}
 		target := config.Target
 		if target == nil {
 			target, err = config.TargetPicker(c)

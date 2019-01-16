@@ -55,32 +55,6 @@ func TestNewWithoutServer(t *testing.T) {
 	}
 }
 
-func TestIngoreNext(t *testing.T) {
-	d := New()
-	pass := false
-
-	d.Use(func(c *Context) error {
-		pass = true
-		c.IgnoreNext = true
-		return c.Next()
-	})
-
-	d.Use(func(c *Context) error {
-		pass = false
-		return c.Next()
-	})
-	d.GET("/", func(c *Context) error {
-		pass = false
-		return nil
-	})
-	req := httptest.NewRequest("GET", "/", nil)
-	resp := httptest.NewRecorder()
-	d.ServeHTTP(resp, req)
-	if !pass {
-		t.Fatalf("ingore next fail")
-	}
-}
-
 func TestHandle(t *testing.T) {
 	d := New()
 	t.Run("all methods", func(t *testing.T) {

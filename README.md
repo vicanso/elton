@@ -12,7 +12,9 @@ Go web framework
 package main
 
 import (
+	"fmt"
 	"log"
+	"regexp"
 	"time"
 
 	"github.com/vicanso/cod"
@@ -28,7 +30,7 @@ func main() {
 	d.Use(middleware.NewStats(middleware.StatsConfig{
 		// 返回接口处理时长、状态码等
 		OnStats: func(stats *middleware.StatsInfo, _ *cod.Context) {
-			log.Println(stats)
+			log.Println("stats:", stats)
 		},
 	}))
 
@@ -40,6 +42,12 @@ func main() {
 		return
 	})
 
+	// 只允许使用json形式提交参数，以及长度限制为10KB
+	d.Use(middleware.NewBodyParser(middleware.BodyParserConfig{
+		Limit:                10 * 1024,
+		IgnoreFormURLEncoded: true,
+	}))
+
 	// fresh与etag，fresh在etag前添加
 	d.Use(middleware.NewFresh(middleware.FreshConfig{}))
 	d.Use(middleware.NewETag(middleware.ETagConfig{}))
@@ -49,6 +57,11 @@ func main() {
 		MinLength: 1,
 	}))
 
+	// 指定使用querystring中的fields来筛选响应数据
+	d.Use(middleware.NewJSONPicker(middleware.JSONPickerConfig{
+		Field: "fields",
+	}))
+
 	// 针对出错error生成相应的HTTP响应数据（http状态码以及响应数据）
 	// 或者成功处理的Body生成相应的HTTP响应数据
 	d.Use(middleware.NewResponder(middleware.ResponderConfig{}))
@@ -56,6 +69,25 @@ func main() {
 	d.GET("/users/me", func(c *cod.Context) (err error) {
 		c.Body = &struct {
 			Name string `json:"name"`
+			Type string `json:"type"`
+		}{
+			"tree.xie",
+			"vip",
+		}
+		return
+	})
+
+	loginTracker := func(info *middleware.TrackerInfo, _ *cod.Context) {
+		// 输出track日志，在实际使用中可以记录至数据库等
+		fmt.Println("login:", info)
+	}
+	d.POST("/users/login", middleware.NewTracker(middleware.TrackerConfig{
+		OnTrack: loginTracker,
+		// 指定哪些字段做***处理
+		Mask: regexp.MustCompile(`password`),
+	}), func(c *cod.Context) (err error) {
+		c.Body = &struct {
+			Account string `json:"account"`
 		}{
 			"tree.xie",
 		}

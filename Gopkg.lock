@@ -34,6 +34,22 @@
   version = "1.0.1"
 
 [[projects]]
+  digest = "1:e406c8abe158c24e64775a6381085014943301ffa175a7b53c33cb391ff9b4f2"
+  name = "github.com/tidwall/gjson"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "5a96cfda705e1762dc0671e26b0b78925ad97e29"
+  version = "v1.1.5"
+
+[[projects]]
+  digest = "1:8453ddbed197809ee8ca28b06bd04e127bec9912deb4ba451fea7a1eca578328"
+  name = "github.com/tidwall/match"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "33827db735fff6510490d69a8622612558a557ed"
+  version = "v1.0.1"
+
+[[projects]]
   digest = "1:09e4855a50c18ee416e0ddf1b64892bdcac56629ce55bb031d7566556caba7ba"
   name = "github.com/vicanso/fresh"
   packages = ["."]
@@ -55,6 +71,7 @@
   input-imports = [
     "github.com/json-iterator/go",
     "github.com/julienschmidt/httprouter",
+    "github.com/tidwall/gjson",
     "github.com/vicanso/fresh",
     "github.com/vicanso/hes",
   ]

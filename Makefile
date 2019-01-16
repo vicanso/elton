@@ -10,4 +10,4 @@ test-cover:
 	go test -race -coverprofile=test.out ./... && go tool cover --html=test.out
 
 bench:
-	go test -bench=. ./
+	go test -bench=. ./...

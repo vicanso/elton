@@ -18,10 +18,6 @@ HTTP响应头，默认初始化为Response的Headers，此http.Header为响应�
 
 是否已将响应数据返回（状态码、数据等已写入至Response），除非需要单独处理数据的响应，否则不要设置此属性。
 
-### IgnoreNext
-
-设置是否忽略后续的Handler，如果设置为true，则后续的所有Handler都不再执行，包括全局中间件或者单独的路由处理函数。
-
 ### ID
 
 Context ID，如果有设置Cod.GenerateID，则在每次接收到请求，创建Context之后，调用`GenerateID`生成，一般用于日志或者统计中唯一标识当前请求。
