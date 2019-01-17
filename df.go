@@ -44,6 +44,12 @@ var (
 		Message:    "invalid response",
 		Category:   ErrCategoryCod,
 	}
+	// ErrNillResponse nil response
+	ErrNillResponse = &hes.Error{
+		StatusCode: 500,
+		Message:    "nil response",
+		Category:   ErrCategoryCod,
+	}
 )
 
 const (

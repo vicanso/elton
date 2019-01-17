@@ -42,6 +42,8 @@ var (
 )
 
 type (
+	// M alias
+	M map[string]interface{}
 	// RouterInfo router's info
 	RouterInfo struct {
 		Method string `json:"method,omitempty"`

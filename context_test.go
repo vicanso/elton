@@ -275,6 +275,15 @@ func TestSetFileContentType(t *testing.T) {
 
 }
 
+func TestPush(t *testing.T) {
+	resp := httptest.NewRecorder()
+	c := NewContext(resp, nil)
+	err := c.Push("/a.css", nil)
+	if err != nil {
+		t.Fatalf("push fail, %v", err)
+	}
+}
+
 func TestGetCod(t *testing.T) {
 	c := NewContext(nil, nil)
 	c.cod = &Cod{}

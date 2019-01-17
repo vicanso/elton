@@ -253,6 +253,18 @@ func (c *Context) SetFileContentType(file string) {
 	}
 }
 
+// Push http server push
+func (c *Context) Push(target string, opts *http.PushOptions) (err error) {
+	if c.Response == nil {
+		return ErrNillResponse
+	}
+	pusher, ok := c.Response.(http.Pusher)
+	if !ok {
+		return nil
+	}
+	return pusher.Push(target, opts)
+}
+
 // Cod get cod instance
 func (c *Context) Cod() *Cod {
 	return c.cod
