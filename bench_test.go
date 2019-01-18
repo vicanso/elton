@@ -3,6 +3,7 @@ package cod
 import (
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -59,5 +60,13 @@ func BenchmarkConvertServerTiming(b *testing.B) {
 	}
 	for i := 0; i < b.N; i++ {
 		ConvertToServerTiming(traceInfos, "cod-")
+	}
+}
+
+func BenchmarkGetStatus(b *testing.B) {
+	b.ReportAllocs()
+	var v int32
+	for i := 0; i < b.N; i++ {
+		atomic.LoadInt32(&v)
 	}
 }

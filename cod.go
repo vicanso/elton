@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
@@ -41,6 +42,15 @@ var (
 	}
 )
 
+const (
+	// StatusRunning running status
+	StatusRunning = iota
+	// StatusClosing closing status
+	StatusClosing
+	// StatusClosed closed status
+	StatusClosed
+)
+
 type (
 	// M alias
 	M map[string]interface{}
@@ -51,6 +61,8 @@ type (
 	}
 	// Cod web framework instance
 	Cod struct {
+		// status of cod
+		status  int32
 		Server  *http.Server
 		Router  *httprouter.Router
 		Routers []*RouterInfo
@@ -169,8 +181,28 @@ func (d *Cod) Close() error {
 	return d.Server.Close()
 }
 
+// GracefulClose graceful close the http server
+func (d *Cod) GracefulClose(delay time.Duration) error {
+	atomic.StoreInt32(&d.status, StatusClosing)
+	time.Sleep(delay)
+	atomic.StoreInt32(&d.status, StatusClosed)
+	return d.Server.Close()
+}
+
+// GetStatus get status of cod
+func (d *Cod) GetStatus() int32 {
+	return atomic.LoadInt32(&d.status)
+}
+
 // ServeHTTP http handler
 func (d *Cod) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	status := atomic.LoadInt32(&d.status)
+	// 非运行中的状态
+	if status != StatusRunning {
+		resp.WriteHeader(http.StatusServiceUnavailable)
+		resp.Write([]byte(fmt.Sprintf("service is not available, status is %d", status)))
+		return
+	}
 	fn, params, _ := d.Router.Lookup(req.Method, req.URL.Path)
 	if fn != nil {
 		fn(resp, req, params)

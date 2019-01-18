@@ -8,6 +8,6 @@ require (
 	github.com/spf13/cast v1.3.0
 	github.com/tidwall/gjson v1.1.5
 	github.com/tidwall/match v1.0.1 // indirect
-	github.com/vicanso/fresh v0.0.0-20181225130141-24960d803b8d
-	github.com/vicanso/hes v0.0.0-20190110140049-95f43f80a36e
+	github.com/vicanso/fresh v0.1.1
+	github.com/vicanso/hes v0.1.2
 )

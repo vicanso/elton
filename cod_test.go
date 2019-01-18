@@ -480,3 +480,42 @@ func TestGenerateRewrites(t *testing.T) {
 		t.Fatalf("generate rewriters fail")
 	}
 }
+
+func TestGracefulClose(t *testing.T) {
+	d := New()
+	t.Run("running 404", func(t *testing.T) {
+		resp := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/users/me", nil)
+		d.ServeHTTP(resp, req)
+		if resp.Code != http.StatusNotFound {
+			t.Fatalf("it should return 404")
+		}
+	})
+
+	t.Run("graceful close", func(t *testing.T) {
+		done := make(chan bool)
+		go func() {
+			err := d.GracefulClose(time.Second)
+			if err != nil {
+				t.Fatalf("server close fail, %v", err)
+			}
+			done <- true
+		}()
+		time.Sleep(10 * time.Millisecond)
+		if d.GetStatus() != StatusClosing {
+			t.Fatalf("server should be closing")
+		}
+		resp := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/users/me", nil)
+		d.ServeHTTP(resp, req)
+		if resp.Code != http.StatusServiceUnavailable ||
+			resp.Body.String() != "service is not available, status is 1" {
+			t.Fatalf("server closing error is invalid")
+		}
+		<-done
+		if d.GetStatus() != StatusClosed {
+			t.Fatalf("server should be closed")
+		}
+	})
+
+}
