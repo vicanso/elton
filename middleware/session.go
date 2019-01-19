@@ -295,12 +295,12 @@ func NewSession(config SessionConfig) cod.Handler {
 	if config.CreateStore == nil {
 		panic("require create store function")
 	}
-	skiper := config.Skipper
-	if skiper == nil {
-		skiper = DefaultSkipper
+	skipper := config.Skipper
+	if skipper == nil {
+		skipper = DefaultSkipper
 	}
 	return func(c *cod.Context) (err error) {
-		if skiper(c) {
+		if skipper(c) {
 			return c.Next()
 		}
 		store := config.CreateStore(c)

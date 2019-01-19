@@ -29,12 +29,12 @@ type (
 
 // NewETag create a eTag middleware
 func NewETag(config ETagConfig) cod.Handler {
-	skiper := config.Skipper
-	if skiper == nil {
-		skiper = DefaultSkipper
+	skipper := config.Skipper
+	if skipper == nil {
+		skipper = DefaultSkipper
 	}
 	return func(c *cod.Context) (err error) {
-		if skiper(c) {
+		if skipper(c) {
 			return c.Next()
 		}
 		err = c.Next()

@@ -78,12 +78,12 @@ func NewProxy(config ProxyConfig) cod.Handler {
 	if err != nil {
 		panic(err)
 	}
-	skiper := config.Skipper
-	if skiper == nil {
-		skiper = DefaultSkipper
+	skipper := config.Skipper
+	if skipper == nil {
+		skipper = DefaultSkipper
 	}
 	return func(c *cod.Context) (err error) {
-		if skiper(c) {
+		if skipper(c) {
 			return c.Next()
 		}
 		target := config.Target

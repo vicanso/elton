@@ -64,12 +64,12 @@ func NewBasicAuth(config BasicAuthConfig) cod.Handler {
 		realm = config.Realm
 	}
 	wwwAuthenticate := basic + " realm=" + realm
-	skiper := config.Skipper
-	if skiper == nil {
-		skiper = DefaultSkipper
+	skipper := config.Skipper
+	if skipper == nil {
+		skipper = DefaultSkipper
 	}
 	return func(c *cod.Context) (err error) {
-		if skiper(c) {
+		if skipper(c) {
 			return c.Next()
 		}
 		auth := c.Request.Header.Get(cod.HeaderAuthorization)

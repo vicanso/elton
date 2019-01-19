@@ -73,9 +73,9 @@ func NewCompress(config CompressConfig) cod.Handler {
 	if minLength == 0 {
 		minLength = defaultCompresMinLength
 	}
-	skiper := config.Skipper
-	if skiper == nil {
-		skiper = DefaultSkipper
+	skipper := config.Skipper
+	if skipper == nil {
+		skipper = DefaultSkipper
 	}
 	checker := config.Checker
 	if checker == nil {
@@ -88,7 +88,7 @@ func NewCompress(config CompressConfig) cod.Handler {
 	// 添加默认的 gzip 压缩
 	compressionList = addGzip(compressionList)
 	return func(c *cod.Context) (err error) {
-		if skiper(c) {
+		if skipper(c) {
 			return c.Next()
 		}
 		err = c.Next()

@@ -266,12 +266,12 @@ func NewLogger(config LoggerConfig) cod.Handler {
 		panic("logger require on log function")
 	}
 	tags := parse([]byte(config.Format))
-	skiper := config.Skipper
-	if skiper == nil {
-		skiper = DefaultSkipper
+	skipper := config.Skipper
+	if skipper == nil {
+		skipper = DefaultSkipper
 	}
 	return func(c *cod.Context) (err error) {
-		if skiper(c) {
+		if skipper(c) {
 			return c.Next()
 		}
 		startedAt := time.Now()

@@ -43,8 +43,9 @@ type (
 	// ConcurrentLimiterConfig concurrent limiter config
 	ConcurrentLimiterConfig struct {
 		// 生成limit key的相关参数
-		Keys []string
-		Lock Lock
+		Keys    []string
+		Lock    Lock
+		Skipper Skipper
 	}
 	// ConcurrentKeyInfo the concurrent key's info
 	ConcurrentKeyInfo struct {
@@ -58,13 +59,13 @@ type (
 )
 
 // NewConcurrentLimiter create a concurrent limiter middleware
-func NewConcurrentLimiter(conf ConcurrentLimiterConfig) cod.Handler {
-	if conf.Lock == nil {
+func NewConcurrentLimiter(config ConcurrentLimiterConfig) cod.Handler {
+	if config.Lock == nil {
 		panic("require lock function")
 	}
 	keys := make([]*ConcurrentKeyInfo, 0)
 	// 根据配置生成key的处理
-	for _, key := range conf.Keys {
+	for _, key := range config.Keys {
 		if key == ipKey {
 			keys = append(keys, &ConcurrentKeyInfo{
 				IP: true,
@@ -97,7 +98,14 @@ func NewConcurrentLimiter(conf ConcurrentLimiterConfig) cod.Handler {
 			Body: true,
 		})
 	}
+	skipper := config.Skipper
+	if skipper == nil {
+		skipper = DefaultSkipper
+	}
 	return func(c *cod.Context) (err error) {
+		if skipper(c) {
+			return c.Next()
+		}
 		values := make([]string, len(keys))
 		req := c.Request
 		// 获取 lock 的key
@@ -121,7 +129,7 @@ func NewConcurrentLimiter(conf ConcurrentLimiterConfig) cod.Handler {
 		}
 		lockKey := strings.Join(values, ",")
 
-		success, unlock, err := conf.Lock(lockKey, c)
+		success, unlock, err := config.Lock(lockKey, c)
 		if err != nil {
 			return
 		}

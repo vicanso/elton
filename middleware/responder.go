@@ -31,12 +31,12 @@ type (
 
 // NewResponder create a responder
 func NewResponder(config ResponderConfig) cod.Handler {
-	skiper := config.Skipper
-	if skiper == nil {
-		skiper = DefaultSkipper
+	skipper := config.Skipper
+	if skipper == nil {
+		skipper = DefaultSkipper
 	}
 	return func(c *cod.Context) error {
-		if skiper(c) {
+		if skipper(c) {
 			return c.Next()
 		}
 		e := c.Next()

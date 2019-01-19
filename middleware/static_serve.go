@@ -131,12 +131,12 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 	if len(cacheArr) > 1 {
 		cacheControl = strings.Join(cacheArr, ", ")
 	}
-	skiper := config.Skipper
-	if skiper == nil {
-		skiper = DefaultSkipper
+	skipper := config.Skipper
+	if skipper == nil {
+		skipper = DefaultSkipper
 	}
 	return func(c *cod.Context) (err error) {
-		if skiper(c) {
+		if skipper(c) {
 			return c.Next()
 		}
 		url := c.Request.URL

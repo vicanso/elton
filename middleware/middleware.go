@@ -31,7 +31,7 @@ type (
 	Skipper func(c *cod.Context) bool
 )
 
-// DefaultSkipper default skiper function(not skip)
+// DefaultSkipper default skipper function(not skip)
 func DefaultSkipper(c *cod.Context) bool {
 	return c.Committed
 }

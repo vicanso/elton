@@ -47,6 +47,7 @@ type (
 	TrackerConfig struct {
 		OnTrack OnTrack
 		Mask    *regexp.Regexp
+		Skipper Skipper
 	}
 )
 
@@ -66,15 +67,22 @@ func convertMap(data map[string]string, mask *regexp.Regexp) map[string]string {
 }
 
 // NewTracker create a tracker middleware
-func NewTracker(conf TrackerConfig) cod.Handler {
-	mask := conf.Mask
+func NewTracker(config TrackerConfig) cod.Handler {
+	mask := config.Mask
 	if mask == nil {
 		mask = defaultMaskFields
 	}
-	if conf.OnTrack == nil {
+	if config.OnTrack == nil {
 		panic("require on track function")
 	}
+	skipper := config.Skipper
+	if skipper == nil {
+		skipper = DefaultSkipper
+	}
 	return func(c *cod.Context) (err error) {
+		if skipper(c) {
+			return c.Next()
+		}
 		result := HandleSuccess
 		query := convertMap(c.Query(), mask)
 		params := convertMap(c.Params, mask)
@@ -92,7 +100,7 @@ func NewTracker(conf TrackerConfig) cod.Handler {
 		if err != nil {
 			result = HandleFail
 		}
-		conf.OnTrack(&TrackerInfo{
+		config.OnTrack(&TrackerInfo{
 			CID:    c.ID,
 			Query:  query,
 			Params: params,

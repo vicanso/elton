@@ -87,9 +87,9 @@ func pick(buf []byte, fields []string) *bytes.Buffer {
 
 // NewJSONPicker create a json picker middleware
 func NewJSONPicker(config JSONPickerConfig) cod.Handler {
-	skiper := config.Skipper
-	if skiper == nil {
-		skiper = DefaultSkipper
+	skipper := config.Skipper
+	if skipper == nil {
+		skipper = DefaultSkipper
 	}
 	if config.Field == "" {
 		panic("require filed")
@@ -99,7 +99,7 @@ func NewJSONPicker(config JSONPickerConfig) cod.Handler {
 		validate = defaultJSONPickerValidate
 	}
 	return func(c *cod.Context) (err error) {
-		if skiper(c) {
+		if skipper(c) {
 			return c.Next()
 		}
 		fields := c.Query()[config.Field]

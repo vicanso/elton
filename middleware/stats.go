@@ -30,6 +30,7 @@ type (
 	// StatsConfig stats config
 	StatsConfig struct {
 		OnStats OnStats
+		Skipper Skipper
 	}
 	// StatsInfo 统计信息
 	StatsInfo struct {
@@ -47,12 +48,19 @@ type (
 )
 
 // NewStats create a new stats middleware
-func NewStats(conf StatsConfig) cod.Handler {
-	if conf.OnStats == nil {
+func NewStats(config StatsConfig) cod.Handler {
+	if config.OnStats == nil {
 		panic("require on stats function")
 	}
 	var connectingCount uint32
+	skipper := config.Skipper
+	if skipper == nil {
+		skipper = DefaultSkipper
+	}
 	return func(c *cod.Context) (err error) {
+		if skipper(c) {
+			return c.Next()
+		}
 		atomic.AddUint32(&connectingCount, 1)
 		defer atomic.AddUint32(&connectingCount, ^uint32(0))
 
@@ -93,7 +101,7 @@ func NewStats(conf StatsConfig) cod.Handler {
 		}
 		info.Size = size
 
-		conf.OnStats(info, c)
+		config.OnStats(info, c)
 		return
 	}
 }

@@ -57,12 +57,12 @@ func NewBodyParser(config BodyParserConfig) cod.Handler {
 	if config.Limit != 0 {
 		limit = config.Limit
 	}
-	skiper := config.Skipper
-	if skiper == nil {
-		skiper = DefaultSkipper
+	skipper := config.Skipper
+	if skipper == nil {
+		skipper = DefaultSkipper
 	}
 	return func(c *cod.Context) (err error) {
-		if skiper(c) || len(c.RequestBody) != 0 {
+		if skipper(c) || len(c.RequestBody) != 0 {
 			return c.Next()
 		}
 		method := c.Request.Method
