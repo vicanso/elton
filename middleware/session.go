@@ -255,6 +255,11 @@ func (s *Session) ResetSessionID() (string, error) {
 	return s.Store.CreateID()
 }
 
+// GetID get session id
+func (s *Session) GetID() string {
+	return s.id
+}
+
 // Commit sync the session to store
 func (s *Session) Commit() (err error) {
 	if !s.modified {

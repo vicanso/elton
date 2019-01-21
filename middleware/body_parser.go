@@ -62,7 +62,7 @@ func NewBodyParser(config BodyParserConfig) cod.Handler {
 		skipper = DefaultSkipper
 	}
 	return func(c *cod.Context) (err error) {
-		if skipper(c) || len(c.RequestBody) != 0 {
+		if skipper(c) || c.RequestBody != nil {
 			return c.Next()
 		}
 		method := c.Request.Method
@@ -120,6 +120,9 @@ func NewBodyParser(config BodyParserConfig) cod.Handler {
 			data := make([]string, len(values))
 			for index, str := range values {
 				arr := strings.Split(str, "=")
+				if len(arr) < 2 {
+					continue
+				}
 				v, _ := url.QueryUnescape(arr[1])
 				if v == "" {
 					v = arr[1]

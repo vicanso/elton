@@ -28,7 +28,8 @@ import (
 )
 
 var (
-	errTargetIsNil = hes.New("target can not be nil")
+	// ErrTargetIsNil target is nil
+	ErrTargetIsNil = hes.New("target can not be nil")
 )
 
 type (
@@ -95,7 +96,7 @@ func NewProxy(config ProxyConfig) cod.Handler {
 		}
 		// 如果无target，则抛错
 		if target == nil {
-			err = errTargetIsNil
+			err = ErrTargetIsNil
 			return
 		}
 		p := httputil.NewSingleHostReverseProxy(target)

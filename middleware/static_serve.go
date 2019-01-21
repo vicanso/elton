@@ -58,9 +58,12 @@ const (
 )
 
 var (
-	errNotAllowQueryString = getStaticServeError("static serve not allow query string", http.StatusBadRequest)
-	errNotFound            = getStaticServeError("static file not found", http.StatusNotFound)
-	errOutOfPath           = getStaticServeError("out of path", http.StatusBadRequest)
+	// ErrNotAllowQueryString not all query string
+	ErrNotAllowQueryString = getStaticServeError("static serve not allow query string", http.StatusBadRequest)
+	// ErrNotFound static file not found
+	ErrNotFound = getStaticServeError("static file not found", http.StatusNotFound)
+	// ErrOutOfPath file out of path
+	ErrOutOfPath = getStaticServeError("out of path", http.StatusBadRequest)
 )
 
 func (fs *FS) outOfPath(file string) bool {
@@ -96,7 +99,7 @@ func (fs *FS) Stat(file string) os.FileInfo {
 // Get get the file's content
 func (fs *FS) Get(file string) (buf []byte, err error) {
 	if fs.outOfPath(file) {
-		return nil, errOutOfPath
+		return nil, ErrOutOfPath
 	}
 	buf, err = ioutil.ReadFile(file)
 	return
@@ -152,7 +155,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 		file = filepath.Join(config.Path, file)
 
 		if config.DenyQueryString && url.RawQuery != "" {
-			err = errNotAllowQueryString
+			err = ErrNotAllowQueryString
 			return
 		}
 		exists := staticFile.Exists(file)
@@ -160,7 +163,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 			if config.NotFoundNext {
 				return c.Next()
 			}
-			err = errNotFound
+			err = ErrNotFound
 			return
 		}
 

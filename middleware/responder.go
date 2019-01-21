@@ -29,6 +29,20 @@ type (
 	}
 )
 
+const (
+	errResponderCategory             = "cod-responder"
+	errResponderConvertErrorCategory = "cod-responder-convert-error"
+)
+
+var (
+	// ErrInvalidResponse invalid response(body an status is nil)
+	ErrInvalidResponse = &hes.Error{
+		StatusCode: 500,
+		Message:    "invalid response",
+		Category:   errResponderCategory,
+	}
+)
+
 // NewResponder create a responder
 func NewResponder(config ResponderConfig) cod.Handler {
 	skipper := config.Skipper
@@ -41,7 +55,7 @@ func NewResponder(config ResponderConfig) cod.Handler {
 		}
 		e := c.Next()
 		bodyBuf := c.BodyBuffer
-		// 如果已生成BodyBytes，则无跳过
+		// 如果已生成BodyBytes，则跳过
 		// 无需要从 Body 中转换 BodyBytes
 		if bodyBuf != nil {
 			return e
@@ -54,6 +68,7 @@ func NewResponder(config ResponderConfig) cod.Handler {
 				he = &hes.Error{
 					StatusCode: http.StatusInternalServerError,
 					Message:    e.Error(),
+					Category:   errResponderConvertErrorCategory,
 				}
 			}
 			err = he
@@ -61,7 +76,7 @@ func NewResponder(config ResponderConfig) cod.Handler {
 
 		if err == nil && c.StatusCode == 0 && c.Body == nil {
 			// 如果status code 与 body 都为空，则为非法响应
-			err = cod.ErrInvalidResponse
+			err = ErrInvalidResponse
 		}
 
 		ct := cod.HeaderContentType
@@ -90,8 +105,8 @@ func NewResponder(config ResponderConfig) cod.Handler {
 			case string:
 				if !hadContentType {
 					c.SetHeader(ct, cod.MIMETextPlain)
-					body = []byte(c.Body.(string))
 				}
+				body = []byte(c.Body.(string))
 			case []byte:
 				if !hadContentType {
 					c.SetHeader(ct, cod.MIMEBinary)

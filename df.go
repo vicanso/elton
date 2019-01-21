@@ -38,12 +38,7 @@ var (
 		Message:    "invalid redirect",
 		Category:   ErrCategoryCod,
 	}
-	// ErrInvalidResponse invalid response(body an status is nil)
-	ErrInvalidResponse = &hes.Error{
-		StatusCode: 500,
-		Message:    "invalid response",
-		Category:   ErrCategoryCod,
-	}
+
 	// ErrNillResponse nil response
 	ErrNillResponse = &hes.Error{
 		StatusCode: 500,
@@ -92,9 +87,9 @@ const (
 	MaxRedirectCode = 308
 
 	// MIMETextPlain text plain
-	MIMETextPlain = "text/plain;charset=UTF-8"
+	MIMETextPlain = "text/plain; charset=UTF-8"
 	// MIMEApplicationJSON application json
-	MIMEApplicationJSON = "application/json;charset=UTF-8"
+	MIMEApplicationJSON = "application/json; charset=UTF-8"
 	// MIMEBinary binary data
 	MIMEBinary = "application/octet-stream"
 

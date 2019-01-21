@@ -224,6 +224,13 @@ func TestGet(t *testing.T) {
 	if s.GetData() == nil {
 		t.Fatalf("get data fail")
 	}
+
+	s.Commit()
+
+	if s.GetID() == "" {
+		t.Fatalf("get session id fail")
+	}
+
 }
 
 func TestResetSessionID(t *testing.T) {

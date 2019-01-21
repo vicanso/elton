@@ -3,6 +3,7 @@ package middleware
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"net/http/httptest"
 	"testing"
 
@@ -74,7 +75,7 @@ func TestResponder(t *testing.T) {
 		})
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		checkResponse(t, resp, 500, `{"statusCode":500,"message":"abcd"}`)
+		checkResponse(t, resp, 500, `{"statusCode":500,"category":"cod-responder-convert-error","message":"abcd"}`)
 		checkJSON(t, resp)
 	})
 
@@ -86,7 +87,8 @@ func TestResponder(t *testing.T) {
 		})
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		checkResponse(t, resp, 500, `{"statusCode":500,"category":"cod","message":"invalid response"}`)
+		fmt.Println(resp)
+		checkResponse(t, resp, 500, `{"statusCode":500,"category":"cod-responder","message":"invalid response"}`)
 		checkJSON(t, resp)
 	})
 
@@ -122,13 +124,14 @@ func TestResponder(t *testing.T) {
 		d := cod.New()
 		d.Use(m)
 		d.GET("/", func(c *cod.Context) error {
+			c.SetFileContentType(".html")
 			c.Body = "abc"
 			return nil
 		})
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
 		checkResponse(t, resp, 200, "abc")
-		checkContentType(t, resp, cod.MIMETextPlain)
+		checkContentType(t, resp, "text/html; charset=utf-8")
 	})
 
 	t.Run("return bytes", func(t *testing.T) {

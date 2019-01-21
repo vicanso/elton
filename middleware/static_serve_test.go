@@ -87,7 +87,7 @@ func TestFS(t *testing.T) {
 			t.Fatalf("file is not exists")
 		}
 		_, err := tfs.Get("/b")
-		if err != errOutOfPath {
+		if err != ErrOutOfPath {
 			t.Fatalf("should return out of path")
 		}
 	})
@@ -102,7 +102,7 @@ func TestStaticServe(t *testing.T) {
 		req := httptest.NewRequest("GET", "/index.html?a=1", nil)
 		c := cod.NewContext(nil, req)
 		err := fn(c)
-		if err != errNotAllowQueryString {
+		if err != ErrNotAllowQueryString {
 			t.Fatalf("should return not allow query string error")
 		}
 	})
@@ -139,7 +139,7 @@ func TestStaticServe(t *testing.T) {
 			return nil
 		}
 		err := fn(c)
-		if err != errNotFound {
+		if err != ErrNotFound {
 			t.Fatalf("should return not found error")
 		}
 	})
