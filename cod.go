@@ -34,14 +34,6 @@ import (
 	"github.com/vicanso/hes"
 )
 
-var (
-	// ErrOutOfHandlerRange out of handler range (call next over handler's size)
-	ErrOutOfHandlerRange = &hes.Error{
-		StatusCode: http.StatusInternalServerError,
-		Message:    "out of handler range",
-	}
-)
-
 const (
 	// StatusRunning running status
 	StatusRunning = iota
@@ -265,9 +257,9 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 		c.Next = func() error {
 			index++
 			var fn Handler
-			// 如果调用过多的next，则会导致panic
+			// 如果调用过多的next，则直接返回
 			if index >= maxNext {
-				panic(ErrOutOfHandlerRange)
+				return nil
 			}
 			// 如果已执行完公共添加的中间件，执行handler list
 			if index >= maxMid {

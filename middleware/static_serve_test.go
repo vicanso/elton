@@ -77,18 +77,12 @@ func TestFS(t *testing.T) {
 	}
 
 	t.Run("out of path", func(t *testing.T) {
-		tfs := FS{
-			Path: "/a",
-		}
+		tfs := FS{}
 		if tfs.Stat("/b") != nil {
 			t.Fatalf("out of path should return nil stat")
 		}
 		if tfs.Exists("/b") {
 			t.Fatalf("file is not exists")
-		}
-		_, err := tfs.Get("/b")
-		if err != ErrOutOfPath {
-			t.Fatalf("should return out of path")
 		}
 	})
 }
@@ -104,6 +98,19 @@ func TestStaticServe(t *testing.T) {
 		err := fn(c)
 		if err != ErrNotAllowQueryString {
 			t.Fatalf("should return not allow query string error")
+		}
+	})
+
+	t.Run("not allow dot file", func(t *testing.T) {
+		fn := NewStaticServe(staticFile, StaticServeConfig{
+			Path:    staticPath,
+			DenyDot: true,
+		})
+		req := httptest.NewRequest("GET", "/.index.html", nil)
+		c := cod.NewContext(nil, req)
+		err := fn(c)
+		if err != ErrNotAllowAccessDot {
+			t.Fatalf("should return not allow dot error")
 		}
 	})
 

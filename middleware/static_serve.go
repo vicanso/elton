@@ -36,20 +36,30 @@ type (
 	}
 	// StaticServeConfig static serve config
 	StaticServeConfig struct {
-		Path                string
-		Mount               string
-		MaxAge              int
-		SMaxAge             int
-		Header              map[string]string
-		DenyQueryString     bool
-		DisableETag         bool
+		// 静态文件目录
+		Path string
+		// mount path
+		Mount string
+		// http cache control max age
+		MaxAge int
+		// http cache control s-maxage
+		SMaxAge int
+		// http response header
+		Header map[string]string
+		// 禁止query string（因为有时静态文件为CDN回源，避免生成各种重复的缓存）
+		DenyQueryString bool
+		// 是否禁止文件路径以.开头（因为这些文件有可能包括重要信息）
+		DenyDot bool
+		// 禁止生成ETag
+		DisableETag bool
+		// 禁止生成 last-modifed
 		DisableLastModified bool
-		NotFoundNext        bool
-		Skipper             Skipper
+		// 如果404，是否调用next执行后续的中间件（默认为不执行，返回404错误）
+		NotFoundNext bool
+		Skipper      Skipper
 	}
 	// FS file system
 	FS struct {
-		Path string
 	}
 )
 
@@ -64,23 +74,12 @@ var (
 	ErrNotFound = getStaticServeError("static file not found", http.StatusNotFound)
 	// ErrOutOfPath file out of path
 	ErrOutOfPath = getStaticServeError("out of path", http.StatusBadRequest)
+	// ErrNotAllowAccessDot file include dot
+	ErrNotAllowAccessDot = getStaticServeError("static server not allow with dot", http.StatusBadRequest)
 )
-
-func (fs *FS) outOfPath(file string) bool {
-	// 判断是否超时指定目录
-	if fs.Path == "" || strings.HasPrefix(file, fs.Path) {
-		return false
-	}
-	return true
-}
 
 // Exists check the file exists
 func (fs *FS) Exists(file string) bool {
-	// 如果非指定目录下的文件，则认为不存在
-	if fs.outOfPath(file) {
-		return false
-	}
-
 	if _, err := os.Stat(file); os.IsNotExist(err) {
 		return false
 	}
@@ -89,18 +88,12 @@ func (fs *FS) Exists(file string) bool {
 
 // Stat get stat of file
 func (fs *FS) Stat(file string) os.FileInfo {
-	if fs.outOfPath(file) {
-		return nil
-	}
 	info, _ := os.Stat(file)
 	return info
 }
 
 // Get get the file's content
 func (fs *FS) Get(file string) (buf []byte, err error) {
-	if fs.outOfPath(file) {
-		return nil, ErrOutOfPath
-	}
 	buf, err = ioutil.ReadFile(file)
 	return
 }
@@ -152,7 +145,23 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 			}
 			file = file[mountLength:]
 		}
+
+		// 检查文件（路径）是否包括.
+		if config.DenyDot {
+			arr := strings.SplitN(file, "/", -1)
+			for _, item := range arr {
+				if item != "" && item[0] == '.' {
+					err = ErrNotAllowAccessDot
+					return
+				}
+			}
+		}
+
 		file = filepath.Join(config.Path, file)
+		if !strings.HasPrefix(file, config.Path) {
+			err = ErrOutOfPath
+			return
+		}
 
 		if config.DenyQueryString && url.RawQuery != "" {
 			err = ErrNotAllowQueryString
