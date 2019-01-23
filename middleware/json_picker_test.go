@@ -2,9 +2,7 @@ package middleware
 
 import (
 	"bytes"
-	"encoding/base64"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/vicanso/cod"
@@ -105,33 +103,4 @@ func TestJSONPicker(t *testing.T) {
 			t.Fatalf("json pick fail")
 		}
 	})
-}
-
-func BenchmarkBufferPick(b *testing.B) {
-	b.ReportAllocs()
-	b64 := base64.StdEncoding.EncodeToString(make([]byte, 1024))
-	m := map[string]interface{}{
-		"_x": b64,
-		"_y": b64,
-		"_z": b64,
-		"i":  1,
-		"f":  1.12,
-		"s":  "\"abc",
-		"b":  false,
-		"arr": []interface{}{
-			1,
-			"2",
-			true,
-		},
-		"m": map[string]interface{}{
-			"a": 1,
-			"b": "2",
-			"c": false,
-		},
-		"null": nil,
-	}
-	buf, _ := json.Marshal(m)
-	for i := 0; i < b.N; i++ {
-		pick(buf, strings.Split("i,f,s,b,arr,m,null", ","))
-	}
 }

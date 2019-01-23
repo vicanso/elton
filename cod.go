@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/tidwall/gjson"
 	"github.com/vicanso/hes"
 )
 
@@ -41,6 +42,10 @@ const (
 	StatusClosing
 	// StatusClosed closed status
 	StatusClosed
+)
+
+var (
+	camelCaseReg = regexp.MustCompile(`[^\x00-\x2f\x3a-\x40\x5b-\x60\x7b-\x7f]+`)
 )
 
 type (
@@ -600,4 +605,85 @@ func GenerateRewrites(rewrites []string) (m map[*regexp.Regexp]string, err error
 		m[reg] = v
 	}
 	return
+}
+
+// JSONPick pick fields from json
+func JSONPick(buf []byte, fields []string) []byte {
+	result := gjson.GetManyBytes(buf, fields...)
+	max := len(result)
+	arr := make([][]byte, max)
+	currentIndex := 0
+	for index, item := range result {
+		raw := item.Raw
+		// nil的数据忽略
+		if item.Type == gjson.Null {
+			continue
+		}
+		arr[currentIndex] = []byte(`"` + fields[index] + `":` + raw)
+		currentIndex++
+	}
+	// 如果部分数据跳过，则裁剪数组
+	if currentIndex != max {
+		arr = arr[0:currentIndex]
+	}
+
+	data := bytes.Join(arr, []byte(","))
+	data = bytes.Join([][]byte{
+		[]byte("{"),
+		data,
+		[]byte("}"),
+	}, nil)
+	return data
+}
+
+// CamelCase convert string to camel case
+// https://github.com/lodash/lodash/blob/master/camelCase.js
+func CamelCase(str string) string {
+	result := camelCaseReg.FindAllString(str, -1)
+	for index, item := range result {
+		if index == 0 {
+			// 第一个单词首字母小写
+			result[index] = strings.ToLower(item)
+		} else {
+			// 后续的单词首字母大写
+			result[index] = strings.ToUpper(item[0:1]) + strings.ToLower(item[1:])
+		}
+	}
+	return strings.Join(result, "")
+}
+
+func camelCaseJSON(t gjson.Result) string {
+	json := make([]string, 0)
+	isArray := t.IsArray()
+	iterator := func(key, value gjson.Result) bool {
+		k := CamelCase(key.String())
+		var valueStr string
+		if value.IsObject() || value.IsArray() {
+			valueStr = camelCaseJSON(value)
+		} else {
+			valueStr = value.Raw
+		}
+		v := ""
+		// 如果数组，则没有key
+		if isArray {
+			v = valueStr
+		} else {
+			v = `"` + k + `":` + valueStr
+		}
+		json = append(json, v)
+		return true
+	}
+	t.ForEach(iterator)
+	joinJSON := strings.Join(json, ",")
+	if isArray {
+		return "[" + joinJSON + "]"
+	}
+	return "{" + joinJSON + "}"
+}
+
+// CamelCaseJSON convert json to camel case
+func CamelCaseJSON(buf []byte) []byte {
+	result := gjson.ParseBytes(buf)
+	json := camelCaseJSON(result)
+	return []byte(json)
 }

@@ -2,6 +2,8 @@ package cod
 
 import (
 	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -517,5 +519,71 @@ func TestGracefulClose(t *testing.T) {
 			t.Fatalf("server should be closed")
 		}
 	})
+}
 
+func TestJSONPick(t *testing.T) {
+	b64 := base64.StdEncoding.EncodeToString(make([]byte, 1024))
+	m := map[string]interface{}{
+		"_x": b64,
+		"_y": b64,
+		"_z": b64,
+		"i":  1,
+		"f":  1.12,
+		"s":  "\"abc",
+		"b":  false,
+		"arr": []interface{}{
+			1,
+			"2",
+			true,
+		},
+		"m": map[string]interface{}{
+			"a": 1,
+			"b": "2",
+			"c": false,
+		},
+		"null": nil,
+	}
+	buf, _ := json.Marshal(m)
+	pickData := JSONPick(buf, strings.Split("i,f,s,b,arr,m,null", ","))
+	if string(pickData) != `{"i":1,"f":1.12,"s":"\"abc","b":false,"arr":[1,"2",true],"m":{"a":1,"b":"2","c":false}}` {
+		t.Fatalf("json pick fail")
+	}
+}
+
+func TestCamelCase(t *testing.T) {
+	camelCase := "fooBar"
+
+	checkList := []string{
+		"Foo Bar",
+		"--foo-bar--",
+		"__FOO_BAR__",
+		"foo_bar",
+	}
+	for _, item := range checkList {
+		if CamelCase(item) != camelCase {
+			t.Fatalf("camel case fail")
+		}
+	}
+}
+
+func TestCamelCaseJSON(t *testing.T) {
+	json := []byte(`{
+		"book_name": "test",
+		"book_price": 12,
+		"book_on_sale": true,
+		"book_author": {
+			"author_name": "tree.xie",
+			"author_age": 0,
+			"author_salary": 10.1,
+		},
+		"book_category": ["vip", "hot-sale"],
+		"book_infos": [
+			{
+				"word_count": 100
+			}
+		]
+	}`)
+	if string(CamelCaseJSON(json)) != `{"bookName":"test","bookPrice":12,"bookOnSale":true,"bookAuthor":{"authorName":"tree.xie","authorAge":0,"authorSalary":10.1},"bookCategory":["vip","hot-sale"],"bookInfos":[{"wordCount":100}]}` {
+		t.Fatalf("camel case json fail")
+	}
 }

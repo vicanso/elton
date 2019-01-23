@@ -19,8 +19,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/tidwall/gjson"
-
 	"github.com/vicanso/cod"
 )
 
@@ -57,34 +55,6 @@ type (
 	}
 )
 
-func pick(buf []byte, fields []string) *bytes.Buffer {
-	result := gjson.GetManyBytes(buf, fields...)
-	max := len(result)
-	arr := make([][]byte, max)
-	currentIndex := 0
-	for index, item := range result {
-		raw := item.Raw
-		// nil的数据忽略
-		if item.Type == gjson.Null {
-			continue
-		}
-		arr[currentIndex] = []byte(`"` + fields[index] + `":` + raw)
-		currentIndex++
-	}
-	// 如果部分数据跳过，则裁剪数组
-	if currentIndex != max {
-		arr = arr[0:currentIndex]
-	}
-
-	data := bytes.Join(arr, []byte(","))
-	data = bytes.Join([][]byte{
-		[]byte("{"),
-		data,
-		[]byte("}"),
-	}, nil)
-	return bytes.NewBuffer(data)
-}
-
 // NewJSONPicker create a json picker middleware
 func NewJSONPicker(config JSONPickerConfig) cod.Handler {
 	skipper := config.Skipper
@@ -111,7 +81,8 @@ func NewJSONPicker(config JSONPickerConfig) cod.Handler {
 			!validate(c) {
 			return
 		}
-		c.BodyBuffer = pick(c.BodyBuffer.Bytes(), strings.SplitN(fields, ",", -1))
+		buf := cod.JSONPick(c.BodyBuffer.Bytes(), strings.SplitN(fields, ",", -1))
+		c.BodyBuffer = bytes.NewBuffer(buf)
 		return
 	}
 }

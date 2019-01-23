@@ -336,3 +336,55 @@ d.GET("/ping", func(c *cod.Context) (err error) {
 
 d.ListenAndServe(":8001")
 ```
+
+## JSONPick
+
+从json中筛选字段。
+
+```go
+buf := []byte(`{
+	"name": "test",
+	"price" 124.12,
+	"no": 124
+}`)
+data := cod.JSONPick(buf, []string{
+	"name",
+	"price",
+})
+// {"name":"test","price":124.12}
+fmt.Println(string(data))
+```
+
+## CamelCase
+
+将字符串转换为驼峰形式。
+
+```go
+// fooBar
+fmt.Println(cod.CamelCase("Foo Bar"))
+```
+
+### CamelCaseJSON
+
+将json中的字段名转换为驼峰形式。
+
+```go
+json := []byte(`{
+	"book_name": "test",
+	"book_price": 12,
+	"book_on_sale": true,
+	"book_author": {
+		"author_name": "tree.xie",
+		"author_age": 0,
+		"author_salary": 10.1,
+	},
+	"book_category": ["vip", "hot-sale"],
+	"book_infos": [
+		{
+			"word_count": 100
+		}
+	]
+}`)
+// {"bookName":"test","bookPrice":12,"bookOnSale":true,"bookAuthor":{"authorName":"tree.xie","authorAge":0,"authorSalary":10.1},"bookCategory":["vip","hot-sale"],"bookInfos":[{"wordCount":100}]}
+fmt.Println(string(cod.CamelCaseJSON(json)))
+```

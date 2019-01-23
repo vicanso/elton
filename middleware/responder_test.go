@@ -3,7 +3,6 @@ package middleware
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"net/http/httptest"
 	"testing"
 
@@ -87,7 +86,6 @@ func TestResponder(t *testing.T) {
 		})
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		fmt.Println(resp)
 		checkResponse(t, resp, 500, `{"statusCode":500,"category":"cod-responder","message":"invalid response"}`)
 		checkJSON(t, resp)
 	})
