@@ -49,44 +49,22 @@ func NewResponder(config ResponderConfig) cod.Handler {
 	if skipper == nil {
 		skipper = DefaultSkipper
 	}
-	return func(c *cod.Context) error {
+	return func(c *cod.Context) (err error) {
 		if skipper(c) {
 			return c.Next()
 		}
-		e := c.Next()
-		bodyBuf := c.BodyBuffer
-		// 如果已生成BodyBytes，则跳过
-		// 无需要从 Body 中转换 BodyBytes
-		if bodyBuf != nil {
-			return e
-		}
-		var err *hes.Error
-		if e != nil {
-			// 如果出错，尝试转换为HTTPError
-			he, ok := e.(*hes.Error)
-			if !ok {
-				he = &hes.Error{
-					StatusCode: http.StatusInternalServerError,
-					Message:    e.Error(),
-					Category:   errResponderConvertErrorCategory,
-				}
-			}
-			err = he
+		err = c.Next()
+		if err != nil {
+			return
 		}
 
-		if err == nil && c.StatusCode == 0 && c.Body == nil {
+		if c.StatusCode == 0 && c.Body == nil {
 			// 如果status code 与 body 都为空，则为非法响应
 			err = ErrInvalidResponse
+			return
 		}
 
 		ct := cod.HeaderContentType
-
-		// 从出错中获取响应数据，响应状态码
-		if err != nil {
-			c.StatusCode = err.StatusCode
-			c.Body, _ = json.Marshal(err)
-			c.SetHeader(ct, cod.MIMEApplicationJSON)
-		}
 
 		hadContentType := false
 		// 判断是否已设置响应头的Content-Type

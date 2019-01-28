@@ -18,41 +18,47 @@ import (
 	"net/http"
 
 	"github.com/vicanso/cod"
+	"github.com/vicanso/hes"
 )
 
 type (
-	// ETagConfig eTag config
-	ETagConfig struct {
+	// ErrorHandlerConfig error handler config
+	ErrorHandlerConfig struct {
 		Skipper Skipper
 	}
 )
 
-// NewETag create a eTag middleware
-func NewETag(config ETagConfig) cod.Handler {
+const (
+	errErrorHandlerCategory = "cod-error-handler"
+)
+
+// NewErrorHandler create a error handler
+func NewErrorHandler(config ErrorHandlerConfig) cod.Handler {
 	skipper := config.Skipper
 	if skipper == nil {
 		skipper = DefaultSkipper
 	}
-	return func(c *cod.Context) (err error) {
+	return func(c *cod.Context) error {
 		if skipper(c) {
 			return c.Next()
 		}
-		err = c.Next()
-		respHeader := c.Headers
-		bodyBuf := c.BodyBuffer
-		// 如果无内容或已设置 ETag ，则跳过
-		// 因为没有内容也不生成 ETag
-		if bodyBuf == nil || bodyBuf.Len() == 0 ||
-			respHeader.Get(cod.HeaderETag) != "" {
-			return
+		err := c.Next()
+		// 如果没有出错，直接返回
+		if err == nil {
+			return nil
 		}
-		// 如果状态码< 200 或者 >= 300 ，则跳过
-		if c.StatusCode < http.StatusOK ||
-			c.StatusCode >= http.StatusMultipleChoices {
-			return
+		he, ok := err.(*hes.Error)
+		if !ok {
+			he = &hes.Error{
+				StatusCode: http.StatusInternalServerError,
+				Message:    err.Error(),
+				Category:   errErrorHandlerCategory,
+			}
 		}
-		eTag := cod.GenerateETag(bodyBuf.Bytes())
-		c.SetHeader(cod.HeaderETag, eTag)
-		return
+		c.StatusCode = he.StatusCode
+		c.Body, _ = json.Marshal(he)
+		// 默认以json的形式返回
+		c.SetHeader(cod.HeaderContentType, cod.MIMEApplicationJSON)
+		return nil
 	}
 }

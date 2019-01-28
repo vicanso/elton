@@ -62,9 +62,11 @@ func main() {
 		Field: "fields",
 	}))
 
-	// 针对出错error生成相应的HTTP响应数据（http状态码以及响应数据）
-	// 或者成功处理的Body生成相应的HTTP响应数据
+	// 根据Body生成相应的HTTP响应数据
 	d.Use(middleware.NewResponder(middleware.ResponderConfig{}))
+
+	// 针对出错error生成相应的HTTP响应数据（http状态码以及响应数据）
+	d.Use(middleware.NewErrorHandler(middleware.ErrorHandlerConfig{}))
 
 	d.GET("/users/me", func(c *cod.Context) (err error) {
 		c.Body = &struct {

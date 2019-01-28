@@ -78,7 +78,7 @@ func NewBodyParser(config BodyParserConfig) cod.Handler {
 		if !valid {
 			return c.Next()
 		}
-		ct := c.Request.Header.Get(cod.HeaderContentType)
+		ct := c.GetRequestHeader(cod.HeaderContentType)
 		// 非json则跳过
 		isJSON := strings.HasPrefix(ct, jsonContentType)
 		isFormURLEncoded := strings.HasPrefix(ct, formURLEncodedContentType)

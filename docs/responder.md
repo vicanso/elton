@@ -2,7 +2,7 @@
 
 responder中间件，此中间件主要做以下的处理：
 
-- 如果Handler的执行返回Error，则将Error转换为相应的HTTP响应数据（响应状态码与响应体）
+<!-- - 如果Handler的执行返回Error，则将Error转换为相应的HTTP响应数据（响应状态码与响应体） -->
 - 将响应的数据Body(interface{})根据其类型转换为[]byte，并设置`Content-Type`
 - 设置响应状态码与响应体(BodyBuffer)
 

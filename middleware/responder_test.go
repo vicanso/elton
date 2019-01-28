@@ -1,13 +1,11 @@
 package middleware
 
 import (
-	"bytes"
-	"errors"
+	"fmt"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/vicanso/cod"
-	"github.com/vicanso/hes"
 )
 
 func checkResponse(t *testing.T, resp *httptest.ResponseRecorder, code int, data string) {
@@ -52,32 +50,6 @@ func TestResponder(t *testing.T) {
 		}
 	})
 
-	t.Run("return error", func(t *testing.T) {
-		c := cod.NewContext(nil, nil)
-		customErr := errors.New("abccd")
-		c.Next = func() error {
-			return customErr
-		}
-		fn := NewResponder(ResponderConfig{})
-		c.BodyBuffer = bytes.NewBuffer([]byte("abcd"))
-		err := fn(c)
-		if err != customErr {
-			t.Fatalf("it should return error")
-		}
-	})
-
-	t.Run("route return error", func(t *testing.T) {
-		d := cod.New()
-		d.Use(m)
-		d.GET("/", func(c *cod.Context) error {
-			return errors.New("abcd")
-		})
-		resp := httptest.NewRecorder()
-		d.ServeHTTP(resp, req)
-		checkResponse(t, resp, 500, `{"statusCode":500,"category":"cod-responder-convert-error","message":"abcd"}`)
-		checkJSON(t, resp)
-	})
-
 	t.Run("invalid response", func(t *testing.T) {
 		d := cod.New()
 		d.Use(m)
@@ -86,36 +58,8 @@ func TestResponder(t *testing.T) {
 		})
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		checkResponse(t, resp, 500, `{"statusCode":500,"category":"cod-responder","message":"invalid response"}`)
-		checkJSON(t, resp)
-	})
-
-	t.Run("return error", func(t *testing.T) {
-		d := cod.New()
-		d.Use(m)
-		d.GET("/", func(c *cod.Context) error {
-			return hes.New("abc")
-		})
-		resp := httptest.NewRecorder()
-		d.ServeHTTP(resp, req)
-		checkResponse(t, resp, 400, `{"statusCode":400,"message":"abc"}`)
-		checkJSON(t, resp)
-	})
-
-	t.Run("return http error", func(t *testing.T) {
-		d := cod.New()
-		d.Use(m)
-		d.GET("/", func(c *cod.Context) error {
-			return &hes.Error{
-				StatusCode: 400,
-				Message:    "abc",
-				Category:   "custom",
-			}
-		})
-		resp := httptest.NewRecorder()
-		d.ServeHTTP(resp, req)
-		checkResponse(t, resp, 400, `{"statusCode":400,"category":"custom","message":"abc"}`)
-		checkJSON(t, resp)
+		fmt.Println(resp)
+		checkResponse(t, resp, 500, "category=cod-responder, message=invalid response")
 	})
 
 	t.Run("return string", func(t *testing.T) {

@@ -54,7 +54,7 @@ func NewFresh(config FreshConfig) cod.Handler {
 			return
 		}
 
-		// 如果响应状态码非 >=200 <300，则跳过
+		// 如果响应状态码 < 200 或者 >= 300，则跳过
 		statusCode := c.StatusCode
 		if statusCode < http.StatusOK || statusCode >= http.StatusMultipleChoices {
 			return

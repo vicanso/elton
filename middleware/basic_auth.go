@@ -85,7 +85,7 @@ func NewBasicAuth(config BasicAuthConfig) cod.Handler {
 		// base64 decode 失败
 		if e != nil {
 			err = getBasicAuthError(e.Error(), http.StatusBadRequest)
-			return err
+			return
 		}
 
 		arr := strings.Split(string(v), ":")
