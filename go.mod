@@ -9,5 +9,5 @@ require (
 	github.com/tidwall/gjson v1.1.5
 	github.com/tidwall/match v1.0.1 // indirect
 	github.com/vicanso/fresh v0.1.1
-	github.com/vicanso/hes v0.1.2
+	github.com/vicanso/hes v0.1.3
 )

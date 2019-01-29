@@ -15,6 +15,7 @@
 package middleware
 
 import (
+	"bytes"
 	"net/http"
 
 	"github.com/vicanso/cod"
@@ -56,7 +57,9 @@ func NewErrorHandler(config ErrorHandlerConfig) cod.Handler {
 			}
 		}
 		c.StatusCode = he.StatusCode
-		c.Body, _ = json.Marshal(he)
+		buf, _ := json.Marshal(he)
+		c.BodyBuffer = bytes.NewBuffer(buf)
+
 		// 默认以json的形式返回
 		c.SetHeader(cod.HeaderContentType, cod.MIMEApplicationJSON)
 		return nil

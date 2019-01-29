@@ -109,9 +109,6 @@ func getStaticServeError(message string, statusCode int) *hes.Error {
 
 // NewStaticServe create a static serve middleware
 func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler {
-	if config.Path == "" {
-		panic("require static path")
-	}
 	mount := config.Mount
 	mountLength := len(mount)
 	cacheArr := []string{

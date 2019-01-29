@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"bytes"
 	"fmt"
 	"net/http/httptest"
 	"testing"
@@ -47,6 +48,22 @@ func TestResponder(t *testing.T) {
 		if err != nil ||
 			!done {
 			t.Fatalf("skip fail")
+		}
+	})
+
+	t.Run("set BodyBuffer", func(t *testing.T) {
+		c := cod.NewContext(nil, nil)
+		done := false
+		c.Next = func() error {
+			c.BodyBuffer = bytes.NewBuffer([]byte(""))
+			done = true
+			return nil
+		}
+		fn := NewResponder(ResponderConfig{})
+		err := fn(c)
+		if err != nil ||
+			!done {
+			t.Fatalf("set body buffer should pass")
 		}
 	})
 

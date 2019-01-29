@@ -57,6 +57,10 @@ func NewResponder(config ResponderConfig) cod.Handler {
 		if err != nil {
 			return
 		}
+		// 如果已设置了BodyBuffer，则已生成好响应数据，跳过
+		if c.BodyBuffer != nil {
+			return
+		}
 
 		if c.StatusCode == 0 && c.Body == nil {
 			// 如果status code 与 body 都为空，则为非法响应
