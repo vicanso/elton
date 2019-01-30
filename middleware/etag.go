@@ -27,7 +27,12 @@ type (
 	}
 )
 
-// NewETag create a eTag middleware
+// NewDefaultETag create a default ETag middleware
+func NewDefaultETag() cod.Handler {
+	return NewETag(ETagConfig{})
+}
+
+// NewETag create a ETag middleware
 func NewETag(config ETagConfig) cod.Handler {
 	skipper := config.Skipper
 	if skipper == nil {

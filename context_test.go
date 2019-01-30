@@ -1,6 +1,7 @@
 package cod
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -8,18 +9,40 @@ import (
 
 func TestReset(t *testing.T) {
 	c := Context{
-		Request:  httptest.NewRequest("GET", "https://aslant.site/", nil),
-		Response: httptest.NewRecorder(),
-		Route:    "/users/me",
+		Request:   httptest.NewRequest("GET", "https://aslant.site/", nil),
+		Response:  httptest.NewRecorder(),
+		Headers:   make(http.Header),
+		Committed: true,
+		ID:        "abcd",
+		Route:     "/users/me",
 		Next: func() error {
 			return nil
 		},
+		Params:      make(map[string]string),
+		StatusCode:  200,
+		Body:        make(map[string]string),
+		BodyBuffer:  bytes.NewBufferString("abcd"),
+		RequestBody: []byte("abcd"),
+		m:           make(map[string]interface{}),
+		realIP:      "abcd",
+		cod:         &Cod{},
 	}
 	c.Reset()
 	if c.Request != nil ||
 		c.Response != nil ||
+		c.Headers != nil ||
+		c.Committed ||
+		c.ID != "" ||
 		c.Route != "" ||
-		c.Next != nil {
+		c.Next != nil ||
+		c.Params != nil ||
+		c.StatusCode != 0 ||
+		c.Body != nil ||
+		c.BodyBuffer != nil ||
+		c.RequestBody != nil ||
+		c.m != nil ||
+		c.realIP != "" ||
+		c.cod != nil {
 		t.Fatalf("reset fail")
 	}
 }

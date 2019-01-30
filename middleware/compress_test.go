@@ -59,7 +59,7 @@ func TestCompress(t *testing.T) {
 			done = true
 			return nil
 		}
-		fn := NewCompress(CompressConfig{})
+		fn := NewDefaultCompress()
 		err := fn(c)
 		if err != nil ||
 			!done {

@@ -64,7 +64,11 @@ func addGzip(items []*Compression) []*Compression {
 		})
 	}
 	return items
+}
 
+// NewDefaultCompress create a default compress middleware, support gzip
+func NewDefaultCompress() cod.Handler {
+	return NewCompress(CompressConfig{})
 }
 
 // NewCompress create a new compress middleware

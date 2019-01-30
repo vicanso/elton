@@ -100,7 +100,7 @@ func TestProxy(t *testing.T) {
 		resp := httptest.NewRecorder()
 		c := cod.NewContext(resp, req)
 		err := fn(c)
-		if err.Error() != "message=target can not be nil" {
+		if err.Error() != "category=cod-proxy, message=target can not be nil" {
 			t.Fatalf("nil proxy should return error")
 		}
 	})

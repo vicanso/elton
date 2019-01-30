@@ -27,9 +27,17 @@ import (
 	"github.com/vicanso/cod"
 )
 
+const (
+	errProxyCategory = "cod-proxy"
+)
+
 var (
 	// ErrTargetIsNil target is nil
-	ErrTargetIsNil = hes.New("target can not be nil")
+	ErrTargetIsNil = &hes.Error{
+		Message:    "target can not be nil",
+		StatusCode: http.StatusBadRequest,
+		Category:   errProxyCategory,
+	}
 )
 
 type (

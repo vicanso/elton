@@ -43,6 +43,11 @@ var (
 	}
 )
 
+// NewDefaultResponder create a default responder
+func NewDefaultResponder() cod.Handler {
+	return NewResponder(ResponderConfig{})
+}
+
 // NewResponder create a responder
 func NewResponder(config ResponderConfig) cod.Handler {
 	skipper := config.Skipper

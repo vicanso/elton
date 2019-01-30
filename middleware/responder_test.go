@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"bytes"
-	"fmt"
 	"net/http/httptest"
 	"testing"
 
@@ -29,7 +28,7 @@ func checkContentType(t *testing.T, resp *httptest.ResponseRecorder, contentType
 }
 
 func TestResponder(t *testing.T) {
-	m := NewResponder(ResponderConfig{})
+	m := NewDefaultResponder()
 	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
 
 	t.Run("skip", func(t *testing.T) {
@@ -75,7 +74,6 @@ func TestResponder(t *testing.T) {
 		})
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		fmt.Println(resp)
 		checkResponse(t, resp, 500, "category=cod-responder, message=invalid response")
 	})
 

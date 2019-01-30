@@ -16,6 +16,7 @@ package middleware
 
 import (
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -41,14 +42,15 @@ type (
 
 var (
 	// errUnauthorized unauthorized err
-	errUnauthorized = getBasicAuthError("unAuthorized", http.StatusUnauthorized)
+	errUnauthorized = getBasicAuthError(errors.New("unAuthorized"), http.StatusUnauthorized)
 )
 
-func getBasicAuthError(message string, statusCode int) *hes.Error {
+func getBasicAuthError(err error, statusCode int) *hes.Error {
 	return &hes.Error{
 		StatusCode: statusCode,
-		Message:    message,
+		Message:    err.Error(),
 		Category:   errBasicAuthCategory,
+		Err:        err,
 	}
 }
 
@@ -84,7 +86,7 @@ func NewBasicAuth(config BasicAuthConfig) cod.Handler {
 		v, e := base64.StdEncoding.DecodeString(auth[basicLen+1:])
 		// base64 decode 失败
 		if e != nil {
-			err = getBasicAuthError(e.Error(), http.StatusBadRequest)
+			err = getBasicAuthError(e, http.StatusBadRequest)
 			return
 		}
 
@@ -96,7 +98,7 @@ func NewBasicAuth(config BasicAuthConfig) cod.Handler {
 		if e != nil {
 			err, ok := e.(*hes.Error)
 			if !ok {
-				err = getBasicAuthError(e.Error(), http.StatusBadRequest)
+				err = getBasicAuthError(e, http.StatusBadRequest)
 			}
 			return err
 		}

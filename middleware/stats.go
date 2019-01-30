@@ -88,6 +88,8 @@ func NewStats(config StatsConfig) cod.Handler {
 			he, ok := err.(*hes.Error)
 			if ok {
 				status = he.StatusCode
+			} else {
+				status = http.StatusInternalServerError
 			}
 		}
 		if status == 0 {

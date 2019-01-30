@@ -51,7 +51,14 @@ var (
 	}
 )
 
-// NewBodyParser new json parser
+// NewDefaultBodyParser create a default body parser, default limit and only json parser
+func NewDefaultBodyParser() cod.Handler {
+	return NewBodyParser(BodyParserConfig{
+		IgnoreFormURLEncoded: true,
+	})
+}
+
+// NewBodyParser create a body parser
 func NewBodyParser(config BodyParserConfig) cod.Handler {
 	limit := defaultRequestBodyLimit
 	if config.Limit != 0 {
@@ -103,6 +110,7 @@ func NewBodyParser(config BodyParserConfig) cod.Handler {
 				StatusCode: http.StatusBadRequest,
 				Message:    e.Error(),
 				Category:   errBodyParserCategory,
+				Err:        e,
 			}
 			return
 		}

@@ -9,7 +9,7 @@ import (
 )
 
 func TestErrorHandler(t *testing.T) {
-	fn := NewErrorHandler(ErrorHandlerConfig{})
+	fn := NewDefaultErrorHandler()
 	req := httptest.NewRequest("GET", "/users/me", nil)
 	resp := httptest.NewRecorder()
 	c := cod.NewContext(resp, req)

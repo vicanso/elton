@@ -9,7 +9,7 @@ import (
 )
 
 func TestETag(t *testing.T) {
-	fn := NewETag(ETagConfig{})
+	fn := NewDefaultETag()
 	t.Run("no body", func(t *testing.T) {
 		resp := httptest.NewRecorder()
 		c := cod.NewContext(resp, nil)

@@ -62,7 +62,7 @@ func TestBodyParser(t *testing.T) {
 	})
 
 	t.Run("request body is not nil", func(t *testing.T) {
-		bodyParser := NewBodyParser(BodyParserConfig{})
+		bodyParser := NewDefaultBodyParser()
 
 		body := `{"name": "tree.xie"}`
 		req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(body))

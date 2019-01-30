@@ -28,6 +28,11 @@ type (
 	}
 )
 
+// NewDefaultFresh create a default ETag middleware
+func NewDefaultFresh() cod.Handler {
+	return NewFresh(FreshConfig{})
+}
+
 // NewFresh create a fresh checker
 func NewFresh(config FreshConfig) cod.Handler {
 	skipper := config.Skipper

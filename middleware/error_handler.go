@@ -33,6 +33,11 @@ const (
 	errErrorHandlerCategory = "cod-error-handler"
 )
 
+// NewDefaultErrorHandler create a default error handler
+func NewDefaultErrorHandler() cod.Handler {
+	return NewErrorHandler(ErrorHandlerConfig{})
+}
+
 // NewErrorHandler create a error handler
 func NewErrorHandler(config ErrorHandlerConfig) cod.Handler {
 	skipper := config.Skipper
@@ -54,13 +59,13 @@ func NewErrorHandler(config ErrorHandlerConfig) cod.Handler {
 				StatusCode: http.StatusInternalServerError,
 				Message:    err.Error(),
 				Category:   errErrorHandlerCategory,
+				Err:        err,
 			}
 		}
 		c.StatusCode = he.StatusCode
+		// 默认以json的形式返回
 		buf, _ := json.Marshal(he)
 		c.BodyBuffer = bytes.NewBuffer(buf)
-
-		// 默认以json的形式返回
 		c.SetHeader(cod.HeaderContentType, cod.MIMEApplicationJSON)
 		return nil
 	}

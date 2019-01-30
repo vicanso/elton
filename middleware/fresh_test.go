@@ -11,7 +11,7 @@ import (
 )
 
 func TestFresh(t *testing.T) {
-	fn := NewFresh(FreshConfig{})
+	fn := NewDefaultFresh()
 	modifiedAt := "Tue, 25 Dec 2018 00:02:22 GMT"
 	t.Run("skip", func(t *testing.T) {
 		c := cod.NewContext(nil, nil)

@@ -75,6 +75,7 @@ func (c *Context) Reset() {
 	c.RequestBody = nil
 	c.m = nil
 	c.realIP = ""
+	c.cod = nil
 }
 
 // RealIP get the real ip

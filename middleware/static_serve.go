@@ -107,6 +107,11 @@ func getStaticServeError(message string, statusCode int) *hes.Error {
 	}
 }
 
+// NewDefaultStaticServe create a static server milldeware use FS
+func NewDefaultStaticServe(config StaticServeConfig) cod.Handler {
+	return NewStaticServe(&FS{}, config)
+}
+
 // NewStaticServe create a static serve middleware
 func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler {
 	mount := config.Mount
@@ -177,11 +182,11 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 		buf, e := staticFile.Get(file)
 		if e != nil {
 			he, ok := e.(*hes.Error)
-			if ok {
-				err = he
-			} else {
-				err = getStaticServeError(e.Error(), http.StatusInternalServerError)
+			if !ok {
+				he = hes.NewWithErrorStatusCode(e, http.StatusInternalServerError)
+				he.Category = errStaticServeCategory
 			}
+			err = he
 			return
 		}
 		if !config.DisableETag {

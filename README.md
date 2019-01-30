@@ -28,7 +28,7 @@ func main() {
 	d.Use(middleware.NewRecover())
 
 	// 针对出错error生成相应的HTTP响应数据（http状态码以及响应数据）
-	d.Use(middleware.NewErrorHandler(middleware.ErrorHandlerConfig{}))
+	d.Use(middleware.NewDefaultErrorHandler()))
 
 	d.Use(middleware.NewStats(middleware.StatsConfig{
 		// 返回接口处理时长、状态码等
@@ -46,14 +46,11 @@ func main() {
 	})
 
 	// 只允许使用json形式提交参数，以及长度限制为10KB
-	d.Use(middleware.NewBodyParser(middleware.BodyParserConfig{
-		Limit:                10 * 1024,
-		IgnoreFormURLEncoded: true,
-	}))
+	d.Use(middleware.NewDefaultBodyParser())
 
 	// fresh与etag，fresh在etag前添加
-	d.Use(middleware.NewFresh(middleware.FreshConfig{}))
-	d.Use(middleware.NewETag(middleware.ETagConfig{}))
+	d.Use(middleware.NewDefaultFresh())
+	d.Use(middleware.NewDefaultETag())
 
 	d.Use(middleware.NewCompress(middleware.CompressConfig{
 		// 最小压缩长度设置为1（测试需要，实际可根据实际场景配置或不配置）
@@ -66,7 +63,7 @@ func main() {
 	}))
 
 	// 根据Body生成相应的HTTP响应数据
-	d.Use(middleware.NewResponder(middleware.ResponderConfig{}))
+	d.Use(middleware.NewDefaultResponder()))
 
 
 	d.GET("/users/me", func(c *cod.Context) (err error) {
