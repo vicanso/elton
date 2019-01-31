@@ -75,7 +75,7 @@ func TestSet(t *testing.T) {
 		t.Fatalf("set fail, %v", err)
 	}
 	err = s.Set("a", "b")
-	if err != ErrNotFetched {
+	if err != errNotFetched {
 		t.Fatalf("should return not fetched error")
 	}
 	s.Fetch()
@@ -102,7 +102,7 @@ func TestSetMap(t *testing.T) {
 	err = s.SetMap(map[string]interface{}{
 		"a": "b",
 	})
-	if err != ErrNotFetched {
+	if err != errNotFetched {
 		t.Fatalf("should return not fetched error")
 	}
 	s.Fetch()
@@ -126,7 +126,7 @@ func TestRefresh(t *testing.T) {
 		Store: store,
 	}
 	err := s.Refresh()
-	if err != ErrNotFetched {
+	if err != errNotFetched {
 		t.Fatalf("should return not fetched error")
 	}
 	s.Fetch()
@@ -257,7 +257,7 @@ func TestCommit(t *testing.T) {
 		t.Fatalf("commit fail, %v", err)
 	}
 	err = s.Commit()
-	if err != ErrDuplicateCommit {
+	if err != errDuplicateCommit {
 		t.Fatalf("duplicate commit should return error")
 	}
 }

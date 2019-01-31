@@ -24,10 +24,10 @@ func main() {
 
 	d.Use(middleware.NewRecover())
 
-	d.Use(middleware.NewFresh(middleware.FreshConfig{}))
-	d.Use(middleware.NewETag(middleware.ETagConfig{}))
+	d.Use(middleware.NewDefaultFresh())
+	d.Use(middleware.NewDefaultETag())
 
-	d.Use(middleware.NewResponder(middleware.ResponderConfig{}))
+	d.Use(middleware.NewDefaultResponder())
 
 	d.GET("/users/me", func(c *cod.Context) (err error) {
 		c.Body = &struct {
@@ -38,12 +38,12 @@ func main() {
 		return
 	})
 
-	fs := &middleware.FS{}
-	static := middleware.NewStaticServe(fs, middleware.StaticServeConfig{
+	static := middleware.NewDefaultStaticServe(middleware.StaticServeConfig{
 		Path:            "/Users/xieshuzhou/tmp",
 		Mount:           "/assets",
 		DenyQueryString: true,
 		DenyDot:         true,
+		MaxAge:          60 * 60,
 	})
 	d.GET("/assets/*file", static, func(c *cod.Context) (err error) {
 		return

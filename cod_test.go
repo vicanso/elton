@@ -542,10 +542,11 @@ func TestJSONPick(t *testing.T) {
 			"c": false,
 		},
 		"null": nil,
+		"中文":   "名称",
 	}
 	buf, _ := json.Marshal(m)
-	pickData := JSONPick(buf, strings.Split("i,f,s,b,arr,m,null", ","))
-	if string(pickData) != `{"i":1,"f":1.12,"s":"\"abc","b":false,"arr":[1,"2",true],"m":{"a":1,"b":"2","c":false}}` {
+	pickData := JSONPick(buf, strings.Split("i,f,s,b,arr,m,null,中文", ","))
+	if string(pickData) != `{"i":1,"f":1.12,"s":"\"abc","b":false,"arr":[1,"2",true],"m":{"a":1,"b":"2","c":false},"中文":"名称"}` {
 		t.Fatalf("json pick fail")
 	}
 }
@@ -568,7 +569,7 @@ func TestCamelCase(t *testing.T) {
 
 func TestCamelCaseJSON(t *testing.T) {
 	json := []byte(`{
-		"book_name": "test",
+		"book_name": "测试",
 		"book_price": 12,
 		"book_on_sale": true,
 		"book_author": {
@@ -583,7 +584,7 @@ func TestCamelCaseJSON(t *testing.T) {
 			}
 		]
 	}`)
-	if string(CamelCaseJSON(json)) != `{"bookName":"test","bookPrice":12,"bookOnSale":true,"bookAuthor":{"authorName":"tree.xie","authorAge":0,"authorSalary":10.1},"bookCategory":["vip","hot-sale"],"bookInfos":[{"wordCount":100}]}` {
+	if string(CamelCaseJSON(json)) != `{"bookName":"测试","bookPrice":12,"bookOnSale":true,"bookAuthor":{"authorName":"tree.xie","authorAge":0,"authorSalary":10.1},"bookCategory":["vip","hot-sale"],"bookInfos":[{"wordCount":100}]}` {
 		t.Fatalf("camel case json fail")
 	}
 }

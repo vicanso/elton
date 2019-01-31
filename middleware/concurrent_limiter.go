@@ -23,11 +23,11 @@ import (
 )
 
 var (
-	// ErrSubmitTooFrequently submit too frequently
-	ErrSubmitTooFrequently = &hes.Error{
+	// errSubmitTooFrequently submit too frequently
+	errSubmitTooFrequently = &hes.Error{
 		StatusCode: http.StatusBadRequest,
 		Message:    "submit too frequently",
-		Category:   "cod-concurrent-limiter",
+		Category:   ErrCategoryConcurrentLimiter,
 	}
 )
 
@@ -135,7 +135,7 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) cod.Handler {
 			return
 		}
 		if !success {
-			err = ErrSubmitTooFrequently
+			err = errSubmitTooFrequently
 			return
 		}
 

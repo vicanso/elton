@@ -25,8 +25,7 @@ import (
 )
 
 const (
-	defaultRealm         = "basic auth tips"
-	errBasicAuthCategory = "cod-basic-auth"
+	defaultRealm = "basic auth tips"
 )
 
 type (
@@ -49,7 +48,7 @@ func getBasicAuthError(err error, statusCode int) *hes.Error {
 	return &hes.Error{
 		StatusCode: statusCode,
 		Message:    err.Error(),
-		Category:   errBasicAuthCategory,
+		Category:   ErrCategoryBasicAuth,
 		Err:        err,
 	}
 }

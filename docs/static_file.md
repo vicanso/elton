@@ -20,6 +20,8 @@ static := middleware.NewStaticServe(fs, middleware.StaticServeConfig{
   Mount:           "/assets",
   DenyQueryString: true,
   DenyDot:         true,
+  // 设置客户端缓存一年(如果静态文件有hash则可设置长缓存，否则设置短缓存)
+  MaxAge:          365 * 24 * 3600,
 })
 d.GET("/assets/*file", static, func(c *cod.Context) (err error) {
   return

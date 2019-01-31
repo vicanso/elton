@@ -1,6 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+
 	"github.com/vicanso/cod"
 	"github.com/vicanso/cod/middleware"
 )
@@ -13,10 +17,20 @@ func main() {
 
 	d.Use(middleware.NewRecover())
 
-	d.Use(middleware.NewFresh(middleware.FreshConfig{}))
-	d.Use(middleware.NewETag(middleware.ETagConfig{}))
+	d.Use(middleware.NewStats(middleware.StatsConfig{
+		OnStats: func(stats *middleware.StatsInfo, _ *cod.Context) {
+			fmt.Println(stats)
+		},
+	}))
 
-	d.Use(middleware.NewResponder(middleware.ResponderConfig{}))
+	d.Use(middleware.NewDefaultErrorHandler())
+
+	d.Use(middleware.NewDefaultFresh())
+	d.Use(middleware.NewDefaultETag())
+
+	d.Use(middleware.NewDefaultResponder())
+
+	d.Use(middleware.NewDefaultBodyParser())
 
 	d.GET("/users/me", func(c *cod.Context) (err error) {
 		c.Body = &struct {
@@ -25,6 +39,20 @@ func main() {
 			"tree.xie",
 		}
 		return
+	})
+
+	d.POST("/users/login", func(c *cod.Context) (err error) {
+		m := make(map[string]interface{})
+		err = json.Unmarshal(c.RequestBody, &m)
+		if err != nil {
+			return
+		}
+		c.Body = m
+		return
+	})
+
+	d.GET("/error", func(_ *cod.Context) error {
+		return errors.New("abcd")
 	})
 
 	d.ListenAndServe(":8001")

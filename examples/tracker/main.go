@@ -16,12 +16,12 @@ func main() {
 
 	d.Use(middleware.NewRecover())
 
-	d.Use(middleware.NewFresh(middleware.FreshConfig{}))
-	d.Use(middleware.NewETag(middleware.ETagConfig{}))
+	d.Use(middleware.NewDefaultFresh())
+	d.Use(middleware.NewDefaultETag())
 
-	d.Use(middleware.NewBodyParser(middleware.BodyParserConfig{}))
+	d.Use(middleware.NewDefaultBodyParser())
 
-	d.Use(middleware.NewResponder(middleware.ResponderConfig{}))
+	d.Use(middleware.NewDefaultResponder())
 
 	d.GET("/users/me", func(c *cod.Context) (err error) {
 		c.Body = &struct {

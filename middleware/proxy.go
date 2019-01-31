@@ -27,16 +27,12 @@ import (
 	"github.com/vicanso/cod"
 )
 
-const (
-	errProxyCategory = "cod-proxy"
-)
-
 var (
-	// ErrTargetIsNil target is nil
-	ErrTargetIsNil = &hes.Error{
+	// errTargetIsNil target is nil
+	errTargetIsNil = &hes.Error{
 		Message:    "target can not be nil",
 		StatusCode: http.StatusBadRequest,
-		Category:   errProxyCategory,
+		Category:   ErrCategoryProxy,
 	}
 )
 
@@ -104,7 +100,7 @@ func NewProxy(config ProxyConfig) cod.Handler {
 		}
 		// 如果无target，则抛错
 		if target == nil {
-			err = ErrTargetIsNil
+			err = errTargetIsNil
 			return
 		}
 		p := httputil.NewSingleHostReverseProxy(target)

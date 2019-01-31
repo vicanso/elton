@@ -29,17 +29,12 @@ type (
 	}
 )
 
-const (
-	errResponderCategory             = "cod-responder"
-	errResponderConvertErrorCategory = "cod-responder-convert-error"
-)
-
 var (
-	// ErrInvalidResponse invalid response(body an status is nil)
-	ErrInvalidResponse = &hes.Error{
+	// errInvalidResponse invalid response(body an status is nil)
+	errInvalidResponse = &hes.Error{
 		StatusCode: 500,
 		Message:    "invalid response",
-		Category:   errResponderCategory,
+		Category:   ErrCategoryResponder,
 	}
 )
 
@@ -69,7 +64,7 @@ func NewResponder(config ResponderConfig) cod.Handler {
 
 		if c.StatusCode == 0 && c.Body == nil {
 			// 如果status code 与 body 都为空，则为非法响应
-			err = ErrInvalidResponse
+			err = errInvalidResponse
 			return
 		}
 

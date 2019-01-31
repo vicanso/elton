@@ -26,6 +26,23 @@ var (
 	json = jsoniter.ConfigCompatibleWithStandardLibrary
 )
 
+const (
+	// ErrCategoryBasicAuth basic auth error category
+	ErrCategoryBasicAuth = "cod-basic-auth"
+	// ErrCategoryBodyParser body parser error category
+	ErrCategoryBodyParser = "cod-body-parser"
+	// ErrCategoryConcurrentLimiter concurrent limiter error category
+	ErrCategoryConcurrentLimiter = "cod-concurrent-limiter"
+	// ErrCategoryProxy proxy error category
+	ErrCategoryProxy = "cod-proxy"
+	// ErrCategoryResponder responder error category
+	ErrCategoryResponder = "cod-responder"
+	// ErrCategorySession session error category
+	ErrCategorySession = "cod-session"
+	// ErrCategoryStaticServe static serve error category
+	ErrCategoryStaticServe = "cod-static-serve"
+)
+
 type (
 	// Skipper check for skip middleware
 	Skipper func(c *cod.Context) bool

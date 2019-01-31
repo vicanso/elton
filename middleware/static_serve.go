@@ -63,10 +63,6 @@ type (
 	}
 )
 
-const (
-	errStaticServeCategory = "cod-static-serve"
-)
-
 var (
 	// ErrNotAllowQueryString not all query string
 	ErrNotAllowQueryString = getStaticServeError("static serve not allow query string", http.StatusBadRequest)
@@ -103,7 +99,7 @@ func getStaticServeError(message string, statusCode int) *hes.Error {
 	return &hes.Error{
 		StatusCode: statusCode,
 		Message:    message,
-		Category:   errStaticServeCategory,
+		Category:   ErrCategoryStaticServe,
 	}
 }
 
@@ -184,7 +180,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 			he, ok := e.(*hes.Error)
 			if !ok {
 				he = hes.NewWithErrorStatusCode(e, http.StatusInternalServerError)
-				he.Category = errStaticServeCategory
+				he.Category = ErrCategoryStaticServe
 			}
 			err = he
 			return

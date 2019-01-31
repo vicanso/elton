@@ -52,7 +52,6 @@ func TestETag(t *testing.T) {
 			c.Body = map[string]string{
 				"name": "tree.xie",
 			}
-			c.StatusCode = 200
 			c.BodyBuffer = bytes.NewBufferString(`{"name":"tree.xie"}`)
 			return nil
 		}

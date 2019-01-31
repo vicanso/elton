@@ -28,7 +28,6 @@ import (
 const (
 	// 默认为50kb
 	defaultRequestBodyLimit   = 50 * 1024
-	errBodyParserCategory     = "cod-body-parser"
 	jsonContentType           = "application/json"
 	formURLEncodedContentType = "application/x-www-form-urlencoded"
 )
@@ -109,7 +108,7 @@ func NewBodyParser(config BodyParserConfig) cod.Handler {
 			err = &hes.Error{
 				StatusCode: http.StatusBadRequest,
 				Message:    e.Error(),
-				Category:   errBodyParserCategory,
+				Category:   ErrCategoryBodyParser,
 				Err:        e,
 			}
 			return
@@ -118,7 +117,7 @@ func NewBodyParser(config BodyParserConfig) cod.Handler {
 			err = &hes.Error{
 				StatusCode: http.StatusBadRequest,
 				Message:    fmt.Sprintf("request body is %d bytes, it should be <= %d", len(body), limit),
-				Category:   errBodyParserCategory,
+				Category:   ErrCategoryBodyParser,
 			}
 			return
 		}

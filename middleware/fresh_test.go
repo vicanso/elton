@@ -45,7 +45,7 @@ func TestFresh(t *testing.T) {
 		}
 	})
 
-	t.Run("modified", func(t *testing.T) {
+	t.Run("not modified", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/users/me", nil)
 		req.Header.Set(cod.HeaderIfModifiedSince, modifiedAt)
 		resp := httptest.NewRecorder()
@@ -55,7 +55,6 @@ func TestFresh(t *testing.T) {
 		done := false
 		c.Next = func() error {
 			done = true
-			c.StatusCode = http.StatusOK
 			c.Body = map[string]string{
 				"name": "tree.xie",
 			}

@@ -27,8 +27,6 @@ func main() {
 
 	d.Use(middleware.NewRecover())
 
-	// 针对出错error生成相应的HTTP响应数据（http状态码以及响应数据）
-	d.Use(middleware.NewDefaultErrorHandler()))
 
 	d.Use(middleware.NewStats(middleware.StatsConfig{
 		// 返回接口处理时长、状态码等
@@ -45,7 +43,10 @@ func main() {
 		return
 	})
 
-	// 只允许使用json形式提交参数，以及长度限制为10KB
+	// 针对出错error生成相应的HTTP响应数据（http状态码以及响应数据）
+	d.Use(middleware.NewDefaultErrorHandler()))
+
+	// 只允许使用json形式提交参数，以及数据限制为50KB
 	d.Use(middleware.NewDefaultBodyParser())
 
 	// fresh与etag，fresh在etag前添加

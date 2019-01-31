@@ -1,25 +1,24 @@
 package main
 
 import (
-	"fmt"
 	"net/url"
 
 	"github.com/vicanso/cod"
 	"github.com/vicanso/cod/middleware"
 )
 
-// curl 'http://127.0.0.1:8001/users/me'
-// {"account":"tree.xie"}
+// curl 'http://127.0.0.1:8001/baidu/'
+// baidu html
 
 func main() {
 	d := cod.New()
 
 	d.Use(middleware.NewRecover())
 
-	d.Use(middleware.NewFresh(middleware.FreshConfig{}))
-	d.Use(middleware.NewETag(middleware.ETagConfig{}))
+	d.Use(middleware.NewDefaultFresh())
+	d.Use(middleware.NewDefaultETag())
 
-	d.Use(middleware.NewResponder(middleware.ResponderConfig{}))
+	d.Use(middleware.NewDefaultResponder())
 
 	d.GET("/users/me", func(c *cod.Context) (err error) {
 		c.Body = &struct {
@@ -41,10 +40,7 @@ func main() {
 		},
 	})
 	// 以/baidu前缀的GET请求的处理
-	d.GET("/baidu/*path", baiduPorxy, func(c *cod.Context) (err error) {
-		fmt.Println(c.StatusCode)
-		return
-	})
+	d.GET("/baidu/*path", baiduPorxy)
 
 	d.ListenAndServe(":8001")
 }

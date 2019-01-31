@@ -51,9 +51,11 @@ func NewETag(config ETagConfig) cod.Handler {
 			respHeader.Get(cod.HeaderETag) != "" {
 			return
 		}
-		// 如果状态码< 200 或者 >= 300 ，则跳过
-		if c.StatusCode < http.StatusOK ||
-			c.StatusCode >= http.StatusMultipleChoices {
+		// 如果响应状态码不为0 而且( < 200 或者 >= 300)，则跳过
+		statusCode := c.StatusCode
+		if statusCode != 0 &&
+			(statusCode < http.StatusOK ||
+				statusCode >= http.StatusMultipleChoices) {
 			return
 		}
 		eTag := cod.GenerateETag(bodyBuf.Bytes())

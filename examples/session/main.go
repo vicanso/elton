@@ -12,7 +12,8 @@ import (
 	ss "github.com/vicanso/sessionstore"
 )
 
-// curl 'http://127.0.0.1:8001/users/me'
+// http://127.0.0.1:8001/users/me
+// 基于cookie，因此使用浏览器测试
 // {"account":"tree.xie","count":3}
 
 func main() {
@@ -52,10 +53,10 @@ func main() {
 
 	d.Use(middleware.NewRecover())
 
-	d.Use(middleware.NewFresh(middleware.FreshConfig{}))
-	d.Use(middleware.NewETag(middleware.ETagConfig{}))
+	d.Use(middleware.NewDefaultFresh())
+	d.Use(middleware.NewDefaultETag())
 
-	d.Use(middleware.NewResponder(middleware.ResponderConfig{}))
+	d.Use(middleware.NewDefaultResponder())
 
 	// session中间件
 	sessionMid := middleware.NewSession(middleware.SessionConfig{

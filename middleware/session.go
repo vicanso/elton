@@ -15,11 +15,12 @@
 package middleware
 
 import (
-	"errors"
+	"net/http"
 	"time"
 
 	"github.com/spf13/cast"
 	"github.com/vicanso/cod"
+	"github.com/vicanso/hes"
 )
 
 const (
@@ -30,12 +31,24 @@ const (
 )
 
 var (
-	// ErrNotFetched not fetch error
-	ErrNotFetched = errors.New("Not fetch session")
-	// ErrResetSessionID reset session id fail
-	ErrResetSessionID = errors.New("reset session id fail")
-	// ErrDuplicateCommit duplicate commit
-	ErrDuplicateCommit = errors.New("duplicate commit")
+	// errNotFetched not fetch error
+	errNotFetched = &hes.Error{
+		Message:    "not fetch session",
+		Category:   ErrCategorySession,
+		StatusCode: http.StatusInternalServerError,
+	}
+	// errResetSessionID reset session id fail
+	errResetSessionID = &hes.Error{
+		Message:    "reset session id fail",
+		Category:   ErrCategorySession,
+		StatusCode: http.StatusInternalServerError,
+	}
+	// errDuplicateCommit duplicate commit
+	errDuplicateCommit = &hes.Error{
+		Message:    "duplicate commit",
+		Category:   ErrCategorySession,
+		StatusCode: http.StatusInternalServerError,
+	}
 )
 
 type (
@@ -130,7 +143,7 @@ func (s *Session) Set(key string, value interface{}) (err error) {
 		return
 	}
 	if !s.fetched {
-		return ErrNotFetched
+		return errNotFetched
 	}
 	if value == nil {
 		delete(s.data, key)
@@ -148,7 +161,7 @@ func (s *Session) SetMap(value map[string]interface{}) (err error) {
 		return
 	}
 	if !s.fetched {
-		return ErrNotFetched
+		return errNotFetched
 	}
 	for k, v := range value {
 		if v == nil {
@@ -166,7 +179,7 @@ func (s *Session) SetMap(value map[string]interface{}) (err error) {
 // Refresh refresh session (update updatedAt)
 func (s *Session) Refresh() (err error) {
 	if !s.fetched {
-		return ErrNotFetched
+		return errNotFetched
 	}
 	s.data[UpdatedAt] = time.Now().Format(time.RFC3339)
 	s.modified = true
@@ -266,7 +279,7 @@ func (s *Session) Commit() (err error) {
 		return
 	}
 	if s.committed {
-		err = ErrDuplicateCommit
+		err = errDuplicateCommit
 		return
 	}
 	// 如果session id为空，则生成新的session id
@@ -277,7 +290,7 @@ func (s *Session) Commit() (err error) {
 			return
 		}
 		if newID == "" {
-			err = ErrResetSessionID
+			err = errResetSessionID
 			return
 		}
 		s.id = newID
