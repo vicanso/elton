@@ -228,15 +228,26 @@ func TestCreate(t *testing.T) {
 func TestNoContent(t *testing.T) {
 	c := NewContext(nil, nil)
 	c.NoContent()
-	if c.StatusCode != http.StatusNoContent {
+	if c.StatusCode != http.StatusNoContent ||
+		c.Body != nil ||
+		c.BodyBuffer != nil {
 		t.Fatalf("set no content fail")
 	}
 }
 
 func TestNotModified(t *testing.T) {
-	c := NewContext(nil, nil)
+	resp := httptest.NewRecorder()
+	c := NewContext(resp, nil)
+	c.Body = map[string]string{}
+	c.BodyBuffer = bytes.NewBufferString("abc")
+	c.Headers.Set(HeaderContentEncoding, "gzip")
+	c.Headers.Set(HeaderContentType, "text/html")
 	c.NotModified()
-	if c.StatusCode != http.StatusNotModified {
+	if c.StatusCode != http.StatusNotModified ||
+		c.Body != nil ||
+		c.BodyBuffer != nil ||
+		c.GetHeader(HeaderContentEncoding) != "" ||
+		c.GetHeader(HeaderContentType) != "" {
 		t.Fatalf("set not modified fail")
 	}
 }

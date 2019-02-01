@@ -218,6 +218,8 @@ func (c *Context) NoContent() {
 // NotModified response not modified
 func (c *Context) NotModified() {
 	c.StatusCode = http.StatusNotModified
+	c.SetHeader(HeaderContentEncoding, "")
+	c.SetHeader(HeaderContentType, "")
 	c.Body = nil
 	c.BodyBuffer = nil
 }
