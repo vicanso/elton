@@ -1,8 +1,6 @@
 package cod
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"net/http/httptest"
 	"strings"
 	"sync/atomic"
@@ -70,65 +68,5 @@ func BenchmarkGetStatus(b *testing.B) {
 	var v int32
 	for i := 0; i < b.N; i++ {
 		atomic.LoadInt32(&v)
-	}
-}
-
-func BenchmarkBufferPick(b *testing.B) {
-	b.ReportAllocs()
-	b64 := base64.StdEncoding.EncodeToString(make([]byte, 1024))
-	m := map[string]interface{}{
-		"_x": b64,
-		"_y": b64,
-		"_z": b64,
-		"i":  1,
-		"f":  1.12,
-		"s":  "\"abc",
-		"b":  false,
-		"arr": []interface{}{
-			1,
-			"2",
-			true,
-		},
-		"m": map[string]interface{}{
-			"a": 1,
-			"b": "2",
-			"c": false,
-		},
-		"null": nil,
-	}
-	buf, _ := json.Marshal(m)
-	for i := 0; i < b.N; i++ {
-		JSONPick(buf, strings.Split("i,f,s,b,arr,m,null", ","))
-	}
-}
-
-func BenchmarkCamelCase(b *testing.B) {
-	b.ReportAllocs()
-	str := "Foo Bar"
-	for i := 0; i < b.N; i++ {
-		CamelCase(str)
-	}
-}
-
-func BenchmarkCamelCaseJSON(b *testing.B) {
-	b.ReportAllocs()
-	json := []byte(`{
-		"book_name": "test",
-		"book_price": 12,
-		"book_on_sale": true,
-		"book_author": {
-			"author_name": "tree.xie",
-			"author_age": 0,
-			"author_salary": 10.1,
-		},
-		"book_category": ["vip", "hot-sale"],
-		"book_infos": [
-			{
-				"word_count": 100
-			}
-		]
-	}`)
-	for i := 0; i < b.N; i++ {
-		CamelCaseJSON(json)
 	}
 }

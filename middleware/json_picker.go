@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/vicanso/cod"
+	"github.com/vicanso/superjson"
 )
 
 var (
@@ -81,7 +82,7 @@ func NewJSONPicker(config JSONPickerConfig) cod.Handler {
 			!validate(c) {
 			return
 		}
-		buf := cod.JSONPick(c.BodyBuffer.Bytes(), strings.SplitN(fields, ",", -1))
+		buf := superjson.Pick(c.BodyBuffer.Bytes(), strings.SplitN(fields, ",", -1))
 		c.BodyBuffer = bytes.NewBuffer(buf)
 		return
 	}
