@@ -51,7 +51,7 @@ type (
 		// RequestBody http request body
 		RequestBody []byte
 		// store for context
-		m map[string]interface{}
+		m map[interface{}]interface{}
 		// realIP the real ip
 		realIP string
 		// cod instance
@@ -140,15 +140,15 @@ func (c *Context) Redirect(code int, url string) (err error) {
 }
 
 // Set store the value in the context
-func (c *Context) Set(key string, value interface{}) {
+func (c *Context) Set(key, value interface{}) {
 	if c.m == nil {
-		c.m = make(map[string]interface{}, 5)
+		c.m = make(map[interface{}]interface{}, 5)
 	}
 	c.m[key] = value
 }
 
 // Get get the value from context
-func (c *Context) Get(key string) interface{} {
+func (c *Context) Get(key interface{}) interface{} {
 	if c.m == nil {
 		return nil
 	}

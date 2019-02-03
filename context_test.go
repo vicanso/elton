@@ -23,7 +23,7 @@ func TestReset(t *testing.T) {
 		Body:        make(map[string]string),
 		BodyBuffer:  bytes.NewBufferString("abcd"),
 		RequestBody: []byte("abcd"),
-		m:           make(map[string]interface{}),
+		m:           make(map[interface{}]interface{}),
 		realIP:      "abcd",
 		cod:         &Cod{},
 	}

@@ -82,7 +82,14 @@ func NewJSONPicker(config JSONPickerConfig) cod.Handler {
 			!validate(c) {
 			return
 		}
-		buf := superjson.Pick(c.BodyBuffer.Bytes(), strings.SplitN(fields, ",", -1))
+		fieldArr := strings.SplitN(fields, ",", -1)
+		fn := superjson.Pick
+		// 如果以-开头，则表示omit
+		if fieldArr[0][0] == '-' {
+			fieldArr[0] = fieldArr[0][1:]
+			fn = superjson.Omit
+		}
+		buf := fn(c.BodyBuffer.Bytes(), fieldArr)
 		c.BodyBuffer = bytes.NewBuffer(buf)
 		return
 	}

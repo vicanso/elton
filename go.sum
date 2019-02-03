@@ -19,5 +19,5 @@ github.com/vicanso/fresh v0.1.1 h1:L3UX/g2uZ4pNFzjc7+PyeYOlIAs2/yUfhcFnK7E+JQU=
 github.com/vicanso/fresh v0.1.1/go.mod h1:gr1RKSFxQ1OnQHzUMBHCigifni7KrXveJjWCTlPjICA=
 github.com/vicanso/hes v0.1.3 h1:3txPJL+J+xBRhIotkK3XKNbmBz+JXJ1knmGM0L+Qe4k=
 github.com/vicanso/hes v0.1.3/go.mod h1:bG0UJ3EihDKObFcLLwJYjxHHr9saFllsFcepyDIvFlo=
-github.com/vicanso/superjson v0.0.1 h1:L0VJkf/zX7Um1AkcRCWp95isK85nnJ/UG4qnb2awWNM=
-github.com/vicanso/superjson v0.0.1/go.mod h1:JWCSeF6/wImFZx+8lPyfeHj1EkbeuLtAZg6fR9sRBpM=
+github.com/vicanso/superjson v0.0.3 h1:WwrTs3VLMFL5pQqPo2jMd0S/3jZxIwfZmReGGapo2Z0=
+github.com/vicanso/superjson v0.0.3/go.mod h1:JWCSeF6/wImFZx+8lPyfeHj1EkbeuLtAZg6fR9sRBpM=

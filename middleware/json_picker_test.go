@@ -95,12 +95,26 @@ func TestJSONPicker(t *testing.T) {
 		fn := NewJSONPicker(JSONPickerConfig{
 			Field: "fields",
 		})
-		err := fn(c)
-		if err != nil {
-			t.Fatalf("json picker fail, %v", err)
-		}
-		if c.BodyBuffer.String() != `{"i":1,"f":1.12,"s":"\"abc","b":false,"arr":[1,"2",true],"m":{"a":1,"b":"2","c":false}}` {
-			t.Fatalf("json pick fail")
-		}
+		t.Run("pick fields", func(t *testing.T) {
+			err := fn(c)
+			if err != nil {
+				t.Fatalf("json picker fail, %v", err)
+			}
+			if c.BodyBuffer.String() != `{"arr":[1,"2",true],"b":false,"f":1.12,"i":1,"m":{"a":1,"b":"2","c":false},"s":"\"abc"}` {
+				t.Fatalf("json pick fail")
+			}
+		})
+
+		t.Run("omit fields", func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/users/me?fields=-x", nil)
+			c.Request = req
+			err := fn(c)
+			if err != nil {
+				t.Fatalf("omit picker fail, %v", err)
+			}
+			if c.BodyBuffer.String() != `{"arr":[1,"2",true],"b":false,"f":1.12,"i":1,"m":{"a":1,"b":"2","c":false},"s":"\"abc"}` {
+				t.Fatalf("json pick fail")
+			}
+		})
 	})
 }
