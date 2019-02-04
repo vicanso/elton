@@ -28,13 +28,6 @@ func main() {
 	d.Use(middleware.NewRecover())
 
 
-	d.Use(middleware.NewStats(middleware.StatsConfig{
-		// 返回接口处理时长、状态码等
-		OnStats: func(stats *middleware.StatsInfo, _ *cod.Context) {
-			log.Println("stats:", stats)
-		},
-	}))
-
 	// 请求处理时长
 	d.Use(func(c *cod.Context) (err error) {
 		started := time.Now()
@@ -45,23 +38,6 @@ func main() {
 
 	// 针对出错error生成相应的HTTP响应数据（http状态码以及响应数据）
 	d.Use(middleware.NewDefaultErrorHandler()))
-
-	// 只允许使用json形式提交参数，以及数据限制为50KB
-	d.Use(middleware.NewDefaultBodyParser())
-
-	// fresh与etag，fresh在etag前添加
-	d.Use(middleware.NewDefaultFresh())
-	d.Use(middleware.NewDefaultETag())
-
-	d.Use(middleware.NewCompress(middleware.CompressConfig{
-		// 最小压缩长度设置为1（测试需要，实际可根据实际场景配置或不配置）
-		MinLength: 1,
-	}))
-
-	// 指定使用querystring中的fields来筛选响应数据
-	d.Use(middleware.NewJSONPicker(middleware.JSONPickerConfig{
-		Field: "fields",
-	}))
 
 	// 根据Body生成相应的HTTP响应数据
 	d.Use(middleware.NewDefaultResponder()))
@@ -78,22 +54,11 @@ func main() {
 		return
 	})
 
-	loginTracker := func(info *middleware.TrackerInfo, _ *cod.Context) {
-		// 输出track日志，在实际使用中可以记录至数据库等
-		fmt.Println("login:", info)
-	}
-	d.POST("/users/login", middleware.NewTracker(middleware.TrackerConfig{
-		OnTrack: loginTracker,
-		// 指定哪些字段做***处理
-		Mask: regexp.MustCompile(`password`),
-	}), func(c *cod.Context) (err error) {
-		c.Body = &struct {
-			Account string `json:"account"`
-		}{
-			"tree.xie",
-		}
+	d.GET("/error", func(c *cod.Context) (err error) {
+		err = errors.New("abcd")
 		return
 	})
+
 	d.ListenAndServe(":8001")
 }
 ```
@@ -103,6 +68,10 @@ func main() {
 ## Cod
 
 [cod.Cod](./docs/cod.md)
+
+## Context
+
+[cod.Context](./docs/context.md)
 
 ## Group
 
