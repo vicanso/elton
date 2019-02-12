@@ -76,10 +76,10 @@ func NewResponder(config ResponderConfig) cod.Handler {
 			hadContentType = true
 		}
 
-		if c.StatusCode == 0 {
-			c.StatusCode = http.StatusOK
-		}
 		statusCode := c.StatusCode
+		if statusCode == 0 {
+			statusCode = http.StatusOK
+		}
 
 		var body []byte
 		if c.Body != nil {
@@ -98,6 +98,7 @@ func NewResponder(config ResponderConfig) cod.Handler {
 				// 转换为json
 				buf, err := json.Marshal(c.Body)
 				if err != nil {
+					c.SetHeader(ct, cod.MIMETextPlain)
 					statusCode = http.StatusInternalServerError
 					body = []byte(err.Error())
 				} else {

@@ -62,9 +62,14 @@ func NewErrorHandler(config ErrorHandlerConfig) cod.Handler {
 				Err:        err,
 			}
 		}
+		// 出错响应，直接设置为no cache
+		c.NoCache()
 		c.StatusCode = he.StatusCode
 		// 默认以json的形式返回
-		buf, _ := json.Marshal(he)
+		buf, e := json.Marshal(he)
+		if e != nil {
+			return e
+		}
 		c.BodyBuffer = bytes.NewBuffer(buf)
 		c.SetHeader(cod.HeaderContentType, cod.MIMEApplicationJSON)
 		return nil

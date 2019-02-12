@@ -30,7 +30,7 @@ const (
 
 type (
 	// Validate validate function
-	Validate func(string, string, *cod.Context) (bool, error)
+	Validate func(username string, password string, c *cod.Context) (bool, error)
 	// BasicAuthConfig basic auth config
 	BasicAuthConfig struct {
 		Realm    string

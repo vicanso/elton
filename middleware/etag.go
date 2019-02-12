@@ -43,12 +43,14 @@ func NewETag(config ETagConfig) cod.Handler {
 			return c.Next()
 		}
 		err = c.Next()
-		respHeader := c.Headers
+		if err != nil {
+			return
+		}
 		bodyBuf := c.BodyBuffer
 		// 如果无内容或已设置 ETag ，则跳过
 		// 因为没有内容也不生成 ETag
 		if bodyBuf == nil || bodyBuf.Len() == 0 ||
-			respHeader.Get(cod.HeaderETag) != "" {
+			c.GetHeader(cod.HeaderETag) != "" {
 			return
 		}
 		// 如果响应状态码不为0 而且( < 200 或者 >= 300)，则跳过

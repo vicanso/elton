@@ -156,11 +156,13 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 		}
 
 		file = filepath.Join(config.Path, file)
+		// 避免文件名是有 .. 等导致最终文件路径越过配置的路径
 		if !strings.HasPrefix(file, config.Path) {
 			err = ErrOutOfPath
 			return
 		}
 
+		// 禁止 querystring
 		if config.DenyQueryString && url.RawQuery != "" {
 			err = ErrNotAllowQueryString
 			return

@@ -108,7 +108,6 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) cod.Handler {
 			return c.Next()
 		}
 		values := make([]string, len(keys))
-		req := c.Request
 		// 获取 lock 的key
 		for i, key := range keys {
 			v := ""
@@ -116,7 +115,7 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) cod.Handler {
 			if key.IP {
 				v = c.RealIP()
 			} else if key.Header {
-				v = req.Header.Get(name)
+				v = c.GetRequestHeader(name)
 			} else if key.Query {
 				query := c.Query()
 				v = query[name]

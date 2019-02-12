@@ -16,9 +16,13 @@ func TestErrorHandler(t *testing.T) {
 	c.Next = func() error {
 		return errors.New("abcd")
 	}
+	c.CacheMaxAge("5m")
 	err := fn(c)
 	if err != nil {
 		t.Fatalf("error handler fail, %v", err)
+	}
+	if c.GetHeader("Cache-Control") != "no-cache" {
+		t.Fatalf("error response should be no cache")
 	}
 	ct := c.GetHeader(cod.HeaderContentType)
 	if c.BodyBuffer.String() != `{"statusCode":500,"category":"cod-error-handler","message":"abcd"}` ||
