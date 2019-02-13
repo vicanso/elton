@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/vicanso/hes"
+
 	"github.com/vicanso/cod"
 )
 
@@ -30,8 +32,11 @@ func NewRecover() cod.Handler {
 			if r := recover(); r != nil {
 				err, ok := r.(error)
 				if !ok {
-					err = fmt.Errorf("%v", r)
+					he := hes.NewWithErrorStatusCode(fmt.Errorf("%v", r), http.StatusInternalServerError)
+					he.Category = ErrCategoryRecover
+					err = he
 				}
+				c.Cod().EmitError(c, err)
 				// 如果已直接对Response写入数据，则将 Committed设置为 true
 				c.Committed = true
 				resp := c.Response

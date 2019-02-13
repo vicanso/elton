@@ -41,6 +41,8 @@ const (
 	ErrCategorySession = "cod-session"
 	// ErrCategoryStaticServe static serve error category
 	ErrCategoryStaticServe = "cod-static-serve"
+	// ErrCategoryRecover recover error category
+	ErrCategoryRecover = "cod-recover"
 )
 
 type (

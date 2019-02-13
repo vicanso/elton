@@ -18,10 +18,17 @@ func TestRecover(t *testing.T) {
 	})
 	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
 	resp := httptest.NewRecorder()
+
+	catchError := false
+	d.OnError(func(_ *cod.Context, _ error) {
+		catchError = true
+	})
+
 	d.ServeHTTP(resp, req)
 	if resp.Code != http.StatusInternalServerError ||
-		resp.Body.String() != "abc" ||
-		!ctx.Committed {
+		resp.Body.String() != "category=cod-recover, message=abc" ||
+		!ctx.Committed ||
+		!catchError {
 		t.Fatalf("recover fail")
 	}
 }
