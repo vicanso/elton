@@ -253,7 +253,7 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 		index := -1
 		var traceInfos []*TraceInfo
 		if d.EnableTrace {
-			traceInfos = make([]*TraceInfo, maxNext)
+			traceInfos = make([]*TraceInfo, 0, maxNext)
 		}
 		c.Next = func() error {
 			index++
@@ -272,21 +272,15 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 				return fn(c)
 			}
 			startedAt := time.Now()
-			i := index
 			err := fn(c)
-			traceInfos[i] = &TraceInfo{
+			traceInfos = append(traceInfos, &TraceInfo{
 				Name:     d.GetFunctionName(fn),
 				Duration: time.Since(startedAt),
-			}
+			})
 			return err
 		}
 		err := c.Next()
 		if traceInfos != nil {
-			// 如果非所有handler都执行了
-			// 则裁剪数组
-			if index < len(traceInfos)-1 {
-				traceInfos = traceInfos[:index+1]
-			}
 			d.EmitTrace(c, traceInfos)
 		}
 		if err != nil {
