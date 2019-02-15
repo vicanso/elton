@@ -233,10 +233,7 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 	})
 	d.Router.Handle(method, path, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		c := d.ctxPool.Get().(*Context)
-		// 如果此context是复用，则需要重置
-		if c.Request != nil {
-			c.Reset()
-		}
+		c.Reset()
 		d.fillContext(c, resp, req)
 		if len(params) != 0 {
 			c.Params = make(map[string]string)

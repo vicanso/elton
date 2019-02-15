@@ -30,12 +30,10 @@ const (
 )
 
 type (
-	// Compress compress function
-	Compress func([]byte, int) ([]byte, error)
-	// Compression compression
-	Compression struct {
-		Type     string
-		Compress Compress
+	// Compressor compressor interface
+	Compressor interface {
+		Accept(c *cod.Context) (acceptable bool, encoding string)
+		Compress([]byte, int) ([]byte, error)
 	}
 	// CompressConfig compress config
 	CompressConfig struct {
@@ -44,26 +42,33 @@ type (
 		// MinLength 最小压缩长度
 		MinLength int
 		// Checker 校验数据是否可压缩
-		Checker         *regexp.Regexp
-		Skipper         Skipper
-		CompressionList []*Compression
+		Checker        *regexp.Regexp
+		Skipper        Skipper
+		CompressorList []Compressor
 	}
+	// gzipCompressor gzip compress
+	gzipCompressor struct{}
 )
 
-func addGzip(items []*Compression) []*Compression {
-	found := false
-	for _, c := range items {
-		if c.Type == cod.Gzip {
-			found = true
-		}
+// AcceptEncoding check request accept encoding
+func AcceptEncoding(c *cod.Context, encoding string) (bool, string) {
+	acceptEncoding := c.GetRequestHeader(cod.HeaderAcceptEncoding)
+	if strings.Contains(acceptEncoding, encoding) {
+		return true, encoding
 	}
-	if !found {
-		items = append(items, &Compression{
-			Type:     cod.Gzip,
-			Compress: doGzip,
-		})
-	}
-	return items
+	return false, ""
+}
+
+func (g *gzipCompressor) Accept(c *cod.Context) (acceptable bool, encoding string) {
+	return AcceptEncoding(c, "gzip")
+}
+
+func (g *gzipCompressor) Compress(buf []byte, level int) ([]byte, error) {
+	return doGzip(buf, level)
+}
+
+func addGzip(items []Compressor) []Compressor {
+	return append(items, new(gzipCompressor))
 }
 
 // NewDefaultCompress create a default compress middleware, support gzip
@@ -85,12 +90,12 @@ func NewCompress(config CompressConfig) cod.Handler {
 	if checker == nil {
 		checker = defaultCompressRegexp
 	}
-	compressionList := config.CompressionList
-	if compressionList == nil {
-		compressionList = make([]*Compression, 0)
+	compressorList := config.CompressorList
+	if compressorList == nil {
+		compressorList = make([]Compressor, 0)
 	}
 	// 添加默认的 gzip 压缩
-	compressionList = addGzip(compressionList)
+	compressorList = addGzip(compressorList)
 	return func(c *cod.Context) (err error) {
 		if skipper(c) {
 			return c.Next()
@@ -107,9 +112,8 @@ func NewCompress(config CompressConfig) cod.Handler {
 		}
 
 		respHeader := c.Headers
-		encoding := respHeader.Get(cod.HeaderContentEncoding)
 		// encoding 不为空，已做处理，无需要压缩
-		if encoding != "" {
+		if respHeader.Get(cod.HeaderContentEncoding) != "" {
 			return
 		}
 		contentType := respHeader.Get(cod.HeaderContentType)
@@ -119,29 +123,25 @@ func NewCompress(config CompressConfig) cod.Handler {
 			return
 		}
 
-		acceptEncoding := c.GetRequestHeader(cod.HeaderAcceptEncoding)
-
 		done := false
-		for _, compression := range compressionList {
+		for _, compressor := range compressorList {
 			if done {
 				break
 			}
-			t := compression.Type
-			// 如果请求端不接受当前压缩的类型
-			if !strings.Contains(acceptEncoding, t) {
+			acceptable, encoding := compressor.Accept(c)
+			if !acceptable {
 				continue
 			}
-			newBuf, e := compression.Compress(buf, config.Level)
+			newBuf, e := compressor.Compress(buf, config.Level)
 			// 如果压缩成功，则使用压缩数据
 			// 失败则忽略
 			if e == nil {
-				c.SetHeader(cod.HeaderContentEncoding, t)
+				c.SetHeader(cod.HeaderContentEncoding, encoding)
 				bodyBuf.Reset()
 				bodyBuf.Write(newBuf)
 				done = true
 			}
 		}
-
 		return
 	}
 }
