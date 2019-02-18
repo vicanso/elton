@@ -176,7 +176,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) cod.Handler
 			return
 		}
 
-		c.SetFileContentType(file)
+		c.SetContentTypeByExt(file)
 		buf, e := staticFile.Get(file)
 		if e != nil {
 			he, ok := e.(*hes.Error)

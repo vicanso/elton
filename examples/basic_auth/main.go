@@ -39,7 +39,7 @@ func main() {
 	// 增加一个group admin，指定url前缀以及公共的中间件
 	adminGroup := cod.NewGroup("/admin", basicAuth)
 	adminGroup.GET("/index.html", basicAuth, func(c *cod.Context) (err error) {
-		c.SetFileContentType(".html")
+		c.SetContentTypeByExt(".html")
 		c.Body = `<html>
 			<body>
 				...TODO

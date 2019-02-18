@@ -334,7 +334,7 @@ c.CacheMaxAge("1m")
 fmt.Println(c.Header())
 ```
 
-### SetFileContentType
+### SetContentTypeByExt
 
 通过文件（文件后缀）设置Content-Type。
 
@@ -342,7 +342,7 @@ fmt.Println(c.Header())
 req := httptest.NewRequest("GET", "/users/me", nil)
 resp := httptest.NewRecorder()
 c := cod.NewContext(resp, req)
-c.SetFileContentType("user.json")
+c.SetContentTypeByExt("user.json")
 // map[Content-Type:[application/json]]
 fmt.Println(c.Header())
 ```

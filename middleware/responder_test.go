@@ -81,7 +81,7 @@ func TestResponder(t *testing.T) {
 		d := cod.New()
 		d.Use(m)
 		d.GET("/", func(c *cod.Context) error {
-			c.SetFileContentType(".html")
+			c.SetContentTypeByExt(".html")
 			c.Body = "abc"
 			return nil
 		})

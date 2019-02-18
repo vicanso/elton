@@ -280,7 +280,7 @@ func TestCacheControl(t *testing.T) {
 	})
 }
 
-func TestSetFileContentType(t *testing.T) {
+func TestSetContentTypeByExt(t *testing.T) {
 	resp := httptest.NewRecorder()
 	c := NewContext(resp, nil)
 	headers := c.Header()
@@ -291,19 +291,19 @@ func TestSetFileContentType(t *testing.T) {
 			t.Fatalf("content type should be %s, but %s", contentType, v)
 		}
 	}
-	c.SetFileContentType(".html")
+	c.SetContentTypeByExt(".html")
 	check("text/html; charset=utf-8")
 	c.SetHeader(HeaderContentType, "")
 
-	c.SetFileContentType("index.html")
+	c.SetContentTypeByExt("index.html")
 	check("text/html; charset=utf-8")
 	c.SetHeader(HeaderContentType, "")
 
-	c.SetFileContentType("")
+	c.SetContentTypeByExt("")
 	check("")
 	c.SetHeader(HeaderContentType, "")
 
-	c.SetFileContentType("../abcd/index.html")
+	c.SetContentTypeByExt("../abcd/index.html")
 	check("text/html; charset=utf-8")
 	c.SetHeader(HeaderContentType, "")
 

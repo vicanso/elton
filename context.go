@@ -247,8 +247,8 @@ func (c *Context) Created(body interface{}) {
 	c.Body = body
 }
 
-// SetFileContentType set content type by file extname
-func (c *Context) SetFileContentType(file string) {
+// SetContentTypeByExt set content type by file extname
+func (c *Context) SetContentTypeByExt(file string) {
 	ext := filepath.Ext(file)
 	contentType := mime.TypeByExtension(ext)
 	if contentType != "" {
