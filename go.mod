@@ -8,5 +8,6 @@ require (
 	github.com/spf13/cast v1.3.0
 	github.com/vicanso/fresh v0.1.1
 	github.com/vicanso/hes v0.1.3
+	github.com/vicanso/keygrip v0.1.0
 	github.com/vicanso/superjson v0.0.4
 )

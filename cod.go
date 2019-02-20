@@ -74,6 +74,8 @@ type (
 		GenerateID GenerateID
 		// EnableTrace enable trace
 		EnableTrace bool
+		// Keys signed cookie keys
+		Keys []string
 		// functionInfos the function address:name map
 		functionInfos map[uintptr]string
 		ctxPool       sync.Pool

@@ -36,7 +36,7 @@ func NewRecover() cod.Handler {
 					he.Category = ErrCategoryRecover
 					err = he
 				}
-				c.Cod().EmitError(c, err)
+				c.Cod(nil).EmitError(c, err)
 				// 如果已直接对Response写入数据，则将 Committed设置为 true
 				c.Committed = true
 				resp := c.Response

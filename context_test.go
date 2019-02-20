@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -44,6 +45,18 @@ func TestReset(t *testing.T) {
 		c.realIP != "" ||
 		c.cod != nil {
 		t.Fatalf("reset fail")
+	}
+}
+
+func TestContext(t *testing.T) {
+	c := NewContext(nil, nil)
+	c.WriteHeader(http.StatusBadRequest)
+	if c.StatusCode != http.StatusBadRequest {
+		t.Fatalf("write header fail")
+	}
+	c.Write([]byte("abcd"))
+	if c.BodyBuffer.String() != "abcd" {
+		t.Fatalf("write fail")
 	}
 }
 
@@ -202,9 +215,77 @@ func TestCookie(t *testing.T) {
 			Path:     "/",
 			HttpOnly: true,
 		}
-		c.SetCookie(cookie)
+		c.AddCookie(cookie)
 		if c.GetHeader(HeaderSetCookie) != "a=b; Path=/; Max-Age=300; HttpOnly; Secure" {
 			t.Fatalf("set cookie fail")
+		}
+	})
+
+}
+
+func TestSignedCookie(t *testing.T) {
+	cod := &Cod{
+		Keys: []string{
+			"secret",
+			"cuttlefish",
+		},
+	}
+	t.Run("set signed cookie", func(t *testing.T) {
+		resp := httptest.NewRecorder()
+		c := NewContext(resp, nil)
+		c.cod = cod
+		cookie := &http.Cookie{
+			Name:     "a",
+			Value:    "b",
+			MaxAge:   300,
+			Secure:   true,
+			Path:     "/",
+			HttpOnly: true,
+		}
+		c.AddSignedCookie(cookie)
+		if strings.Join(c.Headers[HeaderSetCookie], ",") != "a=b; Path=/; Max-Age=300; HttpOnly; Secure,a.sig=9yv2rWFijew8K8a5Uw9jxRJE53s; Path=/; Max-Age=300; HttpOnly; Secure" {
+			t.Fatalf("set signed cookie fail")
+		}
+	})
+
+	t.Run("get signed cookie", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "https://aslant.site/?name=tree.xie&type=1", nil)
+		req.AddCookie(&http.Cookie{
+			Name:  "a",
+			Value: "b",
+		})
+		req.AddCookie(&http.Cookie{
+			Name:  "a.sig",
+			Value: "9yv2rWFijew8K8a5Uw9jxRJE53s",
+		})
+		resp := httptest.NewRecorder()
+		c := NewContext(resp, req)
+		c.cod = cod
+		cookie, err := c.SignedCookie("a")
+		if err != nil || cookie.Value != "b" {
+			t.Fatalf("get signed cookie fail, %v", err)
+		}
+	})
+
+	t.Run("get signed cookie(verify fail)", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "https://aslant.site/?name=tree.xie&type=1", nil)
+		req.AddCookie(&http.Cookie{
+			Name:  "a",
+			Value: "b",
+		})
+		req.AddCookie(&http.Cookie{
+			Name:  "a.sig",
+			Value: "abcd",
+		})
+		resp := httptest.NewRecorder()
+		c := NewContext(resp, req)
+		c.cod = cod
+		cookie, err := c.SignedCookie("a")
+		if err != nil {
+			t.Fatalf("get signed cookie fail, %v", err)
+		}
+		if cookie != nil {
+			t.Fatalf("verify fail should return nil cookie")
 		}
 	})
 }
@@ -333,7 +414,7 @@ func TestPush(t *testing.T) {
 func TestGetCod(t *testing.T) {
 	c := NewContext(nil, nil)
 	c.cod = &Cod{}
-	if c.Cod() == nil {
+	if c.Cod(nil) == nil {
 		t.Fatalf("get cod instance fail")
 	}
 }

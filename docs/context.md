@@ -236,9 +236,9 @@ c.AddHeader("X-Response-Id", "def")
 fmt.Println(c.Header())
 ```
 
-### Cookie
+### Cookie/SignedCookie
 
-获取HTTP请求头中的cookie。
+获取HTTP请求头中的cookie。SignedCookie则会根据初始化Cod时配置的Keys来校验cookie是否符合，符合才返回。
 
 ```go
 req := httptest.NewRequest("GET", "/users/me", nil)
@@ -252,15 +252,15 @@ c := cod.NewContext(resp, req)
 fmt.Println(c.Cookie("jt"))
 ```
 
-### SetCookie
+### AddCookie/AddSignedCookie
 
-设置Cookie至HTTP响应头中。
+设置Cookie至HTTP响应头中。AddSignedCookie则根据当前的Cookie以及初化cod时配置的Keys再生成一个校验cookie(Name为当前Cookie的Name + ".sig")。
 
 ```go
 req := httptest.NewRequest("GET", "/users/me", nil)
 resp := httptest.NewRecorder()
 c := cod.NewContext(resp, req)
-c.SetCookie(&http.Cookie{
+c.AddCookie(&http.Cookie{
   Name:  "jt",
   Value: "abc",
 })

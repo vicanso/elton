@@ -143,6 +143,18 @@ d.GET("/ping", func(c *cod.Context) (err error) {
 d.ListenAndServe(":8001")
 ```
 
+### Keys
+
+用于生成带签名的cookie的密钥，基于[keygrip](https://github.com/vicanso/keygrip)来生成与校验是否合法。
+
+```go
+d := cod.New()
+d.Keys = []string{
+	"secret",
+	"cuttlefish",
+}
+```
+
 ### SetFunctionName
 
 设置函数名字，主要用于trace中统计时的函数展示，如果需要统计Handler的处理时间，建议指定函数名称，便于统计信息的记录。

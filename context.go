@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/vicanso/keygrip"
 )
 
 type (
@@ -57,6 +59,10 @@ type (
 		// cod instance
 		cod *Cod
 	}
+)
+
+const (
+	sig = ".sig"
 )
 
 // Reset reset context
@@ -208,10 +214,75 @@ func (c *Context) Cookie(name string) (*http.Cookie, error) {
 	return c.Request.Cookie(name)
 }
 
-// SetCookie set the cookie for the response
-func (c *Context) SetCookie(cookie *http.Cookie) error {
+// AddCookie add the cookie to the response
+func (c *Context) AddCookie(cookie *http.Cookie) error {
 	c.AddHeader(HeaderSetCookie, cookie.String())
 	return nil
+}
+
+func (c *Context) getKeys() []string {
+	d := c.Cod(nil)
+	if d == nil {
+		return nil
+	}
+	return d.Keys
+}
+
+// SignedCookie get signed cookie from http request
+func (c *Context) SignedCookie(name string) (cookie *http.Cookie, err error) {
+	cookie, err = c.Cookie(name)
+	if err != nil {
+		return
+	}
+	sc, err := c.Cookie(name + sig)
+	if err != nil {
+		return
+	}
+	keys := c.getKeys()
+	if len(keys) == 0 {
+		return
+	}
+	kg := keygrip.New(keys)
+	// 如果校验不符合，则返回空
+	if !kg.Verify([]byte(cookie.Value), []byte(sc.Value)) {
+		cookie = nil
+	}
+	return
+}
+
+func cloneCookie(cookie *http.Cookie) *http.Cookie {
+	return &http.Cookie{
+		Name:       cookie.Name,
+		Value:      cookie.Value,
+		Path:       cookie.Path,
+		Domain:     cookie.Domain,
+		Expires:    cookie.Expires,
+		RawExpires: cookie.RawExpires,
+		MaxAge:     cookie.MaxAge,
+		Secure:     cookie.Secure,
+		HttpOnly:   cookie.HttpOnly,
+		SameSite:   cookie.SameSite,
+		Raw:        cookie.Raw,
+		Unparsed:   cookie.Unparsed,
+	}
+}
+
+// AddSignedCookie add the signed cookie to the response
+func (c *Context) AddSignedCookie(cookie *http.Cookie) (err error) {
+	err = c.AddCookie(cookie)
+	if err != nil {
+		return
+	}
+	sc := cloneCookie(cookie)
+	sc.Name = sc.Name + sig
+	keys := c.getKeys()
+	if len(keys) == 0 {
+		return
+	}
+	kg := keygrip.New(keys)
+	sc.Value = string(kg.Sign([]byte(sc.Value)))
+	err = c.AddCookie(sc)
+	return
 }
 
 // NoContent no content for response
@@ -275,7 +346,10 @@ func (c *Context) Push(target string, opts *http.PushOptions) (err error) {
 }
 
 // Cod get cod instance
-func (c *Context) Cod() *Cod {
+func (c *Context) Cod(d *Cod) *Cod {
+	if d != nil {
+		c.cod = d
+	}
 	return c.cod
 }
 
