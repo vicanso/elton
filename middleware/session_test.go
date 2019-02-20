@@ -283,10 +283,10 @@ func TestDestroy(t *testing.T) {
 }
 
 func TestSession(t *testing.T) {
-	createStore := func(c *cod.Context) Store {
+	createStore := func(c *cod.Context) (Store, error) {
 		return &TmpStore{
 			ctx: c,
-		}
+		}, nil
 	}
 	fn := NewSession(SessionConfig{
 		CreateStore: createStore,

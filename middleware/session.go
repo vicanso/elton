@@ -54,7 +54,7 @@ var (
 type (
 	// SessionConfig session config
 	SessionConfig struct {
-		CreateStore func(c *cod.Context) Store
+		CreateStore func(c *cod.Context) (Store, error)
 		Skipper     Skipper
 	}
 	// Store session store interface
@@ -321,7 +321,10 @@ func NewSession(config SessionConfig) cod.Handler {
 		if skipper(c) {
 			return c.Next()
 		}
-		store := config.CreateStore(c)
+		store, err := config.CreateStore(c)
+		if err != nil {
+			return
+		}
 		s := &Session{
 			Store: store,
 		}
