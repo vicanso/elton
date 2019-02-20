@@ -65,6 +65,14 @@ c.Reset()
 fmt.Println(c.Request)
 ```
 
+### RemoteAddr
+
+获取请求端的IP
+
+```go
+fmt.Println(c.RemoteAddr())
+```
+
 ### RealIP
 
 获取客户端的真实IP，先判断请求头是否有`X-Forwarded-For`，如果没有再取`X-Real-Ip`，都没有则从连接IP中取。

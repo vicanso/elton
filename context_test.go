@@ -47,6 +47,18 @@ func TestReset(t *testing.T) {
 	}
 }
 
+func TestRemoteAddr(t *testing.T) {
+	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
+	req.RemoteAddr = "192.168.1.1:7000"
+
+	c := Context{
+		Request: req,
+	}
+	if c.RemoteAddr() != "192.168.1.1" {
+		t.Fatalf("get remote addr fail")
+	}
+}
+
 func TestRealIP(t *testing.T) {
 	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
 

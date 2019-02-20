@@ -78,6 +78,12 @@ func (c *Context) Reset() {
 	c.cod = nil
 }
 
+// RemoteAddr get remote address
+func (c *Context) RemoteAddr() string {
+	remoteAddr, _, _ := net.SplitHostPort(c.Request.RemoteAddr)
+	return remoteAddr
+}
+
 // RealIP get the real ip
 func (c *Context) RealIP() string {
 	if c.realIP != "" {
@@ -93,7 +99,7 @@ func (c *Context) RealIP() string {
 	if c.realIP != "" {
 		return c.realIP
 	}
-	c.realIP, _, _ = net.SplitHostPort(c.Request.RemoteAddr)
+	c.realIP = c.RemoteAddr()
 	return c.realIP
 }
 
