@@ -37,8 +37,6 @@ const (
 	ErrCategoryProxy = "cod-proxy"
 	// ErrCategoryResponder responder error category
 	ErrCategoryResponder = "cod-responder"
-	// ErrCategorySession session error category
-	ErrCategorySession = "cod-session"
 	// ErrCategoryStaticServe static serve error category
 	ErrCategoryStaticServe = "cod-static-serve"
 	// ErrCategoryRecover recover error category

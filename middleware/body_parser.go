@@ -105,7 +105,9 @@ func NewBodyParser(config BodyParserConfig) cod.Handler {
 
 		body, e := ioutil.ReadAll(c.Request.Body)
 		if e != nil {
+			// IO 读取失败的认为是 exception
 			err = &hes.Error{
+				Exception:  true,
 				StatusCode: http.StatusBadRequest,
 				Message:    e.Error(),
 				Category:   ErrCategoryBodyParser,

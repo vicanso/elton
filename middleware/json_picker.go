@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"github.com/vicanso/cod"
-	"github.com/vicanso/superjson"
+	sj "github.com/vicanso/superjson"
 )
 
 var (
@@ -83,11 +83,11 @@ func NewJSONPicker(config JSONPickerConfig) cod.Handler {
 			return
 		}
 		fieldArr := strings.SplitN(fields, ",", -1)
-		fn := superjson.Pick
+		fn := sj.Pick
 		// 如果以-开头，则表示omit
 		if fieldArr[0][0] == '-' {
 			fieldArr[0] = fieldArr[0][1:]
-			fn = superjson.Omit
+			fn = sj.Omit
 		}
 		buf := fn(c.BodyBuffer.Bytes(), fieldArr)
 		c.BodyBuffer = bytes.NewBuffer(buf)

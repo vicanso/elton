@@ -97,9 +97,6 @@ const (
 	Gzip = "gzip"
 	// Br brotli compress
 	Br = "br"
-
-	// SessionKey session key
-	SessionKey = "_session"
 )
 
 var (
