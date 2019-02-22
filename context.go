@@ -95,13 +95,12 @@ func (c *Context) RealIP() string {
 	if c.realIP != "" {
 		return c.realIP
 	}
-	h := c.Request.Header
-	ip := h.Get(HeaderXForwardedFor)
+	ip := c.GetRequestHeader(HeaderXForwardedFor)
 	if ip != "" {
 		c.realIP = strings.TrimSpace(strings.Split(ip, ",")[0])
 		return c.realIP
 	}
-	c.realIP = h.Get(HeaderXRealIp)
+	c.realIP = c.GetRequestHeader(HeaderXRealIp)
 	if c.realIP != "" {
 		return c.realIP
 	}
@@ -234,18 +233,21 @@ func (c *Context) SignedCookie(name string) (cookie *http.Cookie, err error) {
 	if err != nil {
 		return
 	}
+	keys := c.getKeys()
+	// 如果没有配置keys，则认为cookie符合
+	if len(keys) == 0 {
+		return
+	}
+
 	sc, err := c.Cookie(name + sig)
 	if err != nil {
 		return
 	}
-	keys := c.getKeys()
-	if len(keys) == 0 {
-		return
-	}
 	kg := keygrip.New(keys)
-	// 如果校验不符合，则返回空
+	// 如果校验不符合，则与查找不到cookie 一样
 	if !kg.Verify([]byte(cookie.Value), []byte(sc.Value)) {
 		cookie = nil
+		err = http.ErrNoCookie
 	}
 	return
 }

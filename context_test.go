@@ -281,7 +281,7 @@ func TestSignedCookie(t *testing.T) {
 		c := NewContext(resp, req)
 		c.cod = cod
 		cookie, err := c.SignedCookie("a")
-		if err != nil {
+		if err != http.ErrNoCookie {
 			t.Fatalf("get signed cookie fail, %v", err)
 		}
 		if cookie != nil {

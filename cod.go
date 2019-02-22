@@ -16,16 +16,12 @@ package cod
 
 import (
 	"bytes"
-	"crypto/sha1"
-	"encoding/base64"
 	"fmt"
 	"net"
 	"net/http"
 	"reflect"
-	"regexp"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -43,13 +39,9 @@ const (
 	StatusClosed
 )
 
-var (
-	camelCaseReg = regexp.MustCompile(`[^\x00-\x2f\x3a-\x40\x5b-\x60\x7b-\x7f]+`)
-)
-
 type (
-	// M alias
-	M map[string]interface{}
+	// Skipper check for skip middleware
+	Skipper func(c *Context) bool
 	// RouterInfo router's info
 	RouterInfo struct {
 		Method string `json:"method,omitempty"`
@@ -58,19 +50,22 @@ type (
 	// Cod web framework instance
 	Cod struct {
 		// status of cod
-		status  int32
-		Server  *http.Server
-		Router  *httprouter.Router
+		status int32
+		// Server http server
+		Server *http.Server
+		// Router http router
+		Router *httprouter.Router
+		// Routers all router infos
 		Routers []*RouterInfo
 		// Middlewares middleware function
 		Middlewares    []Handler
 		errorListeners []ErrorListener
 		traceListeners []TraceListener
-		// ErrorHandler error handler
+		// ErrorHandler set the function for error handler
 		ErrorHandler ErrorHandler
-		// NotFoundHandler not found handler
+		// NotFoundHandler set the function for not found handler
 		NotFoundHandler http.HandlerFunc
-		// GenerateID generate id function
+		// GenerateID generate id function, will use it for create id for context
 		GenerateID GenerateID
 		// EnableTrace enable trace
 		EnableTrace bool
@@ -85,6 +80,8 @@ type (
 		Name     string        `json:"name,omitempty"`
 		Duration time.Duration `json:"duration,omitempty"`
 	}
+	// TraceInfos trace infos
+	TraceInfos []*TraceInfo
 	// Router router
 	Router struct {
 		Method     string    `json:"method,omitempty"`
@@ -96,7 +93,6 @@ type (
 		Path        string
 		HandlerList []Handler
 		routers     []*Router
-		Cod         *Cod
 	}
 	// ErrorHandler error handle function
 	ErrorHandler func(*Context, error)
@@ -107,7 +103,7 @@ type (
 	// ErrorListener error listener function
 	ErrorListener func(*Context, error)
 	// TraceListener trace listener
-	TraceListener func(*Context, []*TraceInfo)
+	TraceListener func(*Context, TraceInfos)
 )
 
 // New create a cod instance
@@ -184,7 +180,7 @@ func (d *Cod) GracefulClose(delay time.Duration) error {
 	atomic.StoreInt32(&d.status, StatusClosing)
 	time.Sleep(delay)
 	atomic.StoreInt32(&d.status, StatusClosed)
-	return d.Server.Close()
+	return d.Close()
 }
 
 // GetStatus get status of cod
@@ -253,9 +249,9 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 		maxMid := len(mids)
 		maxNext := maxMid + len(handlerList)
 		index := -1
-		var traceInfos []*TraceInfo
+		var traceInfos TraceInfos
 		if d.EnableTrace {
-			traceInfos = make([]*TraceInfo, 0, maxNext)
+			traceInfos = make(TraceInfos, 0, maxNext)
 		}
 		c.Next = func() error {
 			index++
@@ -285,17 +281,20 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 		if traceInfos != nil {
 			d.EmitTrace(c, traceInfos)
 		}
-		if err != nil {
-			d.EmitError(c, err)
-			d.Error(c, err)
-		} else if !c.Committed {
-			if c.StatusCode != 0 {
-				resp.WriteHeader(c.StatusCode)
-			}
-			if c.BodyBuffer != nil {
-				_, responseErr := resp.Write(c.BodyBuffer.Bytes())
-				if responseErr != nil {
-					d.EmitError(c, responseErr)
+		// 如果已commit 表示返回数据已设置，无需处理
+		if !c.Committed {
+			if err != nil {
+				d.EmitError(c, err)
+				d.Error(c, err)
+			} else {
+				if c.StatusCode != 0 {
+					resp.WriteHeader(c.StatusCode)
+				}
+				if c.BodyBuffer != nil {
+					_, responseErr := resp.Write(c.BodyBuffer.Bytes())
+					if responseErr != nil {
+						d.EmitError(c, responseErr)
+					}
 				}
 			}
 		}
@@ -403,7 +402,7 @@ func (d *Cod) OnError(ln ErrorListener) {
 }
 
 // EmitTrace emit trace
-func (d *Cod) EmitTrace(c *Context, infos []*TraceInfo) {
+func (d *Cod) EmitTrace(c *Context, infos TraceInfos) {
 	lns := d.traceListeners
 	for _, ln := range lns {
 		ln(c, infos)
@@ -509,18 +508,6 @@ func (g *Group) ALL(path string, handlerList ...Handler) {
 	}
 }
 
-// GenerateETag generate eTag
-func GenerateETag(buf []byte) string {
-	size := len(buf)
-	if size == 0 {
-		return "\"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk=\""
-	}
-	h := sha1.New()
-	h.Write(buf)
-	hash := base64.URLEncoding.EncodeToString(h.Sum(nil))
-	return fmt.Sprintf("\"%x-%s\"", size, hash)
-}
-
 func getMs(ns int) string {
 	microSecond := int(time.Microsecond)
 	milliSecond := int(time.Millisecond)
@@ -546,8 +533,8 @@ func getMs(ns int) string {
 	return prefix + "." + strconv.Itoa(offset/unit)
 }
 
-// ConvertToServerTiming convert trace infos to server timing
-func ConvertToServerTiming(traceInfos []*TraceInfo, prefix string) []byte {
+// ServerTiming trace infos to server timing
+func (traceInfos TraceInfos) ServerTiming(prefix string) []byte {
 	size := len(traceInfos)
 	if size == 0 {
 		return nil
@@ -572,29 +559,4 @@ func ConvertToServerTiming(traceInfos []*TraceInfo, prefix string) []byte {
 		}, nil)
 	}
 	return bytes.Join(timings, []byte(","))
-}
-
-// GenerateRewrites generate rewrites
-func GenerateRewrites(rewrites []string) (m map[*regexp.Regexp]string, err error) {
-	if len(rewrites) == 0 {
-		return
-	}
-	m = make(map[*regexp.Regexp]string)
-
-	for _, value := range rewrites {
-		arr := strings.Split(value, ":")
-		if len(arr) != 2 {
-			continue
-		}
-		k := arr[0]
-		v := arr[1]
-		k = strings.Replace(k, "*", "(\\S*)", -1)
-		reg, e := regexp.Compile(k)
-		if e != nil {
-			err = e
-			break
-		}
-		m[reg] = v
-	}
-	return
 }

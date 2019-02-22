@@ -378,7 +378,7 @@ func TestOnTrace(t *testing.T) {
 	d := New()
 	d.EnableTrace = true
 	done := false
-	d.OnTrace(func(c *Context, infos []*TraceInfo) {
+	d.OnTrace(func(c *Context, infos TraceInfos) {
 		if len(infos) != 2 {
 			t.Fatalf("trace count should be 2")
 		}
@@ -416,17 +416,6 @@ func TestGenerateID(t *testing.T) {
 	d.ServeHTTP(resp, req)
 }
 
-func TestGenerateETag(t *testing.T) {
-	eTag := GenerateETag([]byte(""))
-	if eTag != `"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="` {
-		t.Fatalf("gen nil byte eTag fail")
-	}
-	eTag = GenerateETag([]byte("abc"))
-	if eTag != `"3-qZk-NkcGgWq6PiVxeFDCbJzQ2J0="` {
-		t.Fatalf("gen abc eTag fail")
-	}
-}
-
 func TestGetSetFunctionName(t *testing.T) {
 	fn := func() {}
 	d := New()
@@ -438,7 +427,7 @@ func TestGetSetFunctionName(t *testing.T) {
 }
 
 func TestConvertToServerTiming(t *testing.T) {
-	traceInfos := make([]*TraceInfo, 0)
+	traceInfos := make(TraceInfos, 0)
 
 	t.Run("get ms", func(t *testing.T) {
 		if getMs(10) != "0" ||
@@ -448,7 +437,7 @@ func TestConvertToServerTiming(t *testing.T) {
 	})
 
 	t.Run("empty trace infos", func(t *testing.T) {
-		if ConvertToServerTiming(traceInfos, "") != nil {
+		if traceInfos.ServerTiming("") != nil {
 			t.Fatalf("it should be nil")
 		}
 	})
@@ -461,24 +450,10 @@ func TestConvertToServerTiming(t *testing.T) {
 			Name:     "b",
 			Duration: time.Millisecond + time.Microsecond,
 		})
-		if string(ConvertToServerTiming(traceInfos, "cod-")) != `cod-0;dur=0.01;desc="a",cod-1;dur=1;desc="b"` {
+		if string(traceInfos.ServerTiming("cod-")) != `cod-0;dur=0.01;desc="a",cod-1;dur=1;desc="b"` {
 			t.Fatalf("convert server timing fail")
 		}
 	})
-}
-
-func TestGenerateRewrites(t *testing.T) {
-	arr := []string{
-		"/api/*:/$1",
-		"/images/*:/static/$1",
-	}
-	regs, err := GenerateRewrites(arr)
-	if err != nil {
-		t.Fatalf("generate rewrites fail, %v", err)
-	}
-	if len(regs) != 2 {
-		t.Fatalf("generate rewriters fail")
-	}
 }
 
 func TestGracefulClose(t *testing.T) {

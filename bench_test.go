@@ -51,7 +51,7 @@ func BenchmarkContextNewMap(b *testing.B) {
 
 func BenchmarkConvertServerTiming(b *testing.B) {
 	b.ReportAllocs()
-	traceInfos := make([]*TraceInfo, 0)
+	traceInfos := make(TraceInfos, 0)
 	for _, name := range strings.Split("0123456789", "") {
 		traceInfos = append(traceInfos, &TraceInfo{
 			Name:     name,
@@ -59,7 +59,7 @@ func BenchmarkConvertServerTiming(b *testing.B) {
 		})
 	}
 	for i := 0; i < b.N; i++ {
-		ConvertToServerTiming(traceInfos, "cod-")
+		traceInfos.ServerTiming("cod-")
 	}
 }
 
