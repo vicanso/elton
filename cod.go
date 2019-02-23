@@ -303,7 +303,9 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 				}
 			}
 		}
-		d.ctxPool.Put(c)
+		if !c.reuseDisabled {
+			d.ctxPool.Put(c)
+		}
 	})
 }
 

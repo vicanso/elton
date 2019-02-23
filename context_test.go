@@ -399,7 +399,14 @@ func TestSetContentTypeByExt(t *testing.T) {
 	c.SetContentTypeByExt("../abcd/index.html")
 	check("text/html; charset=utf-8")
 	c.SetHeader(HeaderContentType, "")
+}
 
+func TestDisableReuse(t *testing.T) {
+	c := &Context{}
+	c.DisableReuse()
+	if !c.reuseDisabled {
+		t.Fatalf("disable context reuse fail")
+	}
 }
 
 func TestPush(t *testing.T) {

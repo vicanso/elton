@@ -58,6 +58,8 @@ type (
 		realIP string
 		// cod instance
 		cod *Cod
+		// reuseDisabled reuse disabled
+		reuseDisabled bool
 	}
 )
 
@@ -333,6 +335,11 @@ func (c *Context) SetContentTypeByExt(file string) {
 	if contentType != "" {
 		c.SetHeader(HeaderContentType, contentType)
 	}
+}
+
+// DisableReuse set the context disable reuse
+func (c *Context) DisableReuse() {
+	c.reuseDisabled = true
 }
 
 // Push http server push
