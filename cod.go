@@ -106,6 +106,11 @@ type (
 	TraceListener func(*Context, TraceInfos)
 )
 
+// DefaultSkipper default skipper function(not skip)
+func DefaultSkipper(c *Context) bool {
+	return c.Committed
+}
+
 // New create a cod instance
 func New() *Cod {
 	d := NewWithoutServer()

@@ -12,6 +12,15 @@ import (
 	"github.com/vicanso/hes"
 )
 
+func TestSkipper(t *testing.T) {
+	c := &Context{
+		Committed: true,
+	}
+	if !DefaultSkipper(c) {
+		t.Fatalf("default skip fail")
+	}
+}
+
 func TestListenAndServe(t *testing.T) {
 	d := New()
 	go d.ListenAndServe("")
