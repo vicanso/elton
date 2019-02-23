@@ -1,3 +1,4 @@
+export GO111MODULE = on
 
 .PHONY: default test test-cover dev
 
@@ -11,3 +12,6 @@ test-cover:
 
 bench:
 	go test -bench=. ./...
+
+release:
+	go mod tidy
