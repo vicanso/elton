@@ -259,6 +259,10 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			traceInfos = make(TraceInfos, 0, maxNext)
 		}
 		c.Next = func() error {
+			// 如果已设置响应数据，则不再执行后续的中间件
+			if c.Committed {
+				return nil
+			}
 			index++
 			var fn Handler
 			// 如果调用过多的next，则直接返回
@@ -303,6 +307,7 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 				}
 			}
 		}
+		c.Committed = true
 		if !c.reuseDisabled {
 			d.ctxPool.Put(c)
 		}
