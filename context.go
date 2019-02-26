@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/julienschmidt/httprouter"
 	"github.com/vicanso/keygrip"
 )
 
@@ -44,6 +45,8 @@ type (
 		Next func() error
 		// Params uri params
 		Params map[string]string
+		// RawParams http router params
+		RawParams httprouter.Params
 		// StatusCode http response's status code
 		StatusCode int
 		// Body http response's body
@@ -77,6 +80,7 @@ func (c *Context) Reset() {
 	c.Route = ""
 	c.Next = nil
 	c.Params = nil
+	c.RawParams = nil
 	c.StatusCode = 0
 	c.Body = nil
 	c.BodyBuffer = nil

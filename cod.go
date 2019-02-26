@@ -238,6 +238,7 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 		c := d.ctxPool.Get().(*Context)
 		c.Reset()
 		d.fillContext(c, resp, req)
+		c.RawParams = params
 		if len(params) != 0 {
 			c.Params = make(map[string]string)
 			for _, item := range params {
