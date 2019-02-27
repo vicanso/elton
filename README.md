@@ -770,6 +770,17 @@ c.SetContentTypeByExt("user.json")
 fmt.Println(c.Header())
 ```
 
+### DisableReuse
+
+禁止context复用，如果context在所有handler执行之后，还需要使用（如设置了超时出错，但无法对正在执行的handler中断，此时context还在使用中），则需要调用此函数禁用context的复用。
+
+```go
+req := httptest.NewRequest("GET", "/users/me", nil)
+resp := httptest.NewRecorder()
+c := cod.NewContext(resp, req)
+c.DisableReuse()
+```
+
 ## Group
 
 ### NewGroup 
