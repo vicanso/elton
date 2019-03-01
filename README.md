@@ -12,22 +12,24 @@ Go web framework
 package main
 
 import (
-	"fmt"
+	"errors"
 	"log"
-	"regexp"
 	"time"
 
 	"github.com/vicanso/cod"
-	"github.com/vicanso/cod/middleware"
+	errorHandler "github.com/vicanso/cod-error-handler"
+	recover "github.com/vicanso/cod-recover"
+	responder "github.com/vicanso/cod-responder"
 )
 
 func main() {
 
 	d := cod.New()
 
-	d.Use(middleware.NewRecover())
-
-
+	// 捕捉panic异常，避免程序崩溃
+	d.Use(recover.New())
+	// 错误处理，转换为json响应
+	d.Use(errorHandler.NewDefault())
 	// 请求处理时长
 	d.Use(func(c *cod.Context) (err error) {
 		started := time.Now()
@@ -35,13 +37,8 @@ func main() {
 		log.Printf("response time:%s", time.Since(started))
 		return
 	})
-
-	// 针对出错error生成相应的HTTP响应数据（http状态码以及响应数据）
-	d.Use(middleware.NewDefaultErrorHandler()))
-
-	// 根据Body生成相应的HTTP响应数据
-	d.Use(middleware.NewDefaultResponder()))
-
+	// 对响应数据 c.Body 转换为相应的json响应
+	d.Use(responder.NewDefault())
 
 	d.GET("/users/me", func(c *cod.Context) (err error) {
 		c.Body = &struct {
@@ -116,14 +113,14 @@ RouterInfo struct {
 
 ```go
 d := cod.New()
-d.Use(middleware.NewResponder(middleware.ResponderConfig{}))
+d.Use(responder.NewDefault())
 ```
 
 ### ErrorHandler
 
 自定义的Error处理，若路由处理过程中返回Error，则会触发此调用，非未指定此处理函数，则使用默认的处理。
 
-注意若在处理过程中返回的Error已被处理（如middleware.NewResponder），则并不会触发此出错调用，尽量使用NewResponder将出错转换为出错的HTTP响应。
+注意若在处理过程中返回的Error已被处理（如Error Handler），则并不会触发此出错调用，尽量使用中间件将Error转换为相应的输出，如JSON。
 
 ```go
 d := cod.New()
@@ -174,7 +171,7 @@ d.GenerateID = func() string {
   return ulid.MustNew(ulid.Timestamp(t), entropy).String()
 }
 
-d.Use(middleware.NewResponder(middleware.ResponderConfig{}))
+d.Use(responder.NewDefault())
 
 d.GET("/ping", func(c *cod.Context) (err error) {
   log.Println(c.ID)
@@ -196,7 +193,7 @@ d.OnTrace(func(c *cod.Context, traceInfos []*cod.TraceInfo) {
 	log.Println(traceInfos[0])
 })
 
-d.Use(middleware.NewResponder(middleware.ResponderConfig{}))
+d.Use(responder.NewDefault())
 
 d.GET("/ping", func(c *cod.Context) (err error) {
 	c.Body = "pong"
@@ -232,7 +229,7 @@ d.OnTrace(func(c *cod.Context, traceInfos []*cod.TraceInfo) {
 	log.Println(string(buf))
 })
 
-d.Use(middleware.NewResponder(middleware.ResponderConfig{}))
+d.Use(responder.NewDefault())
 
 d.GET("/ping", func(c *cod.Context) (err error) {
 	c.Body = "pong"
@@ -253,7 +250,7 @@ d.OnTrace(func(c *cod.Context, traceInfos cod.TraceInfos) {
 	// cod-0;dur=0.021755;desc="responder",cod-1;dur=0.00175;desc="main.main.func2"
 	log.Println(traceInfos.ServerTiming("cod-"))
 })
-fn := middleware.NewResponder(middleware.ResponderConfig{})
+fn := responder.NewDefault()
 d.Use(fn)
 d.SetFunctionName(fn, "responder")
 
@@ -296,10 +293,11 @@ http.Handler Interface的实现，在此函数中根据HTTP请求的Method与URL
 
 添加Handler的处理函数，配置请求的Method与Path，添加相应的处理函数，Path的相关配置与[httprouter](https://github.com/julienschmidt/httprouter)一致。
 
-```
+```go
 d := cod.New()
 
-d.Use(middleware.NewResponder(middleware.ResponderConfig{}))
+
+d.Use(responder.NewDefault())
 
 noop := func(c *cod.Context) error {
 	return c.Next()
@@ -367,7 +365,7 @@ d.Use(func(c *cod.Context) (err error) {
 	return err
 })
 
-d.Use(middleware.NewResponder(middleware.ResponderConfig{}))
+d.Use(responder.NewDefault())
 
 d.GET("/ping", func(c *cod.Context) (err error) {
 	c.Body = "pong"
@@ -401,7 +399,7 @@ d.OnError(func(c *cod.Context, err error) {
 	log.Println("unhandle error, " + err.Error())
 })
 
-d.Use(middleware.NewResponder(middleware.ResponderConfig{}))
+d.Use(responder.NewDefault())
 
 d.GET("/ping", func(c *cod.Context) (err error) {
 	c.Body = "pong"
