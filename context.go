@@ -247,6 +247,7 @@ func (c *Context) SignedCookie(name string) (cookie *http.Cookie, err error) {
 
 	sc, err := c.Cookie(name + sig)
 	if err != nil {
+		cookie = nil
 		return
 	}
 	kg := keygrip.New(keys)
