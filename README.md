@@ -2,11 +2,11 @@
 
 [![Build Status](https://img.shields.io/travis/vicanso/cod.svg?label=linux+build)](https://travis-ci.org/vicanso/cod)
 
-Go web framework
 
-开始接触后端开发是从nodejs开始，最开始使用的框架是express，后来陆续接触了其它的框架，觉得最熟悉简单的还是koa。使用golang做后端开发时，使用过gin，echo以及iris三个框架，它们的用法都比较类似（都支持中间件，中间件的处理与koa也类似）。但我还是用得不太习惯，不太习惯路由的响应处理，我更习惯koa的处理模式：出错返回error，正常返回body（body支持各种的数据类型）。
+Cod的实现参考了[koa](https://github.com/koajs/koa)，统一中间件的形式，方便定制各类中间件，所有中间件的处理方式都非常简单，如果需要交付给下一中间件，则调用`Context.Next()`。如果当前中间件出错，则返回`Error`结束调用。如果当前处理函数已正常完成处理，则将响应数据赋值`Context.Body = 响应数据`，则各响应中间件将Body转换为相应的响应数据，如JSON等。调用流程如koa的中间件调用流程图。
 
-想着多练习golang，也想着自己去实现一套与koa更类似的web framework，因此则是cod的诞生。
+![](./data/koa.png)
+
 
 ```golang
 package main
@@ -28,7 +28,7 @@ func main() {
 
 	// 捕捉panic异常，避免程序崩溃
 	d.Use(recover.New())
-	// 错误处理，转换为json响应
+	// 错误处理，将错误转换为json响应
 	d.Use(errorHandler.NewDefault())
 	// 请求处理时长
 	d.Use(func(c *cod.Context) (err error) {
@@ -61,6 +61,25 @@ func main() {
 ```
 
 上面的例子已经实现了简单的HTTP响应（得益于golang自带http的强大），整个框架中主要有两个struct：Cod与Context，下面我们来详细介绍这两个struct。
+
+一些常用中间件如下：
+
+- [basic auth](https://github.com/vicanso/cod-basic-auth) HTTP Basic Auth，建议只用于内部管理系统使用
+- [body parser] 请求数据的解析中间件，支持`application/json`以及`application/x-www-form-urlencoded`两种数据类型
+- [compress](https://github.com/vicanso/cod-compress) 数据压缩中间件，默认支持gzip以及brotli(需要支持编译参数以及编译相应动态库)，也可根据需要增加相应的压缩处理
+- [concurrent limiter](https://github.com/vicanso/cod-concurrent-limiter) 根据指定参数限制并发请求，可用于订单提交等防止重复提交或限制提交频率的场景
+- [etag](https://github.com/vicanso/cod-etag) 用于生成HTTP响应数据的ETag
+- [error handler](https://github.com/vicanso/cod-error-handler) 用于将处理函数的Error转换为对应的响应数据，如HTTP响应中的状态码(40x, 50x)，对应的出错类别等，建议在实际使用中根据项目自定义的Error对象生成相应的响应数据
+- [fresh](https://github.com/vicanso/cod-fresh) 判断HTTP请求是否未修改(Not Modified)
+- [json picker](https://github.com/vicanso/cod-json-picker) 用于从响应的JSON中筛选指定字段
+- [logger](https://github.com/vicanso/cod-logger) 生成HTTP请求日志，支持从请求头、响应头中获取相应信息
+- [proxy](https://github.com/vicanso/cod-proxy) Proxy中间件，可定义请求转发至其它的服务
+- [stats](https://github.com/vicanso/cod-stats) 请求处理的统计中间件，包括处理时长、状态码、响应数据长度、连接数等信息
+- [recover](https://github.com/vicanso/cod-recover) 捕获程序的panic异常，避免程序崩溃
+- [responder](https://github.com/vicanso/cod-responder) 响应处理中间件，用于将`Context.Body`(interface{})转换为对应的JSON数据并输出。如果系统使用xml等输出响应数据，可参考此中间件实现interface{}至xml的转换。
+- [session](https://github.com/vicanso/cod-session) Session中间件，默认支持保存至redis或内存中，也可自定义相应的存储
+- [static serve]() 静态文件处理中间件，默认支持从目录中读取静态文件或实现StaticFile的相关接口，从[packr](github.com/gobuffalo/packr/v2)或者数据库(mongodb)等读取文件
+- [tracker] (https://github.com/vicanso/cod-tracker) 可以用于在POST、PUT等提交类的接口中增加跟踪日志，此中间件将输出QueryString，Params以及RequestBody部分，并能将指定的字段做"***"的处理，避免输出敏感信息
 
 ## Cod
 
