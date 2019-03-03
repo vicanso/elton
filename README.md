@@ -5,7 +5,8 @@
 
 Cod的实现参考了[koa](https://github.com/koajs/koa)，统一中间件的形式，方便定制各类中间件，所有中间件的处理方式都非常简单，如果需要交付给下一中间件，则调用`Context.Next()`。如果当前中间件出错，则返回`Error`结束调用。如果当前处理函数已正常完成处理，则将响应数据赋值`Context.Body = 响应数据`，则各响应中间件将Body转换为相应的响应数据，如JSON等。调用流程如koa的中间件调用流程图。
 
-![](./data/koa.png)
+
+![koa](./.data/koa.png)
 
 
 ```golang
