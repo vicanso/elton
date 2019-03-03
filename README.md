@@ -65,7 +65,7 @@ func main() {
 一些常用中间件如下：
 
 - [basic auth](https://github.com/vicanso/cod-basic-auth) HTTP Basic Auth，建议只用于内部管理系统使用
-- [body parser] 请求数据的解析中间件，支持`application/json`以及`application/x-www-form-urlencoded`两种数据类型
+- [body parser](https://github.com/vicanso/cod-body-parser) 请求数据的解析中间件，支持`application/json`以及`application/x-www-form-urlencoded`两种数据类型
 - [compress](https://github.com/vicanso/cod-compress) 数据压缩中间件，默认支持gzip以及brotli(需要支持编译参数以及编译相应动态库)，也可根据需要增加相应的压缩处理
 - [concurrent limiter](https://github.com/vicanso/cod-concurrent-limiter) 根据指定参数限制并发请求，可用于订单提交等防止重复提交或限制提交频率的场景
 - [etag](https://github.com/vicanso/cod-etag) 用于生成HTTP响应数据的ETag
@@ -78,8 +78,8 @@ func main() {
 - [recover](https://github.com/vicanso/cod-recover) 捕获程序的panic异常，避免程序崩溃
 - [responder](https://github.com/vicanso/cod-responder) 响应处理中间件，用于将`Context.Body`(interface{})转换为对应的JSON数据并输出。如果系统使用xml等输出响应数据，可参考此中间件实现interface{}至xml的转换。
 - [session](https://github.com/vicanso/cod-session) Session中间件，默认支持保存至redis或内存中，也可自定义相应的存储
-- [static serve]() 静态文件处理中间件，默认支持从目录中读取静态文件或实现StaticFile的相关接口，从[packr](github.com/gobuffalo/packr/v2)或者数据库(mongodb)等读取文件
-- [tracker] (https://github.com/vicanso/cod-tracker) 可以用于在POST、PUT等提交类的接口中增加跟踪日志，此中间件将输出QueryString，Params以及RequestBody部分，并能将指定的字段做"***"的处理，避免输出敏感信息
+- [static serve](https://github.com/vicanso/cod-static-serve) 静态文件处理中间件，默认支持从目录中读取静态文件或实现StaticFile的相关接口，从[packr](github.com/gobuffalo/packr/v2)或者数据库(mongodb)等读取文件
+- [tracker](https://github.com/vicanso/cod-tracker) 可以用于在POST、PUT等提交类的接口中增加跟踪日志，此中间件将输出QueryString，Params以及RequestBody部分，并能将指定的字段做"***"的处理，避免输出敏感信息
 
 ## Cod
 
