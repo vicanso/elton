@@ -291,10 +291,12 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 		if traceInfos != nil {
 			d.EmitTrace(c, traceInfos)
 		}
+		if err != nil {
+			d.EmitError(c, err)
+		}
 		// 如果已commit 表示返回数据已设置，无需处理
 		if !c.Committed {
 			if err != nil {
-				d.EmitError(c, err)
 				d.Error(c, err)
 			} else {
 				if c.StatusCode != 0 {
