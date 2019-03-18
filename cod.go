@@ -280,15 +280,25 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 				return fn(c)
 			}
 			startedAt := time.Now()
+			traceInfo := &TraceInfo{
+				Name: d.GetFunctionName(fn),
+			}
+			// 先插入至数据，保证顺序
+			traceInfos = append(traceInfos, traceInfo)
 			err := fn(c)
-			traceInfos = append(traceInfos, &TraceInfo{
-				Name:     d.GetFunctionName(fn),
-				Duration: time.Since(startedAt),
-			})
+			// 完成后计算时长（前面的中间件包括后面中间件的处理时长）
+			traceInfo.Duration = time.Since(startedAt)
 			return err
 		}
 		err := c.Next()
 		if traceInfos != nil {
+			max := len(traceInfos)
+			for i, traceInfo := range traceInfos {
+				if i < max-1 {
+					// 计算耗时
+					traceInfo.Duration -= traceInfos[i+1].Duration
+				}
+			}
 			d.EmitTrace(c, traceInfos)
 		}
 		if err != nil {
