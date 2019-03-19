@@ -19,14 +19,15 @@ func TestReset(t *testing.T) {
 		Next: func() error {
 			return nil
 		},
-		Params:      make(map[string]string),
-		StatusCode:  200,
-		Body:        make(map[string]string),
-		BodyBuffer:  bytes.NewBufferString("abcd"),
-		RequestBody: []byte("abcd"),
-		m:           make(map[interface{}]interface{}),
-		realIP:      "abcd",
-		cod:         &Cod{},
+		Params:        make(map[string]string),
+		StatusCode:    200,
+		Body:          make(map[string]string),
+		BodyBuffer:    bytes.NewBufferString("abcd"),
+		RequestBody:   []byte("abcd"),
+		m:             make(map[interface{}]interface{}),
+		realIP:        "abcd",
+		cod:           &Cod{},
+		reuseDisabled: true,
 	}
 	c.Reset()
 	if c.Request != nil ||
@@ -43,7 +44,8 @@ func TestReset(t *testing.T) {
 		c.RequestBody != nil ||
 		c.m != nil ||
 		c.realIP != "" ||
-		c.cod != nil {
+		c.cod != nil ||
+		c.reuseDisabled != false {
 		t.Fatalf("reset fail")
 	}
 }

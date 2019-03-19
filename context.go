@@ -88,6 +88,7 @@ func (c *Context) Reset() {
 	c.m = nil
 	c.realIP = ""
 	c.cod = nil
+	c.reuseDisabled = false
 }
 
 // RemoteAddr get remote address
