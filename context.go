@@ -230,6 +230,14 @@ func (c *Context) AddHeader(key, value string) {
 	c.Headers.Add(key, value)
 }
 
+// ResetHeader reset response header
+func (c *Context) ResetHeader() {
+	h := c.Header()
+	for k := range h {
+		h.Del(k)
+	}
+}
+
 // Cookie get cookie from http request
 func (c *Context) Cookie(name string) (*http.Cookie, error) {
 	return c.Request.Cookie(name)

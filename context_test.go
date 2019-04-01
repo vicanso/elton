@@ -209,6 +209,13 @@ func TestGetSetHeader(t *testing.T) {
 			t.Fatalf("header function fail")
 		}
 	})
+
+	t.Run("reset header", func(t *testing.T) {
+		c.ResetHeader()
+		if len(c.Header()) != 0 {
+			t.Fatalf("reset header fail")
+		}
+	})
 }
 
 func TestCookie(t *testing.T) {
