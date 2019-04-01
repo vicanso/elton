@@ -178,6 +178,21 @@ func (c *Context) GetRequestHeader(key string) string {
 	return c.Request.Header.Get(key)
 }
 
+// SetRequestHeader set http request header
+func (c *Context) SetRequestHeader(key, value string) {
+	h := c.Request.Header
+	if value == "" {
+		h.Del(key)
+		return
+	}
+	h.Set(key, value)
+}
+
+// AddRequestHeader add http request header
+func (c *Context) AddRequestHeader(key, value string) {
+	c.Request.Header.Add(key, value)
+}
+
 // Header get headers of http response
 func (c *Context) Header() http.Header {
 	return c.Headers

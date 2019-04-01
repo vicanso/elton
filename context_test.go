@@ -166,6 +166,28 @@ func TestGetSetHeader(t *testing.T) {
 		}
 	})
 
+	t.Run("set header to request", func(t *testing.T) {
+		key := "X-Request-ID"
+		value := "1"
+		if c.GetRequestHeader(key) != "" {
+			t.Fatalf("request id should be nil before set")
+		}
+		c.SetRequestHeader(key, value)
+		if c.GetRequestHeader(key) != value {
+			t.Fatalf("set request header fail")
+		}
+	})
+
+	t.Run("add header to request", func(t *testing.T) {
+		key := "X-Request-Type"
+		c.AddRequestHeader(key, "1")
+		c.AddRequestHeader(key, "2")
+		ids := c.Request.Header[key]
+		if strings.Join(ids, ",") != "1,2" {
+			t.Fatalf("add request header fail")
+		}
+	})
+
 	t.Run("set header to the response", func(t *testing.T) {
 		c.SetHeader("X-Response-Id", "1")
 		if c.GetHeader("X-Response-Id") != "1" {
