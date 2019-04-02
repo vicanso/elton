@@ -279,9 +279,15 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			if traceInfos == nil {
 				return fn(c)
 			}
+			fnName := d.GetFunctionName(fn)
+			// 如果函数名字为 - ，则跳过
+			if fnName == "-" {
+				return fn(c)
+			}
 			startedAt := time.Now()
+
 			traceInfo := &TraceInfo{
-				Name: d.GetFunctionName(fn),
+				Name: fnName,
 			}
 			// 先插入至数据，保证顺序
 			traceInfos = append(traceInfos, traceInfo)

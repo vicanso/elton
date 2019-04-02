@@ -396,6 +396,12 @@ func TestOnTrace(t *testing.T) {
 	d.Use(func(c *Context) error {
 		return c.Next()
 	})
+	ignoreFn := func(c *Context) error {
+		return c.Next()
+	}
+	d.Use(ignoreFn)
+	d.SetFunctionName(ignoreFn, "-")
+
 	d.GET("/users/me", func(c *Context) error {
 		return nil
 	})
