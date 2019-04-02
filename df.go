@@ -39,10 +39,16 @@ var (
 		Category:   ErrCategoryCod,
 	}
 
-	// ErrNillResponse nil response
-	ErrNillResponse = &hes.Error{
+	// ErrNilResponse nil response
+	ErrNilResponse = &hes.Error{
 		StatusCode: 500,
 		Message:    "nil response",
+		Category:   ErrCategoryCod,
+	}
+	// ErrNotSupportPush not support http push
+	ErrNotSupportPush = &hes.Error{
+		StatusCode: 500,
+		Message:    "not support http push",
 		Category:   ErrCategoryCod,
 	}
 )
@@ -52,8 +58,8 @@ const (
 	ErrCategoryCod = "cod"
 	// HeaderXForwardedFor x-forwarded-for
 	HeaderXForwardedFor = "X-Forwarded-For"
-	// HeaderXRealIp x-real-ip
-	HeaderXRealIp = "X-Real-Ip"
+	// HeaderXRealIP x-real-ip
+	HeaderXRealIP = "X-Real-Ip"
 	// HeaderSetCookie Set-Cookie
 	HeaderSetCookie = "Set-Cookie"
 	// HeaderLocation Location

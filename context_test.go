@@ -90,8 +90,8 @@ func TestRealIP(t *testing.T) {
 	})
 
 	t.Run("get from x-real-ip", func(t *testing.T) {
-		defer req.Header.Del(HeaderXRealIp)
-		req.Header.Set(HeaderXRealIp, "192.168.0.1")
+		defer req.Header.Del(HeaderXRealIP)
+		req.Header.Set(HeaderXRealIP, "192.168.0.1")
 		if c.RealIP() != "192.168.0.1" {
 			t.Fatalf("get real ip from x-real-ip fail")
 		}
@@ -444,7 +444,7 @@ func TestPush(t *testing.T) {
 	resp := httptest.NewRecorder()
 	c := NewContext(resp, nil)
 	err := c.Push("/a.css", nil)
-	if err != nil {
+	if err != ErrNotSupportPush {
 		t.Fatalf("push fail, %v", err)
 	}
 }

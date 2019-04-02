@@ -107,7 +107,7 @@ func (c *Context) RealIP() string {
 		c.realIP = strings.TrimSpace(strings.Split(ip, ",")[0])
 		return c.realIP
 	}
-	c.realIP = c.GetRequestHeader(HeaderXRealIp)
+	c.realIP = c.GetRequestHeader(HeaderXRealIP)
 	if c.realIP != "" {
 		return c.realIP
 	}
@@ -374,11 +374,11 @@ func (c *Context) DisableReuse() {
 // Push http server push
 func (c *Context) Push(target string, opts *http.PushOptions) (err error) {
 	if c.Response == nil {
-		return ErrNillResponse
+		return ErrNilResponse
 	}
 	pusher, ok := c.Response.(http.Pusher)
 	if !ok {
-		return nil
+		return ErrNotSupportPush
 	}
 	return pusher.Push(target, opts)
 }
