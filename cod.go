@@ -401,10 +401,20 @@ func (d *Cod) NotFound(resp http.ResponseWriter, req *http.Request) {
 
 // Error error handle
 func (d *Cod) Error(c *Context, err error) {
+	// 出错时清除部分响应头
+	for _, key := range []string{
+		HeaderETag,
+		HeaderLastModified,
+		HeaderContentEncoding,
+		HeaderContentLength,
+	} {
+		c.SetHeader(key, "")
+	}
 	if d.ErrorHandler != nil {
 		d.ErrorHandler(c, err)
 		return
 	}
+
 	resp := c.Response
 	he, ok := err.(*hes.Error)
 	if ok {

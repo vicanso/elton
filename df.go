@@ -78,6 +78,8 @@ const (
 	HeaderLastModified = "Last-Modified"
 	// HeaderContentEncoding content encoding
 	HeaderContentEncoding = "Content-Encoding"
+	// HeaderContentLength content length
+	HeaderContentLength = "Content-Length"
 	// HeaderIfModifiedSince if modified since
 	HeaderIfModifiedSince = "If-Modified-Since"
 	// HeaderIfNoneMatch if none match

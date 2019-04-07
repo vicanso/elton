@@ -2,6 +2,7 @@ package cod
 
 import (
 	"bytes"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -336,21 +337,49 @@ func TestHandle(t *testing.T) {
 }
 
 func TestErrorHandler(t *testing.T) {
-	d := New()
-	d.GET("/", func(c *Context) error {
-		return hes.New("abc")
+	t.Run("remove header", func(t *testing.T) {
+		d := New()
+		resp := httptest.NewRecorder()
+		c := NewContext(resp, nil)
+		keys := []string{
+			HeaderETag,
+			HeaderLastModified,
+			HeaderContentEncoding,
+			HeaderContentLength,
+		}
+		for _, key := range keys {
+			c.SetHeader(key, "a")
+		}
+		d.Error(c, errors.New("abcd"))
+		for _, key := range keys {
+			value := c.GetHeader(key)
+			if value != "" {
+				t.Fatalf("default error handler should remove some header files")
+			}
+		}
+		if resp.Code != http.StatusInternalServerError ||
+			resp.Body.String() != "abcd" {
+			t.Fatalf("error response fail")
+		}
 	})
 
-	done := false
-	d.ErrorHandler = func(c *Context, err error) {
-		done = true
-	}
-	req := httptest.NewRequest("GET", "/", nil)
-	resp := httptest.NewRecorder()
-	d.ServeHTTP(resp, req)
-	if !done {
-		t.Fatalf("custom error handler is not called")
-	}
+	t.Run("custom error handler", func(t *testing.T) {
+		d := New()
+		d.GET("/", func(c *Context) error {
+			return hes.New("abc")
+		})
+
+		done := false
+		d.ErrorHandler = func(c *Context, err error) {
+			done = true
+		}
+		req := httptest.NewRequest("GET", "/", nil)
+		resp := httptest.NewRecorder()
+		d.ServeHTTP(resp, req)
+		if !done {
+			t.Fatalf("custom error handler is not called")
+		}
+	})
 }
 
 func TestNotFoundHandler(t *testing.T) {
