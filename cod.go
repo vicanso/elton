@@ -315,6 +315,9 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			if err != nil {
 				d.Error(c, err)
 			} else {
+				if c.BodyBuffer != nil {
+					c.SetHeader(HeaderContentLength, strconv.Itoa(c.BodyBuffer.Len()))
+				}
 				if c.StatusCode != 0 {
 					resp.WriteHeader(c.StatusCode)
 				}
