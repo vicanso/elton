@@ -301,7 +301,7 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			max := len(traceInfos)
 			for i, traceInfo := range traceInfos {
 				if i < max-1 {
-					// 计算耗时
+					// 计算真实耗时（不包括后面中间件处理时长）
 					traceInfo.Duration -= traceInfos[i+1].Duration
 				}
 			}

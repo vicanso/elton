@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/vicanso/hes"
 )
 
@@ -17,57 +18,48 @@ func TestSkipper(t *testing.T) {
 	c := &Context{
 		Committed: true,
 	}
-	if !DefaultSkipper(c) {
-		t.Fatalf("default skip fail")
-	}
+	assert := assert.New(t)
+	assert.Equal(DefaultSkipper(c), true)
 }
 
 func TestListenAndServe(t *testing.T) {
+	assert := assert.New(t)
 	d := New()
 	go d.ListenAndServe("")
 	time.Sleep(10 * time.Millisecond)
 	req := httptest.NewRequest("GET", "/users/me", nil)
 	resp := httptest.NewRecorder()
 	d.ServeHTTP(resp, req)
-	if resp.Code != http.StatusNotFound {
-		t.Fatalf("status code should be 404")
-	}
+	assert.Equal(resp.Code, http.StatusNotFound)
 	err := d.Close()
-	if err != nil {
-		t.Fatalf("close server fail, %v", err)
-	}
+	assert.Nil(err, "close server should be successful")
 }
 
 func TestServe(t *testing.T) {
+	assert := assert.New(t)
 	d := New()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("serve fail, %v", err)
-	}
+	assert.Nil(err, "net listen should be successful")
 	go d.Serve(ln)
 	time.Sleep(10 * time.Millisecond)
 	req := httptest.NewRequest("GET", "/users/me", nil)
 	resp := httptest.NewRecorder()
 	d.ServeHTTP(resp, req)
-	if resp.Code != http.StatusNotFound {
-		t.Fatalf("status code should be 404")
-	}
+	assert.Equal(resp.Code, http.StatusNotFound)
 	err = d.Close()
-	if err != nil {
-		t.Fatalf("close server fail, %v", err)
-	}
+	assert.Nil(err, "close server should be successful")
 }
 
 func TestNewWithoutServer(t *testing.T) {
 	d := NewWithoutServer()
-	if d.Server != nil {
-		t.Fatalf("new without server fail")
-	}
+	assert := assert.New(t)
+	assert.Nil(d.Server, "new without server should be nil")
 }
 
 func TestHandle(t *testing.T) {
 	d := New()
 	t.Run("all methods", func(t *testing.T) {
+		assert := assert.New(t)
 		path := "/test-path"
 		d.GET(path)
 		d.POST(path)
@@ -84,15 +76,12 @@ func TestHandle(t *testing.T) {
 			if index >= 8 {
 				p = allMethods
 			}
-			if r.Path != p {
-				t.Fatal("handle method fail")
-			}
+			assert.Equal(r.Path, p)
 		}
-		if len(d.Routers) != 16 {
-			t.Fatal("handle method fail")
-		}
+		assert.Equal(len(d.Routers), 16)
 	})
 	t.Run("group", func(t *testing.T) {
+		assert := assert.New(t)
 		key := "count"
 		countValue := 4
 		d.Use(func(c *Context) error {
@@ -110,20 +99,14 @@ func TestHandle(t *testing.T) {
 		})
 		userGroupPath := "/users"
 		userGroup := NewGroup(userGroupPath, func(c *Context) error {
-			if !strings.HasPrefix(c.Request.URL.Path, userGroupPath) {
-				t.Fatalf("group handle fail")
-			}
+			assert.Equal(strings.HasPrefix(c.Request.URL.Path, userGroupPath), true)
 			return c.Next()
 		})
 		doneCount := 0
 		userGroup.ALL("/me", func(c *Context) (err error) {
 			v := c.Get(key).(int)
-			if v != countValue {
-				t.Fatalf(c.Request.Method + " handle fail")
-			}
-			if c.Route != "/users/me" {
-				t.Fatalf("handle route is not match")
-			}
+			assert.Equal(v, countValue)
+			assert.Equal(c.Route, "/users/me")
 			doneCount++
 			return
 		})
@@ -133,171 +116,65 @@ func TestHandle(t *testing.T) {
 			resp := httptest.NewRecorder()
 			d.ServeHTTP(resp, req)
 		}
-		if doneCount != len(methods) {
-			t.Fatalf("route handle fail")
-		}
+		assert.Equal(doneCount, len(methods), "not all method request is done")
 	})
 
 	route := "/system/info"
-	t.Run("get", func(t *testing.T) {
-		done := false
-		sysGroup := NewGroup("/system")
-		sysGroup.GET("/info", func(c *Context) (err error) {
-			c.StatusCode = 201
-			c.BodyBuffer = bytes.NewBufferString("abcd")
-			if c.Route != route {
-				t.Fatalf("route param fail")
-			}
-			done = true
-			return
-		})
-		d.AddGroup(sysGroup)
-		req := httptest.NewRequest("GET", "https://aslant.site/system/info", nil)
-		resp := httptest.NewRecorder()
-		d.ServeHTTP(resp, req)
-		if !done || resp.Code != 201 {
-			t.Fatalf("handle function is not call")
-		}
-	})
 
-	t.Run("post", func(t *testing.T) {
-		done := false
-		sysGroup := NewGroup("/system")
-		sysGroup.POST("/info", func(c *Context) (err error) {
-			if c.Route != route {
-				t.Fatalf("route param fail")
-			}
-			done = true
-			return
-		})
-		d.AddGroup(sysGroup)
-		req := httptest.NewRequest("POST", "https://aslant.site/system/info", nil)
-		resp := httptest.NewRecorder()
-		d.ServeHTTP(resp, req)
-		if !done {
-			t.Fatalf("handle function is not call")
-		}
-	})
+	t.Run("test method handler", func(t *testing.T) {
+		assert := assert.New(t)
 
-	t.Run("put", func(t *testing.T) {
-		done := false
-		sysGroup := NewGroup("/system")
-		sysGroup.PUT("/info", func(c *Context) (err error) {
-			if c.Route != route {
-				t.Fatalf("route param fail")
+		for _, method := range []string{
+			"GET",
+			"POST",
+			"PUT",
+			"PATCH",
+			"DELETE",
+			"HEAD",
+			"OPTIONS",
+			"TRACE",
+		} {
+			done := false
+			sysGroup := NewGroup("/system")
+			fn := sysGroup.GET
+			switch method {
+			case "GET":
+				fn = sysGroup.GET
+			case "POST":
+				fn = sysGroup.POST
+			case "PUT":
+				fn = sysGroup.PUT
+			case "PATCH":
+				fn = sysGroup.PATCH
+			case "DELETE":
+				fn = sysGroup.DELETE
+			case "HEAD":
+				fn = sysGroup.HEAD
+			case "OPTIONS":
+				fn = sysGroup.OPTIONS
+			case "TRACE":
+				fn = sysGroup.TRACE
 			}
-			done = true
-			return
-		})
-		d.AddGroup(sysGroup)
-		req := httptest.NewRequest("PUT", "https://aslant.site/system/info", nil)
-		resp := httptest.NewRecorder()
-		d.ServeHTTP(resp, req)
-		if !done {
-			t.Fatalf("handle function is not call")
-		}
-	})
-
-	t.Run("patch", func(t *testing.T) {
-		done := false
-		sysGroup := NewGroup("/system")
-		sysGroup.PATCH("/info", func(c *Context) (err error) {
-			if c.Route != route {
-				t.Fatalf("route param fail")
-			}
-			done = true
-			return
-		})
-		d.AddGroup(sysGroup)
-		req := httptest.NewRequest("PATCH", "https://aslant.site/system/info", nil)
-		resp := httptest.NewRecorder()
-		d.ServeHTTP(resp, req)
-		if !done {
-			t.Fatalf("handle function is not call")
-		}
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		done := false
-		sysGroup := NewGroup("/system")
-		sysGroup.DELETE("/info", func(c *Context) (err error) {
-			if c.Route != route {
-				t.Fatalf("route param fail")
-			}
-			done = true
-			return
-		})
-		d.AddGroup(sysGroup)
-		req := httptest.NewRequest("DELETE", "https://aslant.site/system/info", nil)
-		resp := httptest.NewRecorder()
-		d.ServeHTTP(resp, req)
-		if !done {
-			t.Fatalf("handle function is not call")
-		}
-	})
-
-	t.Run("head", func(t *testing.T) {
-		done := false
-		sysGroup := NewGroup("/system")
-		sysGroup.HEAD("/info", func(c *Context) (err error) {
-			if c.Route != route {
-				t.Fatalf("route param fail")
-			}
-			done = true
-			return
-		})
-		d.AddGroup(sysGroup)
-		req := httptest.NewRequest("HEAD", "https://aslant.site/system/info", nil)
-		resp := httptest.NewRecorder()
-		d.ServeHTTP(resp, req)
-		if !done {
-			t.Fatalf("handle function is not call")
-		}
-	})
-
-	t.Run("options", func(t *testing.T) {
-		done := false
-		sysGroup := NewGroup("/system")
-		sysGroup.OPTIONS("/info", func(c *Context) (err error) {
-			if c.Route != route {
-				t.Fatalf("route param fail")
-			}
-			done = true
-			return
-		})
-		d.AddGroup(sysGroup)
-		req := httptest.NewRequest("OPTIONS", "https://aslant.site/system/info", nil)
-		resp := httptest.NewRecorder()
-		d.ServeHTTP(resp, req)
-		if !done {
-			t.Fatalf("handle function is not call")
-		}
-	})
-
-	t.Run("trace", func(t *testing.T) {
-		done := false
-		sysGroup := NewGroup("/system")
-		sysGroup.TRACE("/info", func(c *Context) (err error) {
-			if c.Route != route {
-				t.Fatalf("route param fail")
-			}
-			done = true
-			return
-		})
-		d.AddGroup(sysGroup)
-		req := httptest.NewRequest("TRACE", "https://aslant.site/system/info", nil)
-		resp := httptest.NewRecorder()
-		d.ServeHTTP(resp, req)
-		if !done {
-			t.Fatalf("handle function is not call")
+			fn("/info", func(c *Context) (err error) {
+				c.StatusCode = 201
+				c.BodyBuffer = bytes.NewBufferString("abcd")
+				assert.Equal(c.Route, route)
+				done = true
+				return
+			})
+			d.AddGroup(sysGroup)
+			req := httptest.NewRequest(method, "https://aslant.site/system/info", nil)
+			resp := httptest.NewRecorder()
+			d.ServeHTTP(resp, req)
+			assert.Equal(done, true)
+			assert.Equal(resp.Code, 201)
 		}
 	})
 
 	t.Run("params", func(t *testing.T) {
+		assert := assert.New(t)
 		d.GET("/params/:id", func(c *Context) error {
-			if c.Param("id") == "" {
-				t.Fatalf("set params fail")
-			}
+			assert.Equal(c.Param("id"), "1")
 			return nil
 		})
 		req := httptest.NewRequest("GET", "https://aslant.site/params/1", nil)
@@ -306,16 +183,16 @@ func TestHandle(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
+		assert := assert.New(t)
 		req := httptest.NewRequest("GET", "https://aslant.site/not-found", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		if resp.Code != http.StatusNotFound ||
-			resp.Body.String() != "Not found" {
-			t.Fatalf("default not found handle fail")
-		}
+		assert.Equal(resp.Code, http.StatusNotFound)
+		assert.Equal(resp.Body.String(), "Not found")
 	})
 
 	t.Run("error", func(t *testing.T) {
+		assert := assert.New(t)
 		customErr := hes.New("abcd")
 		d.GET("/error", func(c *Context) error {
 			return customErr
@@ -323,21 +200,19 @@ func TestHandle(t *testing.T) {
 		req := httptest.NewRequest("GET", "https://aslant.site/error", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		if resp.Code != http.StatusBadRequest ||
-			resp.Body.String() != "message=abcd" {
-			t.Fatalf("default error handle fail")
-		}
+		assert.Equal(resp.Code, http.StatusBadRequest)
+		assert.Equal(resp.Body.String(), "message=abcd")
 	})
 
 	t.Run("get routers", func(t *testing.T) {
-		if len(d.Routers) != 34 {
-			t.Fatalf("get routers fail")
-		}
+		assert := assert.New(t)
+		assert.Equal(len(d.Routers), 34, "router count fail")
 	})
 }
 
 func TestErrorHandler(t *testing.T) {
 	t.Run("remove header", func(t *testing.T) {
+		assert := assert.New(t)
 		d := New()
 		resp := httptest.NewRecorder()
 		c := NewContext(resp, nil)
@@ -353,17 +228,14 @@ func TestErrorHandler(t *testing.T) {
 		d.Error(c, errors.New("abcd"))
 		for _, key := range keys {
 			value := c.GetHeader(key)
-			if value != "" {
-				t.Fatalf("default error handler should remove some header files")
-			}
+			assert.Equal(value, "", "the "+key+" header should be nil")
 		}
-		if resp.Code != http.StatusInternalServerError ||
-			resp.Body.String() != "abcd" {
-			t.Fatalf("error response fail")
-		}
+		assert.Equal(resp.Code, http.StatusInternalServerError)
+		assert.Equal(resp.Body.String(), "abcd")
 	})
 
 	t.Run("custom error handler", func(t *testing.T) {
+		assert := assert.New(t)
 		d := New()
 		d.GET("/", func(c *Context) error {
 			return hes.New("abc")
@@ -376,13 +248,12 @@ func TestErrorHandler(t *testing.T) {
 		req := httptest.NewRequest("GET", "/", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		if !done {
-			t.Fatalf("custom error handler is not called")
-		}
+		assert.Equal(done, true, "custom error handler should be called")
 	})
 }
 
 func TestNotFoundHandler(t *testing.T) {
+	assert := assert.New(t)
 	d := New()
 	d.GET("/", func(c *Context) error {
 		return nil
@@ -394,32 +265,28 @@ func TestNotFoundHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/users/me", nil)
 	resp := httptest.NewRecorder()
 	d.ServeHTTP(resp, req)
-	if !done {
-		t.Fatalf("custom not found handler is not called")
-	}
+	assert.Equal(done, true, "custom not found handler should be called")
 }
 
 func TestOnError(t *testing.T) {
+	assert := assert.New(t)
 	d := New()
 	c := NewContext(nil, nil)
-	cutstomErr := hes.New("abc")
-	d.EmitError(c, cutstomErr)
+	customErr := hes.New("abc")
+	d.EmitError(c, customErr)
 	d.OnError(func(_ *Context, err error) {
-		if err != cutstomErr {
-			t.Fatalf("on error fail")
-		}
+		assert.Equal(err, customErr)
 	})
-	d.EmitError(c, cutstomErr)
+	d.EmitError(c, customErr)
 }
 
 func TestOnTrace(t *testing.T) {
+	assert := assert.New(t)
 	d := New()
 	d.EnableTrace = true
 	done := false
 	d.OnTrace(func(c *Context, infos TraceInfos) {
-		if len(infos) != 2 {
-			t.Fatalf("trace count should be 2")
-		}
+		assert.Equal(len(infos), 2, "trace count should be 2")
 		done = true
 	})
 	d.Use(func(c *Context) error {
@@ -437,22 +304,18 @@ func TestOnTrace(t *testing.T) {
 	req := httptest.NewRequest("GET", "/users/me", nil)
 	resp := httptest.NewRecorder()
 	d.ServeHTTP(resp, req)
-	if !done {
-		t.Fatalf("trace fail")
-	}
-
+	assert.Equal(done, true, "on trace should be called")
 }
 
 func TestGenerateID(t *testing.T) {
+	assert := assert.New(t)
 	d := New()
 	randID := "abc"
 	d.GenerateID = func() string {
 		return randID
 	}
 	d.GET("/", func(c *Context) error {
-		if c.ID != randID {
-			t.Fatalf("generate id fail")
-		}
+		assert.Equal(c.ID, randID)
 		return nil
 	})
 	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
@@ -461,29 +324,25 @@ func TestGenerateID(t *testing.T) {
 }
 
 func TestGetSetFunctionName(t *testing.T) {
+	assert := assert.New(t)
 	fn := func() {}
 	d := New()
 	fnName := "test"
 	d.SetFunctionName(fn, "test")
-	if d.GetFunctionName(fn) != fnName {
-		t.Fatalf("get function name fail")
-	}
+	assert.Equal(d.GetFunctionName(fn), fnName)
 }
 
 func TestConvertToServerTiming(t *testing.T) {
+	assert := assert.New(t)
 	traceInfos := make(TraceInfos, 0)
 
 	t.Run("get ms", func(t *testing.T) {
-		if getMs(10) != "0" ||
-			getMs(100000) != "0.10" {
-			t.Fatalf("get ms fail")
-		}
+		assert.Equal(getMs(10), "0")
+		assert.Equal(getMs(100000), "0.10")
 	})
 
 	t.Run("empty trace infos", func(t *testing.T) {
-		if traceInfos.ServerTiming("") != nil {
-			t.Fatalf("it should be nil")
-		}
+		assert.Nil(traceInfos.ServerTiming(""), "no trace should return nil")
 	})
 	t.Run("server timing", func(t *testing.T) {
 		traceInfos = append(traceInfos, &TraceInfo{
@@ -494,46 +353,37 @@ func TestConvertToServerTiming(t *testing.T) {
 			Name:     "b",
 			Duration: time.Millisecond + time.Microsecond,
 		})
-		if string(traceInfos.ServerTiming("cod-")) != `cod-0;dur=0.01;desc="a",cod-1;dur=1;desc="b"` {
-			t.Fatalf("convert server timing fail")
-		}
+		assert.Equal(string(traceInfos.ServerTiming("cod-")), `cod-0;dur=0.01;desc="a",cod-1;dur=1;desc="b"`)
 	})
 }
 
 func TestGracefulClose(t *testing.T) {
 	d := New()
 	t.Run("running 404", func(t *testing.T) {
+		assert := assert.New(t)
 		resp := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/users/me", nil)
 		d.ServeHTTP(resp, req)
-		if resp.Code != http.StatusNotFound {
-			t.Fatalf("it should return 404")
-		}
+		assert.Equal(resp.Code, http.StatusNotFound)
 	})
 
 	t.Run("graceful close", func(t *testing.T) {
+		assert := assert.New(t)
 		done := make(chan bool)
 		go func() {
 			err := d.GracefulClose(time.Second)
-			if err != nil {
-				t.Fatalf("server close fail, %v", err)
-			}
+			assert.Nil(err, "server close should be successful")
 			done <- true
 		}()
 		time.Sleep(10 * time.Millisecond)
-		if d.GetStatus() != StatusClosing {
-			t.Fatalf("server should be closing")
-		}
+		assert.Equal(d.GetStatus(), int32(StatusClosing), "server status should be closing")
 		resp := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/users/me", nil)
 		d.ServeHTTP(resp, req)
-		if resp.Code != http.StatusServiceUnavailable ||
-			resp.Body.String() != "service is not available, status is 1" {
-			t.Fatalf("server closing error is invalid")
-		}
+		assert.Equal(resp.Code, http.StatusServiceUnavailable)
+		assert.Equal(resp.Body.String(), "service is not available, status is 1")
+
 		<-done
-		if d.GetStatus() != StatusClosed {
-			t.Fatalf("server should be closed")
-		}
+		assert.Equal(d.GetStatus(), int32(StatusClosed), "server status should be closed")
 	})
 }

@@ -6,9 +6,12 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestReset(t *testing.T) {
+	assert := assert.New(t)
 	c := Context{
 		Request:   httptest.NewRequest("GET", "https://aslant.site/", nil),
 		Response:  httptest.NewRecorder(),
@@ -30,128 +33,110 @@ func TestReset(t *testing.T) {
 		reuseDisabled: true,
 	}
 	c.Reset()
-	if c.Request != nil ||
-		c.Response != nil ||
-		c.Headers != nil ||
-		c.Committed ||
-		c.ID != "" ||
-		c.Route != "" ||
-		c.Next != nil ||
-		c.Params != nil ||
-		c.StatusCode != 0 ||
-		c.Body != nil ||
-		c.BodyBuffer != nil ||
-		c.RequestBody != nil ||
-		c.m != nil ||
-		c.realIP != "" ||
-		c.cod != nil ||
-		c.reuseDisabled != false {
-		t.Fatalf("reset fail")
-	}
+	assert.Nil(c.Request)
+	assert.Nil(c.Response)
+	assert.Nil(c.Headers)
+	assert.Equal(c.Committed, false)
+	assert.Equal(c.ID, "")
+	assert.Equal(c.Route, "")
+	assert.Nil(c.Next)
+	assert.Nil(c.Params)
+	assert.Equal(c.StatusCode, 0)
+	assert.Nil(c.Body)
+	assert.Nil(c.BodyBuffer)
+	assert.Nil(c.RequestBody)
+	assert.Nil(c.m)
+	assert.Equal(c.realIP, "")
+	assert.Nil(c.cod)
+	assert.Equal(c.reuseDisabled, false)
 }
 
 func TestContext(t *testing.T) {
+	assert := assert.New(t)
 	c := NewContext(nil, nil)
 	c.WriteHeader(http.StatusBadRequest)
-	if c.StatusCode != http.StatusBadRequest {
-		t.Fatalf("write header fail")
-	}
+	assert.Equal(c.StatusCode, http.StatusBadRequest)
 	c.Write([]byte("abcd"))
-	if c.BodyBuffer.String() != "abcd" {
-		t.Fatalf("write fail")
-	}
+
+	assert.Equal(c.BodyBuffer.String(), "abcd")
 }
 
 func TestRemoteAddr(t *testing.T) {
+	assert := assert.New(t)
 	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
 	req.RemoteAddr = "192.168.1.1:7000"
 
 	c := Context{
 		Request: req,
 	}
-	if c.RemoteAddr() != "192.168.1.1" {
-		t.Fatalf("get remote addr fail")
-	}
+	assert.Equal(c.RemoteAddr(), "192.168.1.1")
 }
 
 func TestRealIP(t *testing.T) {
 	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
+	req.RemoteAddr = "192.168.1.1:7000"
 
 	c := Context{
 		Request: req,
 	}
 	t.Run("get from x-forwarded-for", func(t *testing.T) {
+		assert := assert.New(t)
 		defer req.Header.Del(HeaderXForwardedFor)
 		req.Header.Set(HeaderXForwardedFor, "192.0.0.1, 192.168.1.1")
-		if c.RealIP() != "192.0.0.1" {
-			t.Fatalf("get real ip from x-forwarded-for fail")
-		}
+		assert.Equal(c.RealIP(), "192.0.0.1")
 		c.realIP = ""
 	})
 
 	t.Run("get from x-real-ip", func(t *testing.T) {
 		defer req.Header.Del(HeaderXRealIP)
 		req.Header.Set(HeaderXRealIP, "192.168.0.1")
-		if c.RealIP() != "192.168.0.1" {
-			t.Fatalf("get real ip from x-real-ip fail")
-		}
+		assert := assert.New(t)
+		assert.Equal(c.RealIP(), "192.168.0.1")
 		c.realIP = ""
 	})
 
 	t.Run("get real ip from remote addr", func(t *testing.T) {
-		if c.RealIP() == "" {
-			t.Fatalf("get real ip from remote addr fail")
-		}
+		assert := assert.New(t)
+		assert.Equal(c.RealIP(), "192.168.1.1")
 		c.realIP = ""
 	})
 }
 
 func TestParam(t *testing.T) {
+	assert := assert.New(t)
 	c := Context{}
-	if c.Param("name") != "" {
-		t.Fatalf("params is not initialized, it should be nil")
-	}
+	assert.Equal(c.Param("name"), "", "params is not initialized, it should be nil")
 	c.Params = map[string]string{
 		"name": "tree.xie",
 	}
-	if c.Param("name") != "tree.xie" {
-		t.Fatalf("get param fail")
-	}
+	assert.Equal(c.Param("name"), "tree.xie")
 }
 
 func TestQueryParam(t *testing.T) {
+	assert := assert.New(t)
 	req := httptest.NewRequest("GET", "https://aslant.site/?name=tree.xie", nil)
 	resp := httptest.NewRecorder()
 	c := NewContext(resp, req)
-	if c.QueryParam("name") != "tree.xie" {
-		t.Fatalf("get query fail")
-	}
-
-	if c.QueryParam("account") != "" {
-		t.Fatalf("get not exists query fail")
-	}
+	assert.Equal(c.QueryParam("name"), "tree.xie")
+	assert.Equal(c.QueryParam("account"), "")
 }
 
 func TestQuery(t *testing.T) {
+	assert := assert.New(t)
 	req := httptest.NewRequest("GET", "https://aslant.site/?name=tree.xie&type=1", nil)
 	resp := httptest.NewRecorder()
 	c := NewContext(resp, req)
 	q := c.Query()
-	if q["name"] != "tree.xie" ||
-		q["type"] != "1" {
-		t.Fatalf("get query fail")
-	}
+	assert.Equal(q["name"], "tree.xie")
+	assert.Equal(q["type"], "1")
 }
 
 func TestSetGet(t *testing.T) {
+	assert := assert.New(t)
 	c := Context{}
-	if c.Get("name") != nil {
-		t.Fatalf("should return nil when store is not initialized")
-	}
+	assert.Nil(c.Get("name"), "should return nil when store is not initialized")
 	c.Set("name", "tree.xie")
-	if c.Get("name").(string) != "tree.xie" {
-		t.Fatalf("set/get fail")
-	}
+	assert.Equal(c.Get("name").(string), "tree.xie")
 }
 
 func TestGetSetHeader(t *testing.T) {
@@ -161,60 +146,51 @@ func TestGetSetHeader(t *testing.T) {
 	c := NewContext(resp, req)
 
 	t.Run("get header from request", func(t *testing.T) {
-		if c.GetRequestHeader("X-Token") != "abc" {
-			t.Fatalf("get header from request fail")
-		}
+		assert := assert.New(t)
+		assert.Equal(c.GetRequestHeader("X-Token"), "abc")
 	})
 
 	t.Run("set header to request", func(t *testing.T) {
 		key := "X-Request-ID"
 		value := "1"
-		if c.GetRequestHeader(key) != "" {
-			t.Fatalf("request id should be nil before set")
-		}
+		assert := assert.New(t)
+		assert.Equal(c.GetRequestHeader(key), "", "request id should be nil before set")
 		c.SetRequestHeader(key, value)
-		if c.GetRequestHeader(key) != value {
-			t.Fatalf("set request header fail")
-		}
+		assert.Equal(c.GetRequestHeader(key), value)
 	})
 
 	t.Run("add header to request", func(t *testing.T) {
+		assert := assert.New(t)
 		key := "X-Request-Type"
 		c.AddRequestHeader(key, "1")
 		c.AddRequestHeader(key, "2")
 		ids := c.Request.Header[key]
-		if strings.Join(ids, ",") != "1,2" {
-			t.Fatalf("add request header fail")
-		}
+		assert.Equal(strings.Join(ids, ","), "1,2")
 	})
 
 	t.Run("set header to the response", func(t *testing.T) {
+		assert := assert.New(t)
 		c.SetHeader("X-Response-Id", "1")
-		if c.GetHeader("X-Response-Id") != "1" {
-			t.Fatalf("set header to response fail")
-		}
+		assert.Equal(c.GetHeader("X-Response-Id"), "1")
 	})
 
 	t.Run("get header from response", func(t *testing.T) {
+		assert := assert.New(t)
 		idc := "GZ"
 		key := "X-IDC"
 		c.SetHeader(key, idc)
-		if c.GetHeader(key) != idc {
-			t.Fatalf("get header from response fail")
-		}
+		assert.Equal(c.GetHeader(key), idc)
 	})
 
 	t.Run("get header of response", func(t *testing.T) {
-		if c.Header() == nil {
-			t.Fatalf("header function fail")
-		}
+		assert := assert.New(t)
+		assert.NotNil(c.Header(), "response header should not be nil")
 	})
 
 	t.Run("reset header", func(t *testing.T) {
+		assert := assert.New(t)
 		c.ResetHeader()
-		if len(c.Header()) != 0 {
-			t.Fatalf("reset header fail")
-		}
+		assert.Equal(len(c.Header()), 0)
 	})
 }
 
@@ -227,17 +203,15 @@ func TestCookie(t *testing.T) {
 	resp := httptest.NewRecorder()
 	c := NewContext(resp, req)
 	t.Run("get cookie", func(t *testing.T) {
+		assert := assert.New(t)
 		cookie, err := c.Cookie("a")
-		if err != nil {
-			t.Fatalf("get cookie fail, %v", err)
-		}
-		if cookie.Name != "a" ||
-			cookie.Value != "b" {
-			t.Fatalf("get cookie fail")
-		}
+		assert.Nil(err, "get cookie should be successful")
+		assert.Equal(cookie.Name, "a")
+		assert.Equal(cookie.Value, "b")
 	})
 
 	t.Run("set cookie", func(t *testing.T) {
+		assert := assert.New(t)
 		cookie := &http.Cookie{
 			Name:     "a",
 			Value:    "b",
@@ -247,9 +221,7 @@ func TestCookie(t *testing.T) {
 			HttpOnly: true,
 		}
 		c.AddCookie(cookie)
-		if c.GetHeader(HeaderSetCookie) != "a=b; Path=/; Max-Age=300; HttpOnly; Secure" {
-			t.Fatalf("set cookie fail")
-		}
+		assert.Equal(c.GetHeader(HeaderSetCookie), "a=b; Path=/; Max-Age=300; HttpOnly; Secure")
 	})
 
 }
@@ -262,6 +234,7 @@ func TestSignedCookie(t *testing.T) {
 		},
 	}
 	t.Run("set signed cookie", func(t *testing.T) {
+		assert := assert.New(t)
 		resp := httptest.NewRecorder()
 		c := NewContext(resp, nil)
 		c.cod = cod
@@ -274,12 +247,11 @@ func TestSignedCookie(t *testing.T) {
 			HttpOnly: true,
 		}
 		c.AddSignedCookie(cookie)
-		if strings.Join(c.Headers[HeaderSetCookie], ",") != "a=b; Path=/; Max-Age=300; HttpOnly; Secure,a.sig=9yv2rWFijew8K8a5Uw9jxRJE53s; Path=/; Max-Age=300; HttpOnly; Secure" {
-			t.Fatalf("set signed cookie fail")
-		}
+		assert.Equal(strings.Join(c.Headers[HeaderSetCookie], ","), "a=b; Path=/; Max-Age=300; HttpOnly; Secure,a.sig=9yv2rWFijew8K8a5Uw9jxRJE53s; Path=/; Max-Age=300; HttpOnly; Secure")
 	})
 
 	t.Run("get signed cookie", func(t *testing.T) {
+		assert := assert.New(t)
 		req := httptest.NewRequest("GET", "https://aslant.site/?name=tree.xie&type=1", nil)
 		req.AddCookie(&http.Cookie{
 			Name:  "a",
@@ -293,12 +265,12 @@ func TestSignedCookie(t *testing.T) {
 		c := NewContext(resp, req)
 		c.cod = cod
 		cookie, err := c.SignedCookie("a")
-		if err != nil || cookie.Value != "b" {
-			t.Fatalf("get signed cookie fail, %v", err)
-		}
+		assert.Nil(err, "signed cookie should be successful")
+		assert.Equal(cookie.Value, "b")
 	})
 
 	t.Run("get signed cookie(verify fail)", func(t *testing.T) {
+		assert := assert.New(t)
 		req := httptest.NewRequest("GET", "https://aslant.site/?name=tree.xie&type=1", nil)
 		req.AddCookie(&http.Cookie{
 			Name:  "a",
@@ -312,54 +284,44 @@ func TestSignedCookie(t *testing.T) {
 		c := NewContext(resp, req)
 		c.cod = cod
 		cookie, err := c.SignedCookie("a")
-		if err != http.ErrNoCookie {
-			t.Fatalf("get signed cookie fail, %v", err)
-		}
-		if cookie != nil {
-			t.Fatalf("verify fail should return nil cookie")
-		}
+		assert.Equal(err, http.ErrNoCookie)
+		assert.Nil(cookie)
 	})
 }
 
 func TestRedirect(t *testing.T) {
+	assert := assert.New(t)
 	resp := httptest.NewRecorder()
 	c := NewContext(resp, nil)
 	err := c.Redirect(299, "")
-	if err != ErrInvalidRedirect {
-		t.Fatalf("invalid redirect code should return error")
-	}
+	assert.Equal(err, ErrInvalidRedirect)
 
 	url := "https://aslant.site/"
 	err = c.Redirect(302, url)
-	if err != nil {
-		t.Fatalf("redirect fail, %v", err)
-	}
-	if c.GetHeader(HeaderLocation) != url {
-		t.Fatalf("set location fail")
-	}
+	assert.Nil(err)
+	assert.Equal(c.GetHeader(HeaderLocation), url)
 }
 
 func TestCreate(t *testing.T) {
+	assert := assert.New(t)
 	body := "abc"
 	c := NewContext(nil, nil)
 	c.Created(body)
-	if c.StatusCode != http.StatusCreated ||
-		c.Body.(string) != body {
-		t.Fatalf("create for response fail")
-	}
+	assert.Equal(c.StatusCode, http.StatusCreated)
+	assert.Equal(c.Body.(string), body)
 }
 
 func TestNoContent(t *testing.T) {
+	assert := assert.New(t)
 	c := NewContext(nil, nil)
 	c.NoContent()
-	if c.StatusCode != http.StatusNoContent ||
-		c.Body != nil ||
-		c.BodyBuffer != nil {
-		t.Fatalf("set no content fail")
-	}
+	assert.Equal(c.StatusCode, http.StatusNoContent)
+	assert.Nil(c.Body)
+	assert.Nil(c.BodyBuffer)
 }
 
 func TestNotModified(t *testing.T) {
+	assert := assert.New(t)
 	resp := httptest.NewRecorder()
 	c := NewContext(resp, nil)
 	c.Body = map[string]string{}
@@ -367,20 +329,17 @@ func TestNotModified(t *testing.T) {
 	c.Headers.Set(HeaderContentEncoding, "gzip")
 	c.Headers.Set(HeaderContentType, "text/html")
 	c.NotModified()
-	if c.StatusCode != http.StatusNotModified ||
-		c.Body != nil ||
-		c.BodyBuffer != nil ||
-		c.GetHeader(HeaderContentEncoding) != "" ||
-		c.GetHeader(HeaderContentType) != "" {
-		t.Fatalf("set not modified fail")
-	}
+	assert.Equal(c.StatusCode, http.StatusNotModified)
+	assert.Nil(c.Body)
+	assert.Nil(c.BodyBuffer)
+	assert.Equal(c.GetHeader(HeaderContentEncoding), "")
+	assert.Equal(c.GetHeader(HeaderContentType), "")
 }
 
 func TestCacheControl(t *testing.T) {
 	checkCacheControl := func(resp *httptest.ResponseRecorder, value string, t *testing.T) {
-		if resp.HeaderMap["Cache-Control"][0] != value {
-			t.Fatalf("cache control should be " + value)
-		}
+		assert := assert.New(t)
+		assert.Equal(resp.HeaderMap["Cache-Control"][0], value)
 	}
 	t.Run("no cache", func(t *testing.T) {
 		resp := httptest.NewRecorder()
@@ -405,15 +364,14 @@ func TestCacheControl(t *testing.T) {
 }
 
 func TestSetContentTypeByExt(t *testing.T) {
+	assert := assert.New(t)
 	resp := httptest.NewRecorder()
 	c := NewContext(resp, nil)
 	headers := c.Header()
 
 	check := func(contentType string) {
 		v := headers.Get(HeaderContentType)
-		if v != contentType {
-			t.Fatalf("content type should be %s, but %s", contentType, v)
-		}
+		assert.Equal(v, contentType)
 	}
 	c.SetContentTypeByExt(".html")
 	check("text/html; charset=utf-8")
@@ -433,35 +391,31 @@ func TestSetContentTypeByExt(t *testing.T) {
 }
 
 func TestDisableReuse(t *testing.T) {
+	assert := assert.New(t)
 	c := &Context{}
 	c.DisableReuse()
-	if !c.reuseDisabled {
-		t.Fatalf("disable context reuse fail")
-	}
+	assert.Equal(c.reuseDisabled, true)
 }
 
 func TestPush(t *testing.T) {
+	assert := assert.New(t)
 	resp := httptest.NewRecorder()
 	c := NewContext(resp, nil)
 	err := c.Push("/a.css", nil)
-	if err != ErrNotSupportPush {
-		t.Fatalf("push fail, %v", err)
-	}
+	assert.Equal(err, ErrNotSupportPush)
 }
 
 func TestGetCod(t *testing.T) {
+	assert := assert.New(t)
 	c := NewContext(nil, nil)
 	c.cod = &Cod{}
-	if c.Cod(nil) == nil {
-		t.Fatalf("get cod instance fail")
-	}
+	assert.NotNil(c.Cod(nil))
 }
 func TestNewContext(t *testing.T) {
+	assert := assert.New(t)
 	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
 	resp := httptest.NewRecorder()
 	c := NewContext(resp, req)
-	if c.Request != req ||
-		c.Response != resp {
-		t.Fatalf("new context fail")
-	}
+	assert.Equal(c.Request, req)
+	assert.Equal(c.Response, resp)
 }
