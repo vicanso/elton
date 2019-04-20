@@ -41,12 +41,16 @@ func main() {
 	// 对响应数据 c.Body 转换为相应的json响应
 	d.Use(responder.NewDefault())
 
-	d.GET("/users/me", func(c *cod.Context) (err error) {
+	getSession := func(c *cod.Context) error {
+		c.Set("account", "tree.xie")
+		return c.Next()
+	}
+	d.GET("/users/me", getSession, func(c *cod.Context) (err error) {
 		c.Body = &struct {
 			Name string `json:"name"`
 			Type string `json:"type"`
 		}{
-			"tree.xie",
+			c.Get("account").(string),
 			"vip",
 		}
 		return
