@@ -361,6 +361,12 @@ func TestCacheControl(t *testing.T) {
 		c.CacheMaxAge("1m")
 		checkCacheControl(resp, "public, max-age=60", t)
 	})
+	t.Run("set cache s-maxage", func(t *testing.T) {
+		resp := httptest.NewRecorder()
+		c := NewContext(resp, nil)
+		c.CacheSMaxAge("1m", "10s")
+		checkCacheControl(resp, "public, max-age=60, s-maxage=10", t)
+	})
 }
 
 func TestSetContentTypeByExt(t *testing.T) {

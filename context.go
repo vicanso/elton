@@ -16,6 +16,7 @@ package cod
 
 import (
 	"bytes"
+	"fmt"
 	"mime"
 	"net"
 	"net/http"
@@ -348,6 +349,14 @@ func (c *Context) NoStore() {
 func (c *Context) CacheMaxAge(age string) {
 	d, _ := time.ParseDuration(age)
 	cache := "public, max-age=" + strconv.Itoa(int(d.Seconds()))
+	c.SetHeader(HeaderCacheControl, cache)
+}
+
+// CacheSMaxAge set http response to cache for s-max age
+func (c *Context) CacheSMaxAge(age, sMaxAge string) {
+	d, _ := time.ParseDuration(age)
+	d1, _ := time.ParseDuration(sMaxAge)
+	cache := fmt.Sprintf("public, max-age=%d, s-maxage=%d", int(d.Seconds()), int(d1.Seconds()))
 	c.SetHeader(HeaderCacheControl, cache)
 }
 
