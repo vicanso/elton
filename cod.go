@@ -42,6 +42,8 @@ const (
 type (
 	// Skipper check for skip middleware
 	Skipper func(c *Context) bool
+	// Validator validate function for param
+	Validator func(value string) error
 	// RouterInfo router's info
 	RouterInfo struct {
 		Method string `json:"method,omitempty"`
@@ -74,6 +76,7 @@ type (
 		// functionInfos the function address:name map
 		functionInfos map[uintptr]string
 		ctxPool       sync.Pool
+		validators    map[string]Validator
 	}
 	// TraceInfo trace's info
 	TraceInfo struct {
@@ -270,6 +273,18 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			if index >= maxNext {
 				return nil
 			}
+
+			// 在最后一个handler执行时，如果有配置参数校验，则校验
+			if index == maxNext-1 && d.validators != nil {
+				for key, value := range c.Params {
+					if d.validators[key] != nil {
+						e := d.validators[key](value)
+						if e != nil {
+							return e
+						}
+					}
+				}
+			}
 			// 如果已执行完公共添加的中间件，执行handler list
 			if index >= maxMid {
 				fn = handlerList[index-maxMid]
@@ -334,6 +349,14 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			d.ctxPool.Put(c)
 		}
 	})
+}
+
+// AddValidator add validate function
+func (d *Cod) AddValidator(key string, fn Validator) {
+	if d.validators == nil {
+		d.validators = make(map[string]Validator)
+	}
+	d.validators[key] = fn
 }
 
 // GET add http get method handle

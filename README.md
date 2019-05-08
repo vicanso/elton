@@ -399,6 +399,24 @@ d.GET("/ping", func(c *cod.Context) (err error) {
 d.ListenAndServe(":8001")
 ```
 
+### AddValidator
+
+增加参数校验函数，用于param的校验（在最后一个handler执行时调用）
+
+```go
+d := cod.New()
+d.AddValidator("id", func(value string) error {
+	reg := regexp.MustCompile(`^[0-9]{5}$`)
+	if !reg.MatchString(value) {
+		return errors.New("id should be numbers")
+	}
+	return nil
+})
+d.GET("/:id", func(c *Context) error {
+	c.NoContent()
+	return nil
+})
+```
 ### AddGroup
 
 将group中的所有路由处理添加至cod。

@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -208,6 +209,33 @@ func TestHandle(t *testing.T) {
 		assert := assert.New(t)
 		assert.Equal(len(d.Routers), 34, "router count fail")
 	})
+}
+
+func TestParamValidate(t *testing.T) {
+	d := New()
+	runMid := false
+	assert := assert.New(t)
+	d.AddValidator("id", func(value string) error {
+		reg := regexp.MustCompile(`^[0-9]{5}$`)
+		if !reg.MatchString(value) {
+			return errors.New("id should be 5 numbers")
+		}
+		return nil
+	})
+	d.Use(func(c *Context) error {
+		runMid = true
+		return c.Next()
+	})
+	d.GET("/:id", func(c *Context) error {
+		c.NoContent()
+		return nil
+	})
+	req := httptest.NewRequest("GET", "/1", nil)
+	resp := httptest.NewRecorder()
+	d.ServeHTTP(resp, req)
+	assert.True(runMid)
+	assert.Equal(resp.Code, 500)
+	assert.Equal(resp.Body.String(), "id should be 5 numbers")
 }
 
 func TestErrorHandler(t *testing.T) {
