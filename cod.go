@@ -15,13 +15,13 @@
 package cod
 
 import (
-	"bytes"
 	"fmt"
 	"net"
 	"net/http"
 	"reflect"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -601,29 +601,29 @@ func getMs(ns int) string {
 }
 
 // ServerTiming trace infos to server timing
-func (traceInfos TraceInfos) ServerTiming(prefix string) []byte {
+func (traceInfos TraceInfos) ServerTiming(prefix string) string {
 	size := len(traceInfos)
 	if size == 0 {
-		return nil
+		return ""
 	}
-	timings := make([][]byte, size)
-	prefixDesc := []byte(prefix)
 
 	// 转换为 http server timing
+	s := new(strings.Builder)
+	// 每一个server timing长度预估为30
+	s.Grow(30 * size)
 	for i, traceInfo := range traceInfos {
 		v := traceInfo.Duration.Nanoseconds()
-		dur := []byte(getMs(int(v)))
-		index := []byte(strconv.Itoa(i))
+		s.WriteString(prefix)
+		s.WriteString(strconv.Itoa(i))
+		s.Write(ServerTimingDur)
+		s.WriteString(getMs(int(v)))
+		s.Write(ServerTimingDesc)
+		s.WriteString(traceInfo.Name)
+		s.Write(ServerTimingEnd)
+		if i != size-1 {
+			s.WriteRune(',')
+		}
 
-		timings[i] = bytes.Join([][]byte{
-			prefixDesc,
-			index,
-			ServerTimingDur,
-			dur,
-			ServerTimingDesc,
-			[]byte(traceInfo.Name),
-			ServerTimingEnd,
-		}, nil)
 	}
-	return bytes.Join(timings, []byte(","))
+	return s.String()
 }

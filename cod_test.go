@@ -370,7 +370,7 @@ func TestConvertToServerTiming(t *testing.T) {
 	})
 
 	t.Run("empty trace infos", func(t *testing.T) {
-		assert.Nil(traceInfos.ServerTiming(""), "no trace should return nil")
+		assert.Empty(traceInfos.ServerTiming(""), "no trace should return nil")
 	})
 	t.Run("server timing", func(t *testing.T) {
 		traceInfos = append(traceInfos, &TraceInfo{
