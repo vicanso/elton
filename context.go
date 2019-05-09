@@ -400,6 +400,13 @@ func (c *Context) Cod(d *Cod) *Cod {
 	return c.cod
 }
 
+// Pass pass requst to another cod
+func (c *Context) Pass(another *Cod) {
+	// 设置为已commit，避免当前cod继续处理
+	c.Committed = true
+	another.ServeHTTP(c.Response, c.Request)
+}
+
 // NewContext new a context
 func NewContext(resp http.ResponseWriter, req *http.Request) *Context {
 	c := &Context{}

@@ -425,3 +425,23 @@ func TestNewContext(t *testing.T) {
 	assert.Equal(c.Request, req)
 	assert.Equal(c.Response, resp)
 }
+
+func TestContextPass(t *testing.T) {
+	assert := assert.New(t)
+	d := New()
+	another := New()
+	another.GET("/", func(c *Context) error {
+		c.BodyBuffer = bytes.NewBufferString("new data")
+		return nil
+	})
+	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
+	resp := httptest.NewRecorder()
+	d.GET("/", func(c *Context) error {
+		c.Pass(another)
+		c.BodyBuffer = bytes.NewBufferString("original data")
+		return nil
+	})
+	d.ServeHTTP(resp, req)
+	assert.Equal(resp.Code, 200)
+	assert.Equal(resp.Body.String(), "new data")
+}
