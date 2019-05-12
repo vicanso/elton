@@ -588,12 +588,13 @@ func Compose(handlerList ...Handler) Handler {
 		// 新创建一个next的调用链
 		c.Next = func() error {
 			index++
+			// 如果已执行成所有的next，则转回原有的调用链
 			if index >= max {
-				return nil
+				c.Next = originalNext
+				return c.Next()
 			}
 			return handlerList[index](c)
 		}
-		c.Next = originalNext
 		return c.Next()
 	}
 }

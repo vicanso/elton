@@ -352,40 +352,71 @@ func TestGenerateID(t *testing.T) {
 }
 
 func TestCompose(t *testing.T) {
-	assert := assert.New(t)
-	d := New()
-	index := 0
-	fn1 := func(c *Context) (err error) {
-		assert.Equal(index, 0)
-		index++
-		err = c.Next()
-		assert.Equal(index, 5)
-		return
-	}
-	fn2 := func(c *Context) (err error) {
-		assert.Equal(index, 1)
-		index++
-		err = c.Next()
-		assert.Equal(index, 4)
-		return
-	}
-	fn3 := func(c *Context) (err error) {
-		assert.Equal(index, 2)
-		index++
-		err = c.Next()
-		assert.Equal(index, 3)
-		return
-	}
-	fn := Compose(fn1, fn2, fn3)
-	d.Use(fn)
-	d.GET("/", func(c *Context) (err error) {
-		c.BodyBuffer = bytes.NewBufferString("abcd")
-		return
+	t.Run("run success", func(t *testing.T) {
+		assert := assert.New(t)
+		d := New()
+		index := 0
+		fn1 := func(c *Context) (err error) {
+			assert.Equal(index, 0)
+			index++
+			err = c.Next()
+			index++
+			assert.Equal(index, 6)
+			return
+		}
+		fn2 := func(c *Context) (err error) {
+			assert.Equal(index, 1)
+			index++
+			err = c.Next()
+			index++
+			assert.Equal(index, 5)
+			return
+		}
+		fn3 := func(c *Context) (err error) {
+			assert.Equal(index, 2)
+			index++
+			err = c.Next()
+			index++
+			assert.Equal(index, 4)
+			return
+		}
+		fn := Compose(fn1, fn2, fn3)
+		d.Use(fn)
+		d.Use(func(c *Context) (err error) {
+			assert.Equal(index, 3)
+			return c.Next()
+		})
+		d.GET("/", func(c *Context) (err error) {
+			assert.Equal(index, 3)
+			c.BodyBuffer = bytes.NewBufferString("abcd")
+			return
+		})
+		req := httptest.NewRequest("GET", "https://aslant.site/", nil)
+		resp := httptest.NewRecorder()
+		d.ServeHTTP(resp, req)
+		assert.Equal(resp.Code, 200)
+		assert.Equal(resp.Body.String(), "abcd")
 	})
-	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
-	resp := httptest.NewRecorder()
-	d.ServeHTTP(resp, req)
-	assert.Equal(resp.Body.String(), "abcd")
+
+	t.Run("error", func(t *testing.T) {
+		assert := assert.New(t)
+		d := New()
+		fn := Compose(func(c *Context) error {
+			return c.Next()
+		}, func(c *Context) error {
+			return errors.New("custom error")
+		})
+		d.Use(fn)
+		d.GET("/", func(c *Context) (err error) {
+			c.BodyBuffer = bytes.NewBufferString("abcd")
+			return
+		})
+		req := httptest.NewRequest("GET", "https://aslant.site/", nil)
+		resp := httptest.NewRecorder()
+		d.ServeHTTP(resp, req)
+		assert.Equal(resp.Code, 500)
+		assert.Equal(resp.Body.String(), "custom error")
+	})
 }
 func TestGetSetFunctionName(t *testing.T) {
 	assert := assert.New(t)
