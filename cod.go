@@ -575,6 +575,29 @@ func (g *Group) ALL(path string, handlerList ...Handler) {
 	}
 }
 
+// Compose compose handler list
+func Compose(handlerList ...Handler) Handler {
+	max := len(handlerList)
+	if max == 0 {
+		panic("handler function is required")
+	}
+	return func(c *Context) (err error) {
+		// 保存原有的next函数
+		originalNext := c.Next
+		index := -1
+		// 新创建一个next的调用链
+		c.Next = func() error {
+			index++
+			if index >= max {
+				return nil
+			}
+			return handlerList[index](c)
+		}
+		c.Next = originalNext
+		return c.Next()
+	}
+}
+
 func getMs(ns int) string {
 	microSecond := int(time.Microsecond)
 	milliSecond := int(time.Millisecond)

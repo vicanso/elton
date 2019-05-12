@@ -351,6 +351,42 @@ func TestGenerateID(t *testing.T) {
 	d.ServeHTTP(resp, req)
 }
 
+func TestCompose(t *testing.T) {
+	assert := assert.New(t)
+	d := New()
+	index := 0
+	fn1 := func(c *Context) (err error) {
+		assert.Equal(index, 0)
+		index++
+		err = c.Next()
+		assert.Equal(index, 5)
+		return
+	}
+	fn2 := func(c *Context) (err error) {
+		assert.Equal(index, 1)
+		index++
+		err = c.Next()
+		assert.Equal(index, 4)
+		return
+	}
+	fn3 := func(c *Context) (err error) {
+		assert.Equal(index, 2)
+		index++
+		err = c.Next()
+		assert.Equal(index, 3)
+		return
+	}
+	fn := Compose(fn1, fn2, fn3)
+	d.Use(fn)
+	d.GET("/", func(c *Context) (err error) {
+		c.BodyBuffer = bytes.NewBufferString("abcd")
+		return
+	})
+	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
+	resp := httptest.NewRecorder()
+	d.ServeHTTP(resp, req)
+	assert.Equal(resp.Body.String(), "abcd")
+}
 func TestGetSetFunctionName(t *testing.T) {
 	assert := assert.New(t)
 	fn := func() {}
