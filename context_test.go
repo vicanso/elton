@@ -102,6 +102,34 @@ func TestRealIP(t *testing.T) {
 	})
 }
 
+func TestGetClientIP(t *testing.T) {
+	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
+	req.RemoteAddr = "192.168.1.1:7000"
+
+	c := Context{
+		Request: req,
+	}
+	t.Run("get from x-forwarded-for", func(t *testing.T) {
+		assert := assert.New(t)
+		defer req.Header.Del(HeaderXForwardedFor)
+		req.Header.Set(HeaderXForwardedFor, "192.168.1.1, 1.1.1.1, 2.2.2.2")
+		assert.Equal(c.ClientIP(), "1.1.1.1")
+		c.realIP = ""
+	})
+
+	t.Run("get from x-real-ip", func(t *testing.T) {
+		assert := assert.New(t)
+		defer req.Header.Del(HeaderXRealIP)
+		req.Header.Set(HeaderXRealIP, "192.168.1.2")
+		// real ip的是内网IP，因此取remote addr
+		assert.Equal(c.ClientIP(), "192.168.1.1")
+
+		c.realIP = ""
+		req.Header.Set(HeaderXRealIP, "1.1.1.1")
+		assert.Equal(c.ClientIP(), "1.1.1.1")
+	})
+}
+
 func TestParam(t *testing.T) {
 	assert := assert.New(t)
 	c := Context{}

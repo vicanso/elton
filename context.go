@@ -116,6 +116,35 @@ func (c *Context) RealIP() string {
 	return c.realIP
 }
 
+// ClientIP get the client ip
+// get the first public ip from x-forwarded-for --> x-real-ip
+// if not found, then get remote addr
+func (c *Context) ClientIP() string {
+	if c.realIP != "" {
+		return c.realIP
+	}
+	ip := c.GetRequestHeader(HeaderXForwardedFor)
+	if ip != "" {
+		for _, value := range strings.Split(ip, ",") {
+			v := strings.TrimSpace(value)
+			if !IsPrivateIP(net.ParseIP(v)) {
+				c.realIP = v
+				return c.realIP
+			}
+		}
+	}
+	ip = c.GetRequestHeader(HeaderXRealIP)
+	if ip != "" {
+		if !IsPrivateIP(net.ParseIP(ip)) {
+			c.realIP = ip
+			return c.realIP
+		}
+	}
+	// 如果都不符合，只能直接取real ip
+	c.realIP = c.RemoteAddr()
+	return c.realIP
+}
+
 // Param get the param value
 func (c *Context) Param(name string) string {
 	if c.Params == nil {
