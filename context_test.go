@@ -83,7 +83,7 @@ func TestRealIP(t *testing.T) {
 		assert := assert.New(t)
 		defer req.Header.Del(HeaderXForwardedFor)
 		req.Header.Set(HeaderXForwardedFor, "192.0.0.1, 192.168.1.1")
-		assert.Equal(c.RealIP(), "192.0.0.1")
+		assert.Equal(c.RealIP(), "192.0.0.1", "real ip should get from x-forwarded-for")
 		c.realIP = ""
 	})
 
@@ -91,7 +91,7 @@ func TestRealIP(t *testing.T) {
 		defer req.Header.Del(HeaderXRealIP)
 		req.Header.Set(HeaderXRealIP, "192.168.0.1")
 		assert := assert.New(t)
-		assert.Equal(c.RealIP(), "192.168.0.1")
+		assert.Equal(c.RealIP(), "192.168.0.1", "real ip should get from x-real-ip")
 		c.realIP = ""
 	})
 
@@ -113,7 +113,7 @@ func TestGetClientIP(t *testing.T) {
 		assert := assert.New(t)
 		defer req.Header.Del(HeaderXForwardedFor)
 		req.Header.Set(HeaderXForwardedFor, "192.168.1.1, 1.1.1.1, 2.2.2.2")
-		assert.Equal(c.ClientIP(), "1.1.1.1")
+		assert.Equal(c.ClientIP(), "1.1.1.1", "client ip shold get the first public ip from x-forwarded-for")
 		c.realIP = ""
 	})
 

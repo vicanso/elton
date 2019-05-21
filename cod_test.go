@@ -29,7 +29,7 @@ func TestSkipper(t *testing.T) {
 		Committed: true,
 	}
 	assert := assert.New(t)
-	assert.Equal(DefaultSkipper(c), true)
+	assert.Equal(DefaultSkipper(c), true, "default skip should return true")
 }
 
 func TestListenAndServe(t *testing.T) {
@@ -88,7 +88,7 @@ func TestHandle(t *testing.T) {
 			}
 			assert.Equal(r.Path, p)
 		}
-		assert.Equal(len(d.Routers), 16)
+		assert.Equal(len(d.Routers), 16, "method handle add fail")
 	})
 	t.Run("group", func(t *testing.T) {
 		assert := assert.New(t)
@@ -109,14 +109,14 @@ func TestHandle(t *testing.T) {
 		})
 		userGroupPath := "/users"
 		userGroup := NewGroup(userGroupPath, func(c *Context) error {
-			assert.Equal(strings.HasPrefix(c.Request.URL.Path, userGroupPath), true)
+			assert.Equal(strings.HasPrefix(c.Request.URL.Path, userGroupPath), true, "group route should have the same url prefix")
 			return c.Next()
 		})
 		doneCount := 0
 		userGroup.ALL("/me", func(c *Context) (err error) {
 			v := c.Get(key).(int)
 			assert.Equal(v, countValue)
-			assert.Equal(c.Route, "/users/me")
+			assert.Equal(c.Route, "/users/me", "route url is invalid")
 			doneCount++
 			return
 		})
@@ -176,7 +176,7 @@ func TestHandle(t *testing.T) {
 			req := httptest.NewRequest(method, "https://aslant.site/system/info", nil)
 			resp := httptest.NewRecorder()
 			d.ServeHTTP(resp, req)
-			assert.Equal(done, true)
+			assert.Equal(done, true, "route handler isn't called")
 			assert.Equal(resp.Code, 201)
 		}
 	})
@@ -184,7 +184,7 @@ func TestHandle(t *testing.T) {
 	t.Run("params", func(t *testing.T) {
 		assert := assert.New(t)
 		d.GET("/params/:id", func(c *Context) error {
-			assert.Equal(c.Param("id"), "1")
+			assert.Equal(c.Param("id"), "1", "get route param fail")
 			return nil
 		})
 		req := httptest.NewRequest("GET", "https://aslant.site/params/1", nil)
@@ -210,7 +210,7 @@ func TestHandle(t *testing.T) {
 		req := httptest.NewRequest("GET", "https://aslant.site/error", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		assert.Equal(resp.Code, http.StatusBadRequest)
+		assert.Equal(resp.Code, http.StatusBadRequest, "default hes error status code should be 400")
 		assert.Equal(resp.Body.String(), "message=abcd")
 	})
 
@@ -267,7 +267,7 @@ func TestErrorHandler(t *testing.T) {
 			value := c.GetHeader(key)
 			assert.Equal(value, "", "the "+key+" header should be nil")
 		}
-		assert.Equal(resp.Code, http.StatusInternalServerError)
+		assert.Equal(resp.Code, http.StatusInternalServerError, "default error status should be 500")
 		assert.Equal(resp.Body.String(), "abcd")
 	})
 
@@ -352,7 +352,7 @@ func TestGenerateID(t *testing.T) {
 		return randID
 	}
 	d.GET("/", func(c *Context) error {
-		assert.Equal(c.ID, randID)
+		assert.Equal(c.ID, randID, "generate id function should be called")
 		return nil
 	})
 	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
