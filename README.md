@@ -821,6 +821,18 @@ c := cod.NewContext(resp, req)
 c.DisableReuse()
 ```
 
+### Pipe
+
+将当前Reader pipe向Response，用于流式输出响应数据，节省内存。
+
+```go
+resp := httptest.NewRecorder()
+c := NewContext(resp, nil)
+data := []byte("abcd")
+r := bytes.NewReader(data)
+c.Pipe(r)
+```
+
 ## Group
 
 ### NewGroup 

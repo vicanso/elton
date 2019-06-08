@@ -466,10 +466,23 @@ func TestContextPass(t *testing.T) {
 	resp := httptest.NewRecorder()
 	d.GET("/", func(c *Context) error {
 		c.Pass(another)
+		// the data will be ignored
 		c.BodyBuffer = bytes.NewBufferString("original data")
 		return nil
 	})
 	d.ServeHTTP(resp, req)
 	assert.Equal(resp.Code, 200)
 	assert.Equal(resp.Body.String(), "new data")
+}
+
+func TestPipe(t *testing.T) {
+	assert := assert.New(t)
+	resp := httptest.NewRecorder()
+	c := NewContext(resp, nil)
+	data := []byte("abcd")
+	r := bytes.NewReader(data)
+	written, err := c.Pipe(r)
+	assert.Nil(err)
+	assert.Equal(written, int64(len(data)))
+	assert.Equal(data, resp.Body.Bytes())
 }

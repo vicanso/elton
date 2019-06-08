@@ -17,6 +17,7 @@ package cod
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"mime"
 	"net"
 	"net/http"
@@ -434,6 +435,12 @@ func (c *Context) Pass(another *Cod) {
 	// 设置为已commit，避免当前cod继续处理
 	c.Committed = true
 	another.ServeHTTP(c.Response, c.Request)
+}
+
+// Pipe pie to the response
+func (c *Context) Pipe(r io.Reader) (written int64, err error) {
+	c.Committed = true
+	return io.Copy(c.Response, r)
 }
 
 // NewContext new a context
