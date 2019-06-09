@@ -88,6 +88,8 @@ const (
 	HeaderAcceptEncoding = "Accept-Encoding"
 	// HeaderServerTiming server timing
 	HeaderServerTiming = "Server-Timing"
+	// HeaderTransferEncoding transfer encoding
+	HeaderTransferEncoding = "Transfer-Encoding"
 
 	// MinRedirectCode min redirect code
 	MinRedirectCode = 300

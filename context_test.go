@@ -341,11 +341,18 @@ func TestCreate(t *testing.T) {
 
 func TestNoContent(t *testing.T) {
 	assert := assert.New(t)
-	c := NewContext(nil, nil)
+	resp := httptest.NewRecorder()
+	c := NewContext(resp, nil)
+	c.SetHeader(HeaderContentType, "a")
+	c.SetHeader(HeaderContentLength, "b")
+	c.SetHeader(HeaderTransferEncoding, "c")
 	c.NoContent()
 	assert.Equal(c.StatusCode, http.StatusNoContent)
 	assert.Nil(c.Body)
 	assert.Nil(c.BodyBuffer)
+	assert.Empty(c.GetHeader(HeaderContentType))
+	assert.Empty(c.GetHeader(HeaderContentLength))
+	assert.Empty(c.GetHeader(HeaderTransferEncoding))
 }
 
 func TestNotModified(t *testing.T) {

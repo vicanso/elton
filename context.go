@@ -354,6 +354,9 @@ func (c *Context) NoContent() {
 	c.StatusCode = http.StatusNoContent
 	c.Body = nil
 	c.BodyBuffer = nil
+	c.SetHeader(HeaderContentType, "")
+	c.SetHeader(HeaderContentLength, "")
+	c.SetHeader(HeaderTransferEncoding, "")
 }
 
 // NotModified response not modified
