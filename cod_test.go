@@ -218,6 +218,19 @@ func TestHandle(t *testing.T) {
 		assert := assert.New(t)
 		assert.Equal(len(d.Routers), 34, "router count fail")
 	})
+
+	t.Run("response body reader", func(t *testing.T) {
+		assert := assert.New(t)
+		d.GET("/index.html", func(c *Context) error {
+			c.Body = bytes.NewReader([]byte("abcd"))
+			return nil
+		})
+		req := httptest.NewRequest("GET", "https://aslant.site/index.html", nil)
+		resp := httptest.NewRecorder()
+		d.ServeHTTP(resp, req)
+		assert.Equal(resp.Code, http.StatusOK )
+		assert.Equal(resp.Body.String(), "abcd")
+	})
 }
 
 func TestParamValidate(t *testing.T) {

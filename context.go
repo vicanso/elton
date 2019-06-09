@@ -446,6 +446,15 @@ func (c *Context) Pipe(r io.Reader) (written int64, err error) {
 	return io.Copy(c.Response, r)
 }
 
+// BodyIsReader check body is reader
+func (c *Context) BodyIsReader() bool {
+	if c.Body == nil {
+		return false
+	}
+	_, ok := c.Body.(io.Reader)
+	return ok
+}
+
 // NewContext new a context
 func NewContext(resp http.ResponseWriter, req *http.Request) *Context {
 	c := &Context{}

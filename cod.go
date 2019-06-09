@@ -16,6 +16,7 @@ package cod
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"reflect"
@@ -375,6 +376,12 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 					_, responseErr := resp.Write(c.BodyBuffer.Bytes())
 					if responseErr != nil {
 						d.EmitError(c, responseErr)
+					}
+				} else if c.BodyIsReader() {
+					r, _ := c.Body.(io.Reader)
+					_, pipeErr := c.Pipe(r)
+					if pipeErr != nil {
+						d.EmitError(c, pipeErr)
 					}
 				}
 			}
