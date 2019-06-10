@@ -443,11 +443,16 @@ func (c *Context) Pass(another *Cod) {
 // Pipe pie to the response
 func (c *Context) Pipe(r io.Reader) (written int64, err error) {
 	c.Committed = true
+	// 如果是 closer，则需要调用close函数
+	closer, ok := r.(io.Closer)
+	if ok {
+		defer closer.Close()
+	}
 	return io.Copy(c.Response, r)
 }
 
-// BodyIsReader check body is reader
-func (c *Context) BodyIsReader() bool {
+// IsReaderBody check body is reader
+func (c *Context) IsReaderBody() bool {
 	if c.Body == nil {
 		return false
 	}

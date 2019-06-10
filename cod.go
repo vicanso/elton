@@ -377,7 +377,7 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 					if responseErr != nil {
 						d.EmitError(c, responseErr)
 					}
-				} else if c.BodyIsReader() {
+				} else if c.IsReaderBody() {
 					r, _ := c.Body.(io.Reader)
 					_, pipeErr := c.Pipe(r)
 					if pipeErr != nil {
