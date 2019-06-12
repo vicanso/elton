@@ -226,16 +226,13 @@ d.GET("/ping", func(c *cod.Context) (err error) {
 d.ListenAndServe(":8001")
 ```
 
-### Keys
+### SignedKeys
 
 用于生成带签名的cookie的密钥，基于[keygrip](https://github.com/vicanso/keygrip)来生成与校验是否合法。
 
 ```go
 d := cod.New()
-d.Keys = []string{
-	"secret",
-	"cuttlefish",
-}
+d.SignedKeys = new(cod.SimpleSignedKeys)
 ```
 
 ### SetFunctionName

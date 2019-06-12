@@ -282,10 +282,10 @@ func (c *Context) AddCookie(cookie *http.Cookie) error {
 
 func (c *Context) getKeys() []string {
 	d := c.Cod(nil)
-	if d == nil {
+	if d == nil || d.SignedKeys == nil {
 		return nil
 	}
-	return d.Keys
+	return d.SignedKeys.GetKeys()
 }
 
 // SignedCookie get signed cookie from http request

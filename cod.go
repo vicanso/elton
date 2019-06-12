@@ -15,6 +15,7 @@
 package cod
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -77,8 +78,8 @@ type (
 		GenerateID GenerateID
 		// EnableTrace enable trace
 		EnableTrace bool
-		// Keys signed cookie keys
-		Keys []string
+		// SignedKeys signed keys
+		SignedKeys SignedKeysGenerator
 		// functionInfos the function address:name map
 		functionInfos map[uintptr]string
 		ctxPool       sync.Pool
@@ -200,7 +201,7 @@ func (d *Cod) GetFunctionName(fn interface{}) string {
 // ListenAndServe listen and serve for http server
 func (d *Cod) ListenAndServe(addr string) error {
 	if d.Server == nil {
-		panic("server is not initialized")
+		panic(errors.New("server is not initialized"))
 	}
 	d.Server.Addr = addr
 	return d.Server.ListenAndServe()
@@ -209,7 +210,7 @@ func (d *Cod) ListenAndServe(addr string) error {
 // Serve serve for http server
 func (d *Cod) Serve(l net.Listener) error {
 	if d.Server == nil {
-		panic("server is not initialized")
+		panic(errors.New("server is not initialized"))
 	}
 	return d.Server.Serve(l)
 }
@@ -621,7 +622,7 @@ func (g *Group) ALL(path string, handlerList ...Handler) {
 func Compose(handlerList ...Handler) Handler {
 	max := len(handlerList)
 	if max == 0 {
-		panic("handler function is required")
+		panic(errors.New("handler function is required"))
 	}
 	return func(c *Context) (err error) {
 		// 保存原有的next函数

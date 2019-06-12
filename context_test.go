@@ -255,11 +255,13 @@ func TestCookie(t *testing.T) {
 }
 
 func TestSignedCookie(t *testing.T) {
+	sk := new(SimpleSignedKeys)
+	sk.SetKeys([]string{
+		"secret",
+		"cuttlefish",
+	})
 	cod := &Cod{
-		Keys: []string{
-			"secret",
-			"cuttlefish",
-		},
+		SignedKeys: sk,
 	}
 	t.Run("set signed cookie", func(t *testing.T) {
 		assert := assert.New(t)
