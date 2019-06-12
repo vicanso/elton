@@ -29,6 +29,7 @@ func TestReset(t *testing.T) {
 		RequestBody:   []byte("abcd"),
 		m:             make(map[interface{}]interface{}),
 		realIP:        "abcd",
+		clientIP:      "abcd",
 		cod:           &Cod{},
 		reuseDisabled: true,
 	}
@@ -47,6 +48,7 @@ func TestReset(t *testing.T) {
 	assert.Nil(c.RequestBody)
 	assert.Nil(c.m)
 	assert.Equal(c.realIP, "")
+	assert.Equal(c.clientIP, "")
 	assert.Nil(c.cod)
 	assert.Equal(c.reuseDisabled, false)
 }
@@ -79,6 +81,14 @@ func TestRealIP(t *testing.T) {
 	c := Context{
 		Request: req,
 	}
+	t.Run("get real ip from cache", func(t *testing.T) {
+		assert := assert.New(t)
+		ip := "abc"
+		c.realIP = ip
+		assert.Equal(c.RealIP(), ip)
+		c.realIP = ""
+	})
+
 	t.Run("get from x-forwarded-for", func(t *testing.T) {
 		assert := assert.New(t)
 		defer req.Header.Del(HeaderXForwardedFor)
@@ -109,12 +119,20 @@ func TestGetClientIP(t *testing.T) {
 	c := Context{
 		Request: req,
 	}
+	t.Run("get client ip from cache", func(t *testing.T) {
+		assert := assert.New(t)
+		ip := "abc"
+		c.clientIP = ip
+		assert.Equal(c.ClientIP(), ip)
+		c.clientIP = ""
+	})
+
 	t.Run("get from x-forwarded-for", func(t *testing.T) {
 		assert := assert.New(t)
 		defer req.Header.Del(HeaderXForwardedFor)
 		req.Header.Set(HeaderXForwardedFor, "192.168.1.1, 1.1.1.1, 2.2.2.2")
 		assert.Equal(c.ClientIP(), "1.1.1.1", "client ip shold get the first public ip from x-forwarded-for")
-		c.realIP = ""
+		c.clientIP = ""
 	})
 
 	t.Run("get from x-real-ip", func(t *testing.T) {
@@ -124,7 +142,7 @@ func TestGetClientIP(t *testing.T) {
 		// real ip的是内网IP，因此取remote addr
 		assert.Equal(c.ClientIP(), "192.168.1.1")
 
-		c.realIP = ""
+		c.clientIP = ""
 		req.Header.Set(HeaderXRealIP, "1.1.1.1")
 		assert.Equal(c.ClientIP(), "1.1.1.1")
 	})

@@ -61,6 +61,8 @@ type (
 		m map[interface{}]interface{}
 		// realIP the real ip
 		realIP string
+		// clientIP the clint ip
+		clientIP string
 		// cod instance
 		cod *Cod
 		// reuseDisabled reuse disabled
@@ -89,6 +91,7 @@ func (c *Context) Reset() {
 	c.RequestBody = nil
 	c.m = nil
 	c.realIP = ""
+	c.clientIP = ""
 	c.cod = nil
 	c.reuseDisabled = false
 }
@@ -121,29 +124,29 @@ func (c *Context) RealIP() string {
 // get the first public ip from x-forwarded-for --> x-real-ip
 // if not found, then get remote addr
 func (c *Context) ClientIP() string {
-	if c.realIP != "" {
-		return c.realIP
+	if c.clientIP != "" {
+		return c.clientIP
 	}
 	ip := c.GetRequestHeader(HeaderXForwardedFor)
 	if ip != "" {
 		for _, value := range strings.Split(ip, ",") {
 			v := strings.TrimSpace(value)
 			if !IsPrivateIP(net.ParseIP(v)) {
-				c.realIP = v
-				return c.realIP
+				c.clientIP = v
+				return c.clientIP
 			}
 		}
 	}
 	ip = c.GetRequestHeader(HeaderXRealIP)
 	if ip != "" {
 		if !IsPrivateIP(net.ParseIP(ip)) {
-			c.realIP = ip
-			return c.realIP
+			c.clientIP = ip
+			return c.clientIP
 		}
 	}
 	// 如果都不符合，只能直接取real ip
-	c.realIP = c.RemoteAddr()
-	return c.realIP
+	c.clientIP = c.RemoteAddr()
+	return c.clientIP
 }
 
 // Param get the param value
