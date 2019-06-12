@@ -170,11 +170,14 @@ func TestQueryParam(t *testing.T) {
 func TestQuery(t *testing.T) {
 	assert := assert.New(t)
 	req := httptest.NewRequest("GET", "https://aslant.site/?name=tree.xie&type=1", nil)
-	resp := httptest.NewRecorder()
-	c := NewContext(resp, req)
+	c := NewContext(nil, req)
 	q := c.Query()
 	assert.Equal(q["name"], "tree.xie")
 	assert.Equal(q["type"], "1")
+
+	req = httptest.NewRequest("GET", "https://aslant.site/", nil)
+	c = NewContext(nil, req)
+	assert.Nil(c.Query())
 }
 
 func TestSetGet(t *testing.T) {
@@ -203,6 +206,8 @@ func TestGetSetHeader(t *testing.T) {
 		assert.Equal(c.GetRequestHeader(key), "", "request id should be nil before set")
 		c.SetRequestHeader(key, value)
 		assert.Equal(c.GetRequestHeader(key), value)
+		c.SetRequestHeader(key, "")
+		assert.Empty(c.GetRequestHeader(key))
 	})
 
 	t.Run("add header to request", func(t *testing.T) {
