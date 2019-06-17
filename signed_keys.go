@@ -14,7 +14,11 @@
 
 package cod
 
-import "sync"
+import (
+	"sync"
+	"sync/atomic"
+	"unsafe"
+)
 
 type (
 	// SignedKeysGenerator signed keys generator
@@ -30,6 +34,10 @@ type (
 	RWMutexSignedKeys struct {
 		sync.RWMutex
 		keys []string
+	}
+	// AtomicSignedKeys atomic toggle signed keys
+	AtomicSignedKeys struct {
+		keys *[]string
 	}
 )
 
@@ -55,4 +63,16 @@ func (rwSk *RWMutexSignedKeys) SetKeys(keys []string) {
 	rwSk.Lock()
 	defer rwSk.Unlock()
 	rwSk.keys = keys
+}
+
+// GetKeys get keys
+func (atSk *AtomicSignedKeys) GetKeys() []string {
+	keysPoint := (*[]string)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&atSk.keys))))
+	return *keysPoint
+}
+
+// SetKeys set keys
+func (atSk *AtomicSignedKeys) SetKeys(keys []string) {
+	s := keys[0:]
+	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&atSk.keys)), unsafe.Pointer(&s))
 }
