@@ -278,10 +278,9 @@ func TestCookie(t *testing.T) {
 }
 
 func TestSignedCookie(t *testing.T) {
-	sk := new(SimpleSignedKeys)
+	sk := new(RWMutexSignedKeys)
 	sk.SetKeys([]string{
 		"secret",
-		"cuttlefish",
 	})
 	cod := &Cod{
 		SignedKeys: sk,
@@ -339,6 +338,30 @@ func TestSignedCookie(t *testing.T) {
 		cookie, err := c.SignedCookie("a")
 		assert.Equal(err, http.ErrNoCookie)
 		assert.Nil(cookie)
+	})
+
+	t.Run("refresh signed cookie(refresh)", func(t *testing.T) {
+		assert := assert.New(t)
+		req := httptest.NewRequest("GET", "https://aslant.site/?name=tree.xie&type=1", nil)
+		req.AddCookie(&http.Cookie{
+			Name:  "a",
+			Value: "b",
+		})
+		req.AddCookie(&http.Cookie{
+			Name:  "a.sig",
+			Value: "9yv2rWFijew8K8a5Uw9jxRJE53s",
+		})
+		resp := httptest.NewRecorder()
+		c := NewContext(resp, req)
+		sk.SetKeys([]string{
+			"new secret",
+			"secret",
+		})
+		c.cod = cod
+
+		err := c.RefreshSignedCookie("a")
+		assert.Nil(err)
+		assert.Equal("a.sig=lQPKW6xLjOymy5skBYcd6vbbjZQ", resp.Header().Get("Set-Cookie"))
 	})
 }
 

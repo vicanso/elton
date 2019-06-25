@@ -720,6 +720,17 @@ c.AddCookie(&http.Cookie{
 fmt.Println(c.Header())
 ```
 
+### RefreshSignedCookie
+
+将signed cookie对应的sig cookie更新为使用keys列表中第一个key生成，可以保证每次查询都命中第一个，提升性能。
+
+```go
+req := httptest.NewRequest("GET", "/users/me", nil)
+resp := httptest.NewRecorder()
+c := cod.NewContext(resp, req)
+c.RefreshSignedCookie()
+```
+
 ### NoContent
 
 设置HTTP请求的响应状态码为204，响应体为空。

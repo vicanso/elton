@@ -291,8 +291,8 @@ func (c *Context) getKeys() []string {
 	return d.SignedKeys.GetKeys()
 }
 
-// SignedCookie get signed cookie from http request
-func (c *Context) SignedCookie(name string) (cookie *http.Cookie, err error) {
+func (c *Context) getSignedCookie(name string) (cookie *http.Cookie, index int, err error) {
+	index = -1
 	cookie, err = c.Cookie(name)
 	if err != nil {
 		return
@@ -309,10 +309,36 @@ func (c *Context) SignedCookie(name string) (cookie *http.Cookie, err error) {
 		return
 	}
 	kg := keygrip.New(keys)
-	// 如果校验不符合，则与查找不到cookie 一样
-	if !kg.Verify([]byte(cookie.Value), []byte(sc.Value)) {
+	index = kg.Index([]byte(cookie.Value), []byte(sc.Value))
+	return
+}
+
+// SignedCookie get signed cookie from http request
+func (c *Context) SignedCookie(name string) (cookie *http.Cookie, err error) {
+	cookie, index, err := c.getSignedCookie(name)
+	if err != nil {
+		return
+	}
+	if index < 0 {
 		cookie = nil
 		err = http.ErrNoCookie
+	}
+	return
+}
+
+// RefreshSignedCookie refresh signed cookie
+func (c *Context) RefreshSignedCookie(name string) (err error) {
+	cookie, index, err := c.getSignedCookie(name)
+	if err != nil {
+		return
+	}
+	if index < 0 {
+		err = http.ErrNoCookie
+		return
+	}
+	// 需要更新key
+	if index != 0 {
+		err = c.addSigCookie(cookie)
 	}
 	return
 }
@@ -334,12 +360,7 @@ func cloneCookie(cookie *http.Cookie) *http.Cookie {
 	}
 }
 
-// AddSignedCookie add the signed cookie to the response
-func (c *Context) AddSignedCookie(cookie *http.Cookie) (err error) {
-	err = c.AddCookie(cookie)
-	if err != nil {
-		return
-	}
+func (c *Context) addSigCookie(cookie *http.Cookie) (err error) {
 	sc := cloneCookie(cookie)
 	sc.Name = sc.Name + sig
 	keys := c.getKeys()
@@ -349,6 +370,16 @@ func (c *Context) AddSignedCookie(cookie *http.Cookie) (err error) {
 	kg := keygrip.New(keys)
 	sc.Value = string(kg.Sign([]byte(sc.Value)))
 	err = c.AddCookie(sc)
+	return
+}
+
+// AddSignedCookie add the signed cookie to the response
+func (c *Context) AddSignedCookie(cookie *http.Cookie) (err error) {
+	err = c.AddCookie(cookie)
+	if err != nil {
+		return
+	}
+	err = c.addSigCookie(cookie)
 	return
 }
 
