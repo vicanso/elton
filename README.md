@@ -79,9 +79,10 @@ func main() {
 - [json picker](https://github.com/vicanso/cod-json-picker) 用于从响应的JSON中筛选指定字段
 - [logger](https://github.com/vicanso/cod-logger) 生成HTTP请求日志，支持从请求头、响应头中获取相应信息
 - [proxy](https://github.com/vicanso/cod-proxy) Proxy中间件，可定义请求转发至其它的服务
-- [stats](https://github.com/vicanso/cod-stats) 请求处理的统计中间件，包括处理时长、状态码、响应数据长度、连接数等信息
 - [recover](https://github.com/vicanso/cod-recover) 捕获程序的panic异常，避免程序崩溃
 - [responder](https://github.com/vicanso/cod-responder) 响应处理中间件，用于将`Context.Body`(interface{})转换为对应的JSON数据并输出。如果系统使用xml等输出响应数据，可参考此中间件实现interface{}至xml的转换。
+- [router-concurrent-limiter](https://github.com/vicanso/cod-router-concurrent-limiter) 路由并发限制中间件，可以针对路由限制并发请求量。
+- [stats](https://github.com/vicanso/cod-stats) 请求处理的统计中间件，包括处理时长、状态码、响应数据长度、连接数等信息
 - [session](https://github.com/vicanso/cod-session) Session中间件，默认支持保存至redis或内存中，也可自定义相应的存储
 - [static serve](https://github.com/vicanso/cod-static-serve) 静态文件处理中间件，默认支持从目录中读取静态文件或实现StaticFile的相关接口，从[packr](github.com/gobuffalo/packr/v2)或者数据库(mongodb)等读取文件
 - [tracker](https://github.com/vicanso/cod-tracker) 可以用于在POST、PUT等提交类的接口中增加跟踪日志，此中间件将输出QueryString，Params以及RequestBody部分，并能将指定的字段做"***"的处理，避免输出敏感信息
