@@ -67,7 +67,9 @@ type (
 		// Routers all router infos
 		Routers []*RouterInfo
 		// Middlewares middleware function
-		Middlewares    []Handler
+		Middlewares []Handler
+		// PreMiddlewares pre middleware function
+		PreMiddlewares []PreHandler
 		errorListeners []ErrorListener
 		traceListeners []TraceListener
 		// ErrorHandler set the function for error handler
@@ -114,6 +116,8 @@ type (
 	ErrorListener func(*Context, error)
 	// TraceListener trace listener
 	TraceListener func(*Context, TraceInfos)
+	// PreHandler pre handler
+	PreHandler func(*http.Request)
 )
 
 // DefaultSkipper default skipper function(not skip)
@@ -165,7 +169,6 @@ func New() *Cod {
 func NewWithoutServer() *Cod {
 	d := &Cod{
 		Router:        httprouter.New(),
-		Middlewares:   make([]Handler, 0),
 		functionInfos: make(map[uintptr]string),
 	}
 	d.ctxPool.New = func() interface{} {
@@ -241,6 +244,9 @@ func (d *Cod) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		resp.WriteHeader(http.StatusServiceUnavailable)
 		resp.Write([]byte(fmt.Sprintf("service is not available, status is %d", status)))
 		return
+	}
+	for _, preHandler := range d.PreMiddlewares {
+		preHandler(req)
 	}
 	fn, params, _ := d.Router.Lookup(req.Method, req.URL.Path)
 	if fn != nil {
@@ -451,11 +457,22 @@ func (d *Cod) ALL(path string, handlerList ...Handler) {
 
 // Use add middleware function handle
 func (d *Cod) Use(handlerList ...Handler) {
+	if d.Middlewares == nil {
+		d.Middlewares = make([]Handler, 0)
+	}
 	for _, fn := range handlerList {
 		name := d.GetFunctionName(fn)
 		d.SetFunctionName(fn, name)
 	}
 	d.Middlewares = append(d.Middlewares, handlerList...)
+}
+
+// Pre add pre middleware function handler
+func (d *Cod) Pre(handlerList ...PreHandler) {
+	if d.PreMiddlewares == nil {
+		d.PreMiddlewares = make([]PreHandler, 0)
+	}
+	d.PreMiddlewares = append(d.PreMiddlewares, handlerList...)
 }
 
 // NotFound not found handle

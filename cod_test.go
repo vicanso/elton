@@ -66,6 +66,41 @@ func TestNewWithoutServer(t *testing.T) {
 	assert.Nil(d.Server, "new without server should be nil")
 }
 
+func TestPreHandle(t *testing.T) {
+	d := New()
+	pong := "pong"
+	d.GET("/ping", func(c *Context) error {
+		c.BodyBuffer = bytes.NewBufferString(pong)
+		return nil
+	})
+	t.Run("not found", func(t *testing.T) {
+		assert := assert.New(t)
+		req := httptest.NewRequest("GET", "/api/ping", nil)
+		resp := httptest.NewRecorder()
+		d.ServeHTTP(resp, req)
+		assert.Equal(404, resp.Code)
+		assert.Equal("Not found", resp.Body.String())
+	})
+
+	t.Run("pong", func(t *testing.T) {
+		// replace url prefix /api
+		urlPrefix := "/api"
+		d.Pre(func(req *http.Request) {
+			path := req.URL.Path
+			if strings.HasPrefix(path, urlPrefix) {
+				req.URL.Path = path[len(urlPrefix):]
+			}
+		})
+
+		assert := assert.New(t)
+		req := httptest.NewRequest("GET", "/api/ping", nil)
+		resp := httptest.NewRecorder()
+		d.ServeHTTP(resp, req)
+		assert.Equal(200, resp.Code)
+		assert.Equal(pong, resp.Body.String())
+	})
+}
+
 func TestHandle(t *testing.T) {
 	d := New()
 	t.Run("all methods", func(t *testing.T) {
@@ -228,7 +263,7 @@ func TestHandle(t *testing.T) {
 		req := httptest.NewRequest("GET", "https://aslant.site/index.html", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		assert.Equal(resp.Code, http.StatusOK )
+		assert.Equal(resp.Code, http.StatusOK)
 		assert.Equal(resp.Body.String(), "abcd")
 	})
 }

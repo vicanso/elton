@@ -134,11 +134,22 @@ RouterInfo struct {
 
 ### Middlewares
 
-当前Cod实例中的所有中间件处理函数，为[]Handler，如果需要添加中间件，尽量使用Use，不要直接append此属性。
+当前Cod实例中的所有中间件处理函数，为[]Handler，如果需要添加中间件，尽量使用Use，不要直接append此属性。此类函数在匹配路由成功后才会调用，如果不匹配的路由则不会调用。
 
 ```go
 d := cod.New()
 d.Use(responder.NewDefault())
+```
+
+### PreMiddlewares
+
+当前Cod实例中的前置中间件处理函数，为[]PreHandler，此类函数在匹配路由调用。
+
+```go
+d := cod.New()
+d.Pre(func(req *http.Request) {
+
+})
 ```
 
 ### ErrorHandler
@@ -388,6 +399,29 @@ d.Use(func(c *cod.Context) (err error) {
 })
 
 d.Use(responder.NewDefault())
+
+d.GET("/ping", func(c *cod.Context) (err error) {
+	c.Body = "pong"
+	return
+})
+
+d.ListenAndServe(":8001")
+```
+
+### Pre
+
+添加全局前置中间件处理函数，对于所有请求都会调用（包括无匹配路由的请求）。
+
+```go
+d := cod.New()
+// replace url prefix /api
+urlPrefix := "/api"
+d.Pre(func(req *http.Request) {
+	path := req.URL.Path
+	if strings.HasPrefix(path, urlPrefix) {
+		req.URL.Path = path[len(urlPrefix):]
+	}
+})
 
 d.GET("/ping", func(c *cod.Context) (err error) {
 	c.Body = "pong"
