@@ -498,7 +498,7 @@ func TestGetCod(t *testing.T) {
 	assert := assert.New(t)
 	c := NewContext(nil, nil)
 	c.cod = &Cod{}
-	assert.NotNil(c.Cod(nil))
+	assert.Equal(c.cod, c.Cod())
 }
 func TestNewContext(t *testing.T) {
 	assert := assert.New(t)

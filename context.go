@@ -144,7 +144,7 @@ func (c *Context) ClientIP() string {
 			return c.clientIP
 		}
 	}
-	// 如果都不符合，只能直接取real ip
+	// 如果都不符合，只能直接取remote addr
 	c.clientIP = c.RemoteAddr()
 	return c.clientIP
 }
@@ -284,7 +284,7 @@ func (c *Context) AddCookie(cookie *http.Cookie) error {
 }
 
 func (c *Context) getKeys() []string {
-	d := c.Cod(nil)
+	d := c.cod
 	if d == nil || d.SignedKeys == nil {
 		return nil
 	}
@@ -460,10 +460,7 @@ func (c *Context) Push(target string, opts *http.PushOptions) (err error) {
 }
 
 // Cod get cod instance
-func (c *Context) Cod(d *Cod) *Cod {
-	if d != nil {
-		c.cod = d
-	}
+func (c *Context) Cod() *Cod {
 	return c.cod
 }
 
