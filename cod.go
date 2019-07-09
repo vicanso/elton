@@ -347,7 +347,7 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			traceInfo := &TraceInfo{
 				Name: fnName,
 			}
-			// 先插入至数据，保证顺序
+			// 先添加至slice中，保证顺序
 			traceInfos = append(traceInfos, traceInfo)
 			err := fn(c)
 			// 完成后计算时长（前面的中间件包括后面中间件的处理时长）

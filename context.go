@@ -96,10 +96,29 @@ func (c *Context) Reset() {
 	c.reuseDisabled = false
 }
 
+// GetRemoteAddr get remote addr
+func GetRemoteAddr(req *http.Request) string {
+	remoteAddr, _, _ := net.SplitHostPort(req.RemoteAddr)
+	return remoteAddr
+}
+
 // RemoteAddr get remote address
 func (c *Context) RemoteAddr() string {
-	remoteAddr, _, _ := net.SplitHostPort(c.Request.RemoteAddr)
-	return remoteAddr
+	return GetRemoteAddr(c.Request)
+}
+
+// GetRealIP get real ip
+func GetRealIP(req *http.Request) string {
+	h := req.Header
+	ip := h.Get(HeaderXForwardedFor)
+	if ip != "" {
+		return strings.TrimSpace(strings.Split(ip, ",")[0])
+	}
+	ip = h.Get(HeaderXRealIP)
+	if ip != "" {
+		return ip
+	}
+	return GetRemoteAddr(req)
 }
 
 // RealIP get the real ip
@@ -107,17 +126,29 @@ func (c *Context) RealIP() string {
 	if c.realIP != "" {
 		return c.realIP
 	}
-	ip := c.GetRequestHeader(HeaderXForwardedFor)
-	if ip != "" {
-		c.realIP = strings.TrimSpace(strings.Split(ip, ",")[0])
-		return c.realIP
-	}
-	c.realIP = c.GetRequestHeader(HeaderXRealIP)
-	if c.realIP != "" {
-		return c.realIP
-	}
-	c.realIP = c.RemoteAddr()
+	c.realIP = GetRealIP(c.Request)
 	return c.realIP
+}
+
+// GetClientIP get client ip
+func GetClientIP(req *http.Request) string {
+	h := req.Header
+	ip := h.Get(HeaderXForwardedFor)
+	if ip != "" {
+		for _, value := range strings.Split(ip, ",") {
+			v := strings.TrimSpace(value)
+			if !IsPrivateIP(net.ParseIP(v)) {
+				return v
+			}
+		}
+	}
+	ip = h.Get(HeaderXRealIP)
+	if ip != "" {
+		if !IsPrivateIP(net.ParseIP(ip)) {
+			return ip
+		}
+	}
+	return GetRemoteAddr(req)
 }
 
 // ClientIP get the client ip
@@ -127,25 +158,7 @@ func (c *Context) ClientIP() string {
 	if c.clientIP != "" {
 		return c.clientIP
 	}
-	ip := c.GetRequestHeader(HeaderXForwardedFor)
-	if ip != "" {
-		for _, value := range strings.Split(ip, ",") {
-			v := strings.TrimSpace(value)
-			if !IsPrivateIP(net.ParseIP(v)) {
-				c.clientIP = v
-				return c.clientIP
-			}
-		}
-	}
-	ip = c.GetRequestHeader(HeaderXRealIP)
-	if ip != "" {
-		if !IsPrivateIP(net.ParseIP(ip)) {
-			c.clientIP = ip
-			return c.clientIP
-		}
-	}
-	// 如果都不符合，只能直接取remote addr
-	c.clientIP = c.RemoteAddr()
+	c.clientIP = GetClientIP(c.Request)
 	return c.clientIP
 }
 
