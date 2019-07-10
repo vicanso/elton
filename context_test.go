@@ -37,30 +37,31 @@ func TestReset(t *testing.T) {
 	assert.Nil(c.Request)
 	assert.Nil(c.Response)
 	assert.Nil(c.Headers)
-	assert.Equal(c.Committed, false)
-	assert.Equal(c.ID, "")
-	assert.Equal(c.Route, "")
+	assert.False(c.Committed)
+	assert.Equal("", c.ID)
+	assert.Equal("", c.Route)
 	assert.Nil(c.Next)
 	assert.Nil(c.Params)
-	assert.Equal(c.StatusCode, 0)
+	assert.Equal(0, c.StatusCode)
 	assert.Nil(c.Body)
 	assert.Nil(c.BodyBuffer)
 	assert.Nil(c.RequestBody)
 	assert.Nil(c.m)
-	assert.Equal(c.realIP, "")
-	assert.Equal(c.clientIP, "")
+	assert.Equal("", c.realIP)
+	assert.Equal("", c.clientIP)
 	assert.Nil(c.cod)
-	assert.Equal(c.reuseDisabled, false)
+	assert.False(c.reuseDisabled)
 }
 
 func TestContext(t *testing.T) {
+	data := "abcd"
 	assert := assert.New(t)
 	c := NewContext(nil, nil)
 	c.WriteHeader(http.StatusBadRequest)
 	assert.Equal(c.StatusCode, http.StatusBadRequest)
-	c.Write([]byte("abcd"))
+	c.Write([]byte(data))
 
-	assert.Equal(c.BodyBuffer.String(), "abcd")
+	assert.Equal(data, c.BodyBuffer.String())
 }
 
 func TestRemoteAddr(t *testing.T) {
@@ -71,7 +72,7 @@ func TestRemoteAddr(t *testing.T) {
 	c := Context{
 		Request: req,
 	}
-	assert.Equal(c.RemoteAddr(), "192.168.1.1")
+	assert.Equal("192.168.1.1", c.RemoteAddr())
 }
 
 func TestRealIP(t *testing.T) {
@@ -85,7 +86,7 @@ func TestRealIP(t *testing.T) {
 		assert := assert.New(t)
 		ip := "abc"
 		c.realIP = ip
-		assert.Equal(c.RealIP(), ip)
+		assert.Equal(ip, c.RealIP())
 		c.realIP = ""
 	})
 
@@ -93,7 +94,7 @@ func TestRealIP(t *testing.T) {
 		assert := assert.New(t)
 		defer req.Header.Del(HeaderXForwardedFor)
 		req.Header.Set(HeaderXForwardedFor, "192.0.0.1, 192.168.1.1")
-		assert.Equal(c.RealIP(), "192.0.0.1", "real ip should get from x-forwarded-for")
+		assert.Equal("192.0.0.1", c.RealIP(), "real ip should get from x-forwarded-for")
 		c.realIP = ""
 	})
 
@@ -101,13 +102,13 @@ func TestRealIP(t *testing.T) {
 		defer req.Header.Del(HeaderXRealIP)
 		req.Header.Set(HeaderXRealIP, "192.168.0.1")
 		assert := assert.New(t)
-		assert.Equal(c.RealIP(), "192.168.0.1", "real ip should get from x-real-ip")
+		assert.Equal("192.168.0.1", c.RealIP(), "real ip should get from x-real-ip")
 		c.realIP = ""
 	})
 
 	t.Run("get real ip from remote addr", func(t *testing.T) {
 		assert := assert.New(t)
-		assert.Equal(c.RealIP(), "192.168.1.1")
+		assert.Equal("192.168.1.1", c.RealIP())
 		c.realIP = ""
 	})
 }
@@ -123,7 +124,7 @@ func TestGetClientIP(t *testing.T) {
 		assert := assert.New(t)
 		ip := "abc"
 		c.clientIP = ip
-		assert.Equal(c.ClientIP(), ip)
+		assert.Equal(ip, c.ClientIP())
 		c.clientIP = ""
 	})
 
@@ -131,7 +132,7 @@ func TestGetClientIP(t *testing.T) {
 		assert := assert.New(t)
 		defer req.Header.Del(HeaderXForwardedFor)
 		req.Header.Set(HeaderXForwardedFor, "192.168.1.1, 1.1.1.1, 2.2.2.2")
-		assert.Equal(c.ClientIP(), "1.1.1.1", "client ip shold get the first public ip from x-forwarded-for")
+		assert.Equal("1.1.1.1", c.ClientIP(), "client ip shold get the first public ip from x-forwarded-for")
 		c.clientIP = ""
 	})
 
@@ -140,11 +141,11 @@ func TestGetClientIP(t *testing.T) {
 		defer req.Header.Del(HeaderXRealIP)
 		req.Header.Set(HeaderXRealIP, "192.168.1.2")
 		// real ip的是内网IP，因此取remote addr
-		assert.Equal(c.ClientIP(), "192.168.1.1")
+		assert.Equal("192.168.1.1", c.ClientIP())
 
 		c.clientIP = ""
 		req.Header.Set(HeaderXRealIP, "1.1.1.1")
-		assert.Equal(c.ClientIP(), "1.1.1.1")
+		assert.Equal("1.1.1.1", c.ClientIP())
 	})
 }
 
@@ -155,7 +156,7 @@ func TestParam(t *testing.T) {
 	c.Params = map[string]string{
 		"name": "tree.xie",
 	}
-	assert.Equal(c.Param("name"), "tree.xie")
+	assert.Equal("tree.xie", c.Param("name"))
 }
 
 func TestQueryParam(t *testing.T) {
@@ -163,8 +164,8 @@ func TestQueryParam(t *testing.T) {
 	req := httptest.NewRequest("GET", "https://aslant.site/?name=tree.xie", nil)
 	resp := httptest.NewRecorder()
 	c := NewContext(resp, req)
-	assert.Equal(c.QueryParam("name"), "tree.xie")
-	assert.Equal(c.QueryParam("account"), "")
+	assert.Equal("tree.xie", c.QueryParam("name"))
+	assert.Empty(c.QueryParam("account"))
 }
 
 func TestQuery(t *testing.T) {
@@ -172,8 +173,8 @@ func TestQuery(t *testing.T) {
 	req := httptest.NewRequest("GET", "https://aslant.site/?name=tree.xie&type=1", nil)
 	c := NewContext(nil, req)
 	q := c.Query()
-	assert.Equal(q["name"], "tree.xie")
-	assert.Equal(q["type"], "1")
+	assert.Equal("tree.xie", q["name"])
+	assert.Equal("1", q["type"])
 
 	req = httptest.NewRequest("GET", "https://aslant.site/", nil)
 	c = NewContext(nil, req)
@@ -185,7 +186,7 @@ func TestSetGet(t *testing.T) {
 	c := Context{}
 	assert.Nil(c.Get("name"), "should return nil when store is not initialized")
 	c.Set("name", "tree.xie")
-	assert.Equal(c.Get("name").(string), "tree.xie")
+	assert.Equal("tree.xie", c.Get("name").(string))
 }
 
 func TestGetSetHeader(t *testing.T) {
@@ -196,7 +197,7 @@ func TestGetSetHeader(t *testing.T) {
 
 	t.Run("get header from request", func(t *testing.T) {
 		assert := assert.New(t)
-		assert.Equal(c.GetRequestHeader("X-Token"), "abc")
+		assert.Equal("abc", c.GetRequestHeader("X-Token"))
 	})
 
 	t.Run("set header to request", func(t *testing.T) {
@@ -205,7 +206,7 @@ func TestGetSetHeader(t *testing.T) {
 		assert := assert.New(t)
 		assert.Equal(c.GetRequestHeader(key), "", "request id should be nil before set")
 		c.SetRequestHeader(key, value)
-		assert.Equal(c.GetRequestHeader(key), value)
+		assert.Equal(value, c.GetRequestHeader(key))
 		c.SetRequestHeader(key, "")
 		assert.Empty(c.GetRequestHeader(key))
 	})
@@ -216,13 +217,13 @@ func TestGetSetHeader(t *testing.T) {
 		c.AddRequestHeader(key, "1")
 		c.AddRequestHeader(key, "2")
 		ids := c.Request.Header[key]
-		assert.Equal(strings.Join(ids, ","), "1,2")
+		assert.Equal("1,2", strings.Join(ids, ","))
 	})
 
 	t.Run("set header to the response", func(t *testing.T) {
 		assert := assert.New(t)
 		c.SetHeader("X-Response-Id", "1")
-		assert.Equal(c.GetHeader("X-Response-Id"), "1")
+		assert.Equal("1", c.GetHeader("X-Response-Id"))
 	})
 
 	t.Run("get header from response", func(t *testing.T) {
@@ -230,7 +231,7 @@ func TestGetSetHeader(t *testing.T) {
 		idc := "GZ"
 		key := "X-IDC"
 		c.SetHeader(key, idc)
-		assert.Equal(c.GetHeader(key), idc)
+		assert.Equal(idc, c.GetHeader(key))
 	})
 
 	t.Run("get header of response", func(t *testing.T) {
@@ -241,8 +242,25 @@ func TestGetSetHeader(t *testing.T) {
 	t.Run("reset header", func(t *testing.T) {
 		assert := assert.New(t)
 		c.ResetHeader()
-		assert.Equal(len(c.Header()), 0)
+		assert.Equal(0, len(c.Header()))
 	})
+}
+
+func TestGetKeys(t *testing.T) {
+	assert := assert.New(t)
+	c := NewContext(nil, nil)
+	assert.Nil(c.getKeys())
+	d := New()
+	keys := []string{
+		"a",
+		"b",
+	}
+	ssk := &SimpleSignedKeys{
+		keys: keys,
+	}
+	d.SignedKeys = ssk
+	c.cod = d
+	assert.Equal(keys, c.getKeys())
 }
 
 func TestCookie(t *testing.T) {
@@ -257,8 +275,8 @@ func TestCookie(t *testing.T) {
 		assert := assert.New(t)
 		cookie, err := c.Cookie("a")
 		assert.Nil(err, "get cookie should be successful")
-		assert.Equal(cookie.Name, "a")
-		assert.Equal(cookie.Value, "b")
+		assert.Equal("a", cookie.Name)
+		assert.Equal("b", cookie.Value)
 	})
 
 	t.Run("set cookie", func(t *testing.T) {
@@ -272,7 +290,7 @@ func TestCookie(t *testing.T) {
 			HttpOnly: true,
 		}
 		c.AddCookie(cookie)
-		assert.Equal(c.GetHeader(HeaderSetCookie), "a=b; Path=/; Max-Age=300; HttpOnly; Secure")
+		assert.Equal("a=b; Path=/; Max-Age=300; HttpOnly; Secure", c.GetHeader(HeaderSetCookie))
 	})
 
 }
@@ -299,7 +317,7 @@ func TestSignedCookie(t *testing.T) {
 			HttpOnly: true,
 		}
 		c.AddSignedCookie(cookie)
-		assert.Equal(strings.Join(c.Headers[HeaderSetCookie], ","), "a=b; Path=/; Max-Age=300; HttpOnly; Secure,a.sig=9yv2rWFijew8K8a5Uw9jxRJE53s; Path=/; Max-Age=300; HttpOnly; Secure")
+		assert.Equal("a=b; Path=/; Max-Age=300; HttpOnly; Secure,a.sig=9yv2rWFijew8K8a5Uw9jxRJE53s; Path=/; Max-Age=300; HttpOnly; Secure", strings.Join(c.Headers[HeaderSetCookie], ","))
 	})
 
 	t.Run("get signed cookie", func(t *testing.T) {
@@ -315,10 +333,13 @@ func TestSignedCookie(t *testing.T) {
 		})
 		resp := httptest.NewRecorder()
 		c := NewContext(resp, req)
+		_, err := c.SignedCookie("a")
+		assert.Equal(http.ErrNoCookie, err)
+
 		c.cod = cod
 		cookie, err := c.SignedCookie("a")
 		assert.Nil(err, "signed cookie should be successful")
-		assert.Equal(cookie.Value, "b")
+		assert.Equal("b", cookie.Value)
 	})
 
 	t.Run("get signed cookie(verify fail)", func(t *testing.T) {
@@ -336,7 +357,7 @@ func TestSignedCookie(t *testing.T) {
 		c := NewContext(resp, req)
 		c.cod = cod
 		cookie, err := c.SignedCookie("a")
-		assert.Equal(err, http.ErrNoCookie)
+		assert.Equal(http.ErrNoCookie, err)
 		assert.Nil(cookie)
 	})
 
@@ -357,9 +378,13 @@ func TestSignedCookie(t *testing.T) {
 			"new secret",
 			"secret",
 		})
-		c.cod = cod
 
 		err := c.RefreshSignedCookie("a")
+		assert.Equal(http.ErrNoCookie, err)
+
+		c.cod = cod
+
+		err = c.RefreshSignedCookie("a")
 		assert.Nil(err)
 		assert.Equal("a.sig=lQPKW6xLjOymy5skBYcd6vbbjZQ", resp.Header().Get("Set-Cookie"))
 	})
@@ -375,7 +400,7 @@ func TestRedirect(t *testing.T) {
 	url := "https://aslant.site/"
 	err = c.Redirect(302, url)
 	assert.Nil(err)
-	assert.Equal(c.GetHeader(HeaderLocation), url)
+	assert.Equal(url, c.GetHeader(HeaderLocation))
 }
 
 func TestCreate(t *testing.T) {
@@ -383,8 +408,8 @@ func TestCreate(t *testing.T) {
 	body := "abc"
 	c := NewContext(nil, nil)
 	c.Created(body)
-	assert.Equal(c.StatusCode, http.StatusCreated)
-	assert.Equal(c.Body.(string), body)
+	assert.Equal(http.StatusCreated, c.StatusCode)
+	assert.Equal(body, c.Body.(string))
 }
 
 func TestNoContent(t *testing.T) {
@@ -395,7 +420,7 @@ func TestNoContent(t *testing.T) {
 	c.SetHeader(HeaderContentLength, "b")
 	c.SetHeader(HeaderTransferEncoding, "c")
 	c.NoContent()
-	assert.Equal(c.StatusCode, http.StatusNoContent)
+	assert.Equal(http.StatusNoContent, c.StatusCode)
 	assert.Nil(c.Body)
 	assert.Nil(c.BodyBuffer)
 	assert.Empty(c.GetHeader(HeaderContentType))
@@ -412,17 +437,17 @@ func TestNotModified(t *testing.T) {
 	c.Headers.Set(HeaderContentEncoding, "gzip")
 	c.Headers.Set(HeaderContentType, "text/html")
 	c.NotModified()
-	assert.Equal(c.StatusCode, http.StatusNotModified)
+	assert.Equal(http.StatusNotModified, c.StatusCode)
 	assert.Nil(c.Body)
 	assert.Nil(c.BodyBuffer)
-	assert.Equal(c.GetHeader(HeaderContentEncoding), "")
-	assert.Equal(c.GetHeader(HeaderContentType), "")
+	assert.Empty(c.GetHeader(HeaderContentEncoding))
+	assert.Empty(c.GetHeader(HeaderContentType))
 }
 
 func TestCacheControl(t *testing.T) {
 	checkCacheControl := func(resp *httptest.ResponseRecorder, value string, t *testing.T) {
 		assert := assert.New(t)
-		assert.Equal(resp.HeaderMap["Cache-Control"][0], value)
+		assert.Equal(value, resp.HeaderMap["Cache-Control"][0])
 	}
 	t.Run("no cache", func(t *testing.T) {
 		resp := httptest.NewRecorder()
@@ -460,7 +485,7 @@ func TestSetContentTypeByExt(t *testing.T) {
 
 	check := func(contentType string) {
 		v := headers.Get(HeaderContentType)
-		assert.Equal(v, contentType)
+		assert.Equal(contentType, v)
 	}
 	c.SetContentTypeByExt(".html")
 	check("text/html; charset=utf-8")
@@ -483,7 +508,7 @@ func TestDisableReuse(t *testing.T) {
 	assert := assert.New(t)
 	c := &Context{}
 	c.DisableReuse()
-	assert.Equal(c.reuseDisabled, true)
+	assert.True(c.reuseDisabled)
 }
 
 func TestPush(t *testing.T) {
@@ -491,7 +516,7 @@ func TestPush(t *testing.T) {
 	resp := httptest.NewRecorder()
 	c := NewContext(resp, nil)
 	err := c.Push("/a.css", nil)
-	assert.Equal(err, ErrNotSupportPush)
+	assert.Equal(ErrNotSupportPush, err)
 }
 
 func TestGetCod(t *testing.T) {
@@ -505,8 +530,8 @@ func TestNewContext(t *testing.T) {
 	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
 	resp := httptest.NewRecorder()
 	c := NewContext(resp, req)
-	assert.Equal(c.Request, req)
-	assert.Equal(c.Response, resp)
+	assert.Equal(req, c.Request)
+	assert.Equal(resp, c.Response)
 }
 
 func TestContextPass(t *testing.T) {
@@ -526,8 +551,8 @@ func TestContextPass(t *testing.T) {
 		return nil
 	})
 	d.ServeHTTP(resp, req)
-	assert.Equal(resp.Code, 200)
-	assert.Equal(resp.Body.String(), "new data")
+	assert.Equal(http.StatusOK, resp.Code)
+	assert.Equal("new data", resp.Body.String())
 }
 
 func TestPipe(t *testing.T) {
@@ -538,6 +563,6 @@ func TestPipe(t *testing.T) {
 	r := bytes.NewReader(data)
 	written, err := c.Pipe(r)
 	assert.Nil(err)
-	assert.Equal(written, int64(len(data)))
+	assert.Equal(int64(len(data)), written)
 	assert.Equal(data, resp.Body.Bytes())
 }

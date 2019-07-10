@@ -29,7 +29,29 @@ func TestSkipper(t *testing.T) {
 		Committed: true,
 	}
 	assert := assert.New(t)
-	assert.Equal(DefaultSkipper(c), true, "default skip should return true")
+	assert.Equal(true, DefaultSkipper(c), "default skip should return true")
+
+	d := New()
+	execFisrtMid := false
+	execSecondMid := false
+	d.Use(func(c *Context) error {
+		execFisrtMid = true
+		c.Committed = true
+		return c.Next()
+	})
+	d.Use(func(c *Context) error {
+		execSecondMid = true
+		return c.Next()
+	})
+
+	d.GET("/", func(c *Context) error {
+		return nil
+	})
+	req := httptest.NewRequest("GET", "/", nil)
+	resp := httptest.NewRecorder()
+	d.ServeHTTP(resp, req)
+	assert.Equal(true, execFisrtMid)
+	assert.Equal(false, execSecondMid)
 }
 
 func TestListenAndServe(t *testing.T) {
@@ -55,7 +77,7 @@ func TestServe(t *testing.T) {
 	req := httptest.NewRequest("GET", "/users/me", nil)
 	resp := httptest.NewRecorder()
 	d.ServeHTTP(resp, req)
-	assert.Equal(resp.Code, http.StatusNotFound)
+	assert.Equal(http.StatusNotFound, resp.Code)
 	err = d.Close()
 	assert.Nil(err, "close server should be successful")
 }
@@ -93,7 +115,7 @@ func TestPreHandle(t *testing.T) {
 		})
 
 		assert := assert.New(t)
-		req := httptest.NewRequest("GET", "/api/ping", nil)
+		req := httptest.NewRequest("GET", urlPrefix+"/ping", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
 		assert.Equal(200, resp.Code)
@@ -121,9 +143,9 @@ func TestHandle(t *testing.T) {
 			if index >= 8 {
 				p = allMethods
 			}
-			assert.Equal(r.Path, p)
+			assert.Equal(p, r.Path)
 		}
-		assert.Equal(len(d.Routers), 16, "method handle add fail")
+		assert.Equal(16, len(d.Routers), "method handle add fail")
 	})
 	t.Run("group", func(t *testing.T) {
 		assert := assert.New(t)
@@ -144,14 +166,14 @@ func TestHandle(t *testing.T) {
 		})
 		userGroupPath := "/users"
 		userGroup := NewGroup(userGroupPath, func(c *Context) error {
-			assert.Equal(strings.HasPrefix(c.Request.URL.Path, userGroupPath), true, "group route should have the same url prefix")
+			assert.Equal(true, strings.HasPrefix(c.Request.URL.Path, userGroupPath), "group route should have the same url prefix")
 			return c.Next()
 		})
 		doneCount := 0
 		userGroup.ALL("/me", func(c *Context) (err error) {
 			v := c.Get(key).(int)
-			assert.Equal(v, countValue)
-			assert.Equal(c.Route, "/users/me", "route url is invalid")
+			assert.Equal(countValue, v)
+			assert.Equal(userGroupPath+"/me", c.Route, "route url is invalid")
 			doneCount++
 			return
 		})
@@ -203,7 +225,7 @@ func TestHandle(t *testing.T) {
 			fn("/info", func(c *Context) (err error) {
 				c.StatusCode = 201
 				c.BodyBuffer = bytes.NewBufferString("abcd")
-				assert.Equal(c.Route, route)
+				assert.Equal(route, c.Route)
 				done = true
 				return
 			})
@@ -211,15 +233,15 @@ func TestHandle(t *testing.T) {
 			req := httptest.NewRequest(method, "https://aslant.site/system/info", nil)
 			resp := httptest.NewRecorder()
 			d.ServeHTTP(resp, req)
-			assert.Equal(done, true, "route handler isn't called")
-			assert.Equal(resp.Code, 201)
+			assert.Equal(true, done, "route handler isn't called")
+			assert.Equal(201, resp.Code)
 		}
 	})
 
 	t.Run("params", func(t *testing.T) {
 		assert := assert.New(t)
 		d.GET("/params/:id", func(c *Context) error {
-			assert.Equal(c.Param("id"), "1", "get route param fail")
+			assert.Equal("1", c.Param("id"), "get route param fail")
 			return nil
 		})
 		req := httptest.NewRequest("GET", "https://aslant.site/params/1", nil)
@@ -232,8 +254,8 @@ func TestHandle(t *testing.T) {
 		req := httptest.NewRequest("GET", "https://aslant.site/not-found", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		assert.Equal(resp.Code, http.StatusNotFound)
-		assert.Equal(resp.Body.String(), "Not found")
+		assert.Equal(http.StatusNotFound, resp.Code)
+		assert.Equal("Not found", resp.Body.String())
 	})
 
 	t.Run("error", func(t *testing.T) {
@@ -245,26 +267,27 @@ func TestHandle(t *testing.T) {
 		req := httptest.NewRequest("GET", "https://aslant.site/error", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		assert.Equal(resp.Code, http.StatusBadRequest, "default hes error status code should be 400")
-		assert.Equal(resp.Body.String(), "message=abcd")
+		assert.Equal(http.StatusBadRequest, resp.Code, "default hes error status code should be 400")
+		assert.Equal("message=abcd", resp.Body.String())
 	})
 
 	t.Run("get routers", func(t *testing.T) {
 		assert := assert.New(t)
-		assert.Equal(len(d.Routers), 34, "router count fail")
+		assert.Equal(34, len(d.Routers), "router count fail")
 	})
 
 	t.Run("response body reader", func(t *testing.T) {
 		assert := assert.New(t)
+		data := "abcd"
 		d.GET("/index.html", func(c *Context) error {
-			c.Body = bytes.NewReader([]byte("abcd"))
+			c.Body = bytes.NewReader([]byte(data))
 			return nil
 		})
 		req := httptest.NewRequest("GET", "https://aslant.site/index.html", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		assert.Equal(resp.Code, http.StatusOK)
-		assert.Equal(resp.Body.String(), "abcd")
+		assert.Equal(http.StatusOK, resp.Code)
+		assert.Equal(data, resp.Body.String())
 	})
 }
 
@@ -291,8 +314,8 @@ func TestParamValidate(t *testing.T) {
 	resp := httptest.NewRecorder()
 	d.ServeHTTP(resp, req)
 	assert.True(runMid)
-	assert.Equal(resp.Code, 500)
-	assert.Equal(resp.Body.String(), "id should be 5 numbers")
+	assert.Equal(500, resp.Code)
+	assert.Equal("id should be 5 numbers", resp.Body.String())
 }
 
 func TestErrorHandler(t *testing.T) {
@@ -310,13 +333,14 @@ func TestErrorHandler(t *testing.T) {
 		for _, key := range keys {
 			c.SetHeader(key, "a")
 		}
-		d.Error(c, errors.New("abcd"))
+		message := "abcd"
+		d.Error(c, errors.New(message))
 		for _, key := range keys {
 			value := c.GetHeader(key)
 			assert.Equal(value, "", "the "+key+" header should be nil")
 		}
-		assert.Equal(resp.Code, http.StatusInternalServerError, "default error status should be 500")
-		assert.Equal(resp.Body.String(), "abcd")
+		assert.Equal(http.StatusInternalServerError, resp.Code, "default error status should be 500")
+		assert.Equal(message, resp.Body.String())
 	})
 
 	t.Run("custom error handler", func(t *testing.T) {
@@ -333,7 +357,7 @@ func TestErrorHandler(t *testing.T) {
 		req := httptest.NewRequest("GET", "/", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		assert.Equal(done, true, "custom error handler should be called")
+		assert.Equal(true, done, "custom error handler should be called")
 	})
 }
 
@@ -350,7 +374,7 @@ func TestNotFoundHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/users/me", nil)
 	resp := httptest.NewRecorder()
 	d.ServeHTTP(resp, req)
-	assert.Equal(done, true, "custom not found handler should be called")
+	assert.Equal(true, done, "custom not found handler should be called")
 }
 
 func TestOnError(t *testing.T) {
@@ -360,7 +384,7 @@ func TestOnError(t *testing.T) {
 	customErr := hes.New("abc")
 	d.EmitError(c, customErr)
 	d.OnError(func(_ *Context, err error) {
-		assert.Equal(err, customErr)
+		assert.Equal(customErr, err)
 	})
 	d.EmitError(c, customErr)
 }
@@ -389,7 +413,7 @@ func TestOnTrace(t *testing.T) {
 	req := httptest.NewRequest("GET", "/users/me", nil)
 	resp := httptest.NewRecorder()
 	d.ServeHTTP(resp, req)
-	assert.Equal(done, true, "on trace should be called")
+	assert.Equal(true, done, "on trace should be called")
 }
 
 func TestGenerateID(t *testing.T) {
@@ -400,7 +424,7 @@ func TestGenerateID(t *testing.T) {
 		return randID
 	}
 	d.GET("/", func(c *Context) error {
-		assert.Equal(c.ID, randID, "generate id function should be called")
+		assert.Equal(randID, c.ID, "generate id function should be called")
 		return nil
 	})
 	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
@@ -414,45 +438,45 @@ func TestCompose(t *testing.T) {
 		d := New()
 		index := 0
 		fn1 := func(c *Context) (err error) {
-			assert.Equal(index, 0)
+			assert.Equal(0, index)
 			index++
 			err = c.Next()
 			index++
-			assert.Equal(index, 6)
+			assert.Equal(6, index)
 			return
 		}
 		fn2 := func(c *Context) (err error) {
-			assert.Equal(index, 1)
+			assert.Equal(1, index)
 			index++
 			err = c.Next()
 			index++
-			assert.Equal(index, 5)
+			assert.Equal(5, index)
 			return
 		}
 		fn3 := func(c *Context) (err error) {
-			assert.Equal(index, 2)
+			assert.Equal(2, index)
 			index++
 			err = c.Next()
 			index++
-			assert.Equal(index, 4)
+			assert.Equal(4, index)
 			return
 		}
 		fn := Compose(fn1, fn2, fn3)
 		d.Use(fn)
 		d.Use(func(c *Context) (err error) {
-			assert.Equal(index, 3)
+			assert.Equal(3, index)
 			return c.Next()
 		})
 		d.GET("/", func(c *Context) (err error) {
-			assert.Equal(index, 3)
+			assert.Equal(3, index)
 			c.BodyBuffer = bytes.NewBufferString("abcd")
 			return
 		})
 		req := httptest.NewRequest("GET", "https://aslant.site/", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		assert.Equal(resp.Code, 200)
-		assert.Equal(resp.Body.String(), "abcd")
+		assert.Equal(200, resp.Code)
+		assert.Equal("abcd", resp.Body.String())
 	})
 
 	t.Run("error", func(t *testing.T) {
@@ -471,8 +495,8 @@ func TestCompose(t *testing.T) {
 		req := httptest.NewRequest("GET", "https://aslant.site/", nil)
 		resp := httptest.NewRecorder()
 		d.ServeHTTP(resp, req)
-		assert.Equal(resp.Code, 500)
-		assert.Equal(resp.Body.String(), "custom error")
+		assert.Equal(500, resp.Code)
+		assert.Equal("custom error", resp.Body.String())
 	})
 }
 func TestGetSetFunctionName(t *testing.T) {
@@ -480,8 +504,8 @@ func TestGetSetFunctionName(t *testing.T) {
 	fn := func() {}
 	d := New()
 	fnName := "test"
-	d.SetFunctionName(fn, "test")
-	assert.Equal(d.GetFunctionName(fn), fnName)
+	d.SetFunctionName(fn, fnName)
+	assert.Equal(fnName, d.GetFunctionName(fn))
 }
 
 func TestConvertToServerTiming(t *testing.T) {
@@ -489,8 +513,8 @@ func TestConvertToServerTiming(t *testing.T) {
 	traceInfos := make(TraceInfos, 0)
 
 	t.Run("get ms", func(t *testing.T) {
-		assert.Equal(getMs(10), "0")
-		assert.Equal(getMs(100000), "0.10")
+		assert.Equal("0", getMs(10))
+		assert.Equal("0.10", getMs(100000))
 	})
 
 	t.Run("empty trace infos", func(t *testing.T) {
@@ -505,7 +529,7 @@ func TestConvertToServerTiming(t *testing.T) {
 			Name:     "b",
 			Duration: time.Millisecond + time.Microsecond,
 		})
-		assert.Equal(string(traceInfos.ServerTiming("cod-")), `cod-0;dur=0.01;desc="a",cod-1;dur=1;desc="b"`)
+		assert.Equal(`cod-0;dur=0.01;desc="a",cod-1;dur=1;desc="b"`, string(traceInfos.ServerTiming("cod-")))
 	})
 }
 
@@ -516,7 +540,7 @@ func TestGracefulClose(t *testing.T) {
 		resp := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/users/me", nil)
 		d.ServeHTTP(resp, req)
-		assert.Equal(resp.Code, http.StatusNotFound)
+		assert.Equal(http.StatusNotFound, resp.Code)
 	})
 
 	t.Run("graceful close", func(t *testing.T) {
@@ -532,11 +556,11 @@ func TestGracefulClose(t *testing.T) {
 		resp := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/users/me", nil)
 		d.ServeHTTP(resp, req)
-		assert.Equal(resp.Code, http.StatusServiceUnavailable)
-		assert.Equal(resp.Body.String(), "service is not available, status is 1")
+		assert.Equal(http.StatusServiceUnavailable, resp.Code)
+		assert.Equal("service is not available, status is 1", resp.Body.String())
 
 		<-done
-		assert.Equal(d.GetStatus(), int32(StatusClosed), "server status should be closed")
+		assert.Equal(int32(StatusClosed), d.GetStatus(), "server status should be closed")
 	})
 }
 
