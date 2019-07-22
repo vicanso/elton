@@ -305,7 +305,8 @@ func (c *Context) getKeys() []string {
 	return d.SignedKeys.GetKeys()
 }
 
-func (c *Context) getSignedCookie(name string) (cookie *http.Cookie, index int, err error) {
+// GetSignedCookie get signed cookie
+func (c *Context) GetSignedCookie(name string) (cookie *http.Cookie, index int, err error) {
 	index = -1
 	cookie, err = c.Cookie(name)
 	if err != nil {
@@ -329,30 +330,13 @@ func (c *Context) getSignedCookie(name string) (cookie *http.Cookie, index int, 
 
 // SignedCookie get signed cookie from http request
 func (c *Context) SignedCookie(name string) (cookie *http.Cookie, err error) {
-	cookie, index, err := c.getSignedCookie(name)
+	cookie, index, err := c.GetSignedCookie(name)
 	if err != nil {
 		return
 	}
 	if index < 0 {
 		cookie = nil
 		err = http.ErrNoCookie
-	}
-	return
-}
-
-// RefreshSignedCookie refresh signed cookie
-func (c *Context) RefreshSignedCookie(name string) (err error) {
-	cookie, index, err := c.getSignedCookie(name)
-	if err != nil {
-		return
-	}
-	if index < 0 {
-		err = http.ErrNoCookie
-		return
-	}
-	// 需要更新key
-	if index != 0 {
-		err = c.addSigCookie(cookie)
 	}
 	return
 }
