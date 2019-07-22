@@ -9,5 +9,7 @@ github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/vicanso/hes v0.1.4 h1:n8kG8krvNJF4Sj1PvZOEUzdUsmDSbCcGr8C1nYnoP+o=
 github.com/vicanso/hes v0.1.4/go.mod h1:bG0UJ3EihDKObFcLLwJYjxHHr9saFllsFcepyDIvFlo=
+github.com/vicanso/hes v0.2.0 h1:ONvSxpY41EmcLIVRXNbnQ3wT1YtjUmp+OfOTWIxgx14=
+github.com/vicanso/hes v0.2.0/go.mod h1:QcxOFmFfBQMhASTaLgnFayXYCgevdSeBVprt+o+3eKo=
 github.com/vicanso/keygrip v0.1.0 h1:/zYzoVIbREAvaxSM7bo3/oSXuuYztaP71dPBfhRoNkM=
 github.com/vicanso/keygrip v0.1.0/go.mod h1:cI05iOjY00NJ7oH2Z9Zdm9eJPUkpoex3XnEubK78nho=

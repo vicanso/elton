@@ -71,7 +71,8 @@ type (
 )
 
 const (
-	sig = ".sig"
+	// SignedCookieSuffix signed cookie suffix
+	SignedCookieSuffix = ".sig"
 )
 
 // Reset reset context
@@ -316,7 +317,7 @@ func (c *Context) getSignedCookie(name string) (cookie *http.Cookie, index int, 
 		return
 	}
 
-	sc, err := c.Cookie(name + sig)
+	sc, err := c.Cookie(name + SignedCookieSuffix)
 	if err != nil {
 		cookie = nil
 		return
@@ -375,7 +376,7 @@ func cloneCookie(cookie *http.Cookie) *http.Cookie {
 
 func (c *Context) addSigCookie(cookie *http.Cookie) (err error) {
 	sc := cloneCookie(cookie)
-	sc.Name = sc.Name + sig
+	sc.Name = sc.Name + SignedCookieSuffix
 	keys := c.getKeys()
 	if len(keys) == 0 {
 		return
