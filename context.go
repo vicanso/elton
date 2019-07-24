@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/vicanso/hes"
 	"github.com/vicanso/keygrip"
 )
 
@@ -68,6 +69,10 @@ type (
 		// reuseDisabled reuse disabled
 		reuseDisabled bool
 	}
+)
+
+var (
+	errSignKeyIsNil = hes.New("keys for sign cookie can't be nil")
 )
 
 const (
@@ -313,8 +318,8 @@ func (c *Context) GetSignedCookie(name string) (cookie *http.Cookie, index int, 
 		return
 	}
 	keys := c.getKeys()
-	// 如果没有配置keys，则认为cookie符合
 	if len(keys) == 0 {
+		err = errSignKeyIsNil
 		return
 	}
 

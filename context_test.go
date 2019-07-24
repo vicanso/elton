@@ -334,7 +334,7 @@ func TestSignedCookie(t *testing.T) {
 		resp := httptest.NewRecorder()
 		c := NewContext(resp, req)
 		_, err := c.SignedCookie("a")
-		assert.Equal(http.ErrNoCookie, err)
+		assert.Equal(errSignKeyIsNil, err)
 
 		c.cod = cod
 		cookie, err := c.SignedCookie("a")
