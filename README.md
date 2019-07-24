@@ -3,7 +3,7 @@
 [![Build Status](https://img.shields.io/travis/vicanso/cod.svg?label=linux+build)](https://travis-ci.org/vicanso/cod)
 
 
-Cod的实现参考了[koa](https://github.com/koajs/koa)，统一中间件的形式，方便定制各类中间件，所有中间件的处理方式都非常简单，如果需要交付给下一中间件，则调用`Context.Next()`。如果当前中间件出错，则返回`Error`结束调用。如果当前处理函数已正常完成处理，则将响应数据赋值`Context.Body = 响应数据`，则各响应中间件将Body转换为相应的响应数据，如JSON等。调用流程如koa的中间件调用流程图。
+Cod的实现参考了[koa](https://github.com/koajs/koa)，统一中间件的形式，方便定制各类中间件，所有中间件的处理方式都非常简单，如果需要交付给下一中间件，则调用`Context.Next()`。如果当前中间件出错，则返回`Error`结束调用。如果当前处理函数已正常完成处理，则将响应数据赋值`Context.Body = 响应数据`，由响应中间件将Body转换为相应的响应数据，如JSON等。调用流程如koa的中间件调用流程图。
 
 
 ![koa](./.data/koa.png)
@@ -71,7 +71,7 @@ func main() {
 
 - [basic auth](https://github.com/vicanso/cod-basic-auth) HTTP Basic Auth，建议只用于内部管理系统使用
 - [body parser](https://github.com/vicanso/cod-body-parser) 请求数据的解析中间件，支持`application/json`以及`application/x-www-form-urlencoded`两种数据类型
-- [compress](https://github.com/vicanso/cod-compress) 数据压缩中间件，默认支持gzip以及brotli(需要支持编译参数以及编译相应动态库)，也可根据需要增加相应的压缩处理
+- [compress](https://github.com/vicanso/cod-compress) 数据压缩中间件，默认支持gzip、brotli(需要支持编译参数以及编译相应动态库)以及snappy，也可根据需要增加相应的压缩处理
 - [concurrent limiter](https://github.com/vicanso/cod-concurrent-limiter) 根据指定参数限制并发请求，可用于订单提交等防止重复提交或限制提交频率的场景
 - [etag](https://github.com/vicanso/cod-etag) 用于生成HTTP响应数据的ETag
 - [error handler](https://github.com/vicanso/cod-error-handler) 用于将处理函数的Error转换为对应的响应数据，如HTTP响应中的状态码(40x, 50x)，对应的出错类别等，建议在实际使用中根据项目自定义的Error对象生成相应的响应数据
@@ -143,7 +143,7 @@ d.Use(responder.NewDefault())
 
 ### PreMiddlewares
 
-当前Cod实例中的前置中间件处理函数，为[]PreHandler，此类函数在匹配路由调用。
+当前Cod实例中的前置中间件处理函数，为[]PreHandler，此类函数在匹配路由前调用。
 
 ```go
 d := cod.New()
@@ -219,7 +219,7 @@ d.ListenAndServe(":8001")
 
 ### EnableTrace
 
-是否启用调用跟踪，设置此参数为true，则会记录每个Handler的调用时长（前一个Handler包含后面Handler的处理时长）。
+是否启用调用跟踪，设置此参数为true，则会记录每个Handler的调用时长。
 
 ```go
 d := cod.New()
@@ -244,7 +244,7 @@ d.ListenAndServe(":8001")
 
 ```go
 d := cod.New()
-d.SignedKeys = new(cod.SimpleSignedKeys)
+d.SignedKeys = new(cod.RWMutexSignedKeys)
 ```
 
 ### SetFunctionName
@@ -519,7 +519,11 @@ next函数，此函数会在获取请求时自动生成，无需调整。
 
 ### Params
 
-路由参数对象，它等于httprouter路由匹配生成的`httprouter.Params`。
+路由参数对象，它由httprouter的路由参数`httprouter.Params`转换得来。
+
+### RawParams
+
+路由参数对象，httprouter的路由参数`httprouter.Params`。
 
 ### StatusCode
 
@@ -531,7 +535,7 @@ HTTP响应数据，此属性为interface{}，因此可以设置不同的数据�
 
 ### BodyBuffer
 
-HTTP的响应数据缓冲（字节），此数据为真正返回的响应体，responder中间件就是将Body转换为字节(BodyBuffer)，并写入相应的`Content-Type`。
+HTTP的响应数据缓冲（字节），此数据为真正返回的响应体，一般不需要赋值此参数，而由responder中间件将Body转换为字节(BodyBuffer)，并写入相应的`Content-Type`。
 
 ### RequestBody
 
@@ -571,6 +575,19 @@ req.Header.Set("X-Forwarded-For", "8.8.8.8")
 c := cod.NewContext(resp, req)
 // 8.8.8.8
 fmt.Println(c.RealIP())
+```
+
+### ClientIP
+
+获取客户端真实IP，其获取方式与`RealIP`类似，但在获取到IP时，先判断是否公网IP，如果非公网IP，则继续获取下一符合条件的IP。
+
+```go
+req := httptest.NewRequest("GET", "/users/me", nil)
+resp := httptest.NewRecorder()
+req.Header.Set("X-Forwarded-For", "127.0.0.1, 8.8.8.8")
+c := cod.NewContext(resp, req)
+// 8.8.8.8
+fmt.Println(c.ClientIP())
 ```
 
 ### Param
