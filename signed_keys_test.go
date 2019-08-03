@@ -61,7 +61,12 @@ func TestAtomicSignedKeys(t *testing.T) {
 		done <- true
 	}()
 	for index := 0; index < max; index++ {
-		sk.GetKeys()
+		keys := sk.GetKeys()
+		if len(keys) == 2 {
+			assert.Equal([]string{"a", "b"}, keys)
+		} else {
+			assert.Equal([]string{"a"}, keys)
+		}
 	}
 	<-done
 }
