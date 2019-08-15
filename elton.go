@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cod
+package elton
 
 import (
 	"errors"
@@ -56,9 +56,9 @@ type (
 		Method string `json:"method,omitempty"`
 		Path   string `json:"path,omitempty"`
 	}
-	// Cod web framework instance
-	Cod struct {
-		// status of cod
+	// Elton web framework instance
+	Elton struct {
+		// status of elton
 		status int32
 		// Server http server
 		Server *http.Server
@@ -110,7 +110,7 @@ type (
 	ErrorHandler func(*Context, error)
 	// GenerateID generate context id
 	GenerateID func() string
-	// Handler cod handle function
+	// Handler elton handle function
 	Handler func(*Context) error
 	// ErrorListener error listener function
 	ErrorListener func(*Context, error)
@@ -155,8 +155,8 @@ func IsPrivateIP(ip net.IP) bool {
 	return false
 }
 
-// New create a cod instance
-func New() *Cod {
+// New create a elton instance
+func New() *Elton {
 	d := NewWithoutServer()
 	s := &http.Server{
 		Handler: d,
@@ -165,9 +165,9 @@ func New() *Cod {
 	return d
 }
 
-// NewWithoutServer create a cod instance without server
-func NewWithoutServer() *Cod {
-	d := &Cod{
+// NewWithoutServer create a elton instance without server
+func NewWithoutServer() *Elton {
+	d := &Elton{
 		Router:        httprouter.New(),
 		functionInfos: make(map[uintptr]string),
 	}
@@ -186,13 +186,13 @@ func NewGroup(path string, handlerList ...Handler) *Group {
 }
 
 // SetFunctionName set function name
-func (d *Cod) SetFunctionName(fn interface{}, name string) {
+func (d *Elton) SetFunctionName(fn interface{}, name string) {
 	p := reflect.ValueOf(fn).Pointer()
 	d.functionInfos[p] = name
 }
 
 // GetFunctionName get function name
-func (d *Cod) GetFunctionName(fn interface{}) string {
+func (d *Elton) GetFunctionName(fn interface{}) string {
 	p := reflect.ValueOf(fn).Pointer()
 	name := d.functionInfos[p]
 	if name != "" {
@@ -202,7 +202,7 @@ func (d *Cod) GetFunctionName(fn interface{}) string {
 }
 
 // ListenAndServe listen and serve for http server
-func (d *Cod) ListenAndServe(addr string) error {
+func (d *Elton) ListenAndServe(addr string) error {
 	if d.Server == nil {
 		panic(errors.New("server is not initialized"))
 	}
@@ -211,7 +211,7 @@ func (d *Cod) ListenAndServe(addr string) error {
 }
 
 // Serve serve for http server
-func (d *Cod) Serve(l net.Listener) error {
+func (d *Elton) Serve(l net.Listener) error {
 	if d.Server == nil {
 		panic(errors.New("server is not initialized"))
 	}
@@ -219,25 +219,25 @@ func (d *Cod) Serve(l net.Listener) error {
 }
 
 // Close close the http server
-func (d *Cod) Close() error {
+func (d *Elton) Close() error {
 	return d.Server.Close()
 }
 
 // GracefulClose graceful close the http server
-func (d *Cod) GracefulClose(delay time.Duration) error {
+func (d *Elton) GracefulClose(delay time.Duration) error {
 	atomic.StoreInt32(&d.status, StatusClosing)
 	time.Sleep(delay)
 	atomic.StoreInt32(&d.status, StatusClosed)
 	return d.Close()
 }
 
-// GetStatus get status of cod
-func (d *Cod) GetStatus() int32 {
+// GetStatus get status of elton
+func (d *Elton) GetStatus() int32 {
 	return atomic.LoadInt32(&d.status)
 }
 
 // ServeHTTP http handler
-func (d *Cod) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+func (d *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	status := atomic.LoadInt32(&d.status)
 	// 非运行中的状态
 	if status != StatusRunning {
@@ -258,7 +258,7 @@ func (d *Cod) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 }
 
 // fillContext fill the context
-func (d *Cod) fillContext(c *Context, resp http.ResponseWriter, req *http.Request) {
+func (d *Elton) fillContext(c *Context, resp http.ResponseWriter, req *http.Request) {
 	c.Request = req
 	c.Response = resp
 	if resp != nil {
@@ -267,7 +267,7 @@ func (d *Cod) fillContext(c *Context, resp http.ResponseWriter, req *http.Reques
 }
 
 // Handle add http handle function
-func (d *Cod) Handle(method, path string, handlerList ...Handler) {
+func (d *Elton) Handle(method, path string, handlerList ...Handler) {
 	for _, fn := range handlerList {
 		name := d.GetFunctionName(fn)
 		d.SetFunctionName(fn, name)
@@ -296,7 +296,7 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 			c.ID = d.GenerateID()
 		}
 		c.Route = path
-		c.cod = d
+		c.elton = d
 		mids := d.Middlewares
 		maxMid := len(mids)
 		maxNext := maxMid + len(handlerList)
@@ -401,7 +401,7 @@ func (d *Cod) Handle(method, path string, handlerList ...Handler) {
 }
 
 // AddValidator add validate function
-func (d *Cod) AddValidator(key string, fn Validator) {
+func (d *Elton) AddValidator(key string, fn Validator) {
 	if d.validators == nil {
 		d.validators = make(map[string]Validator)
 	}
@@ -409,54 +409,54 @@ func (d *Cod) AddValidator(key string, fn Validator) {
 }
 
 // GET add http get method handle
-func (d *Cod) GET(path string, handlerList ...Handler) {
+func (d *Elton) GET(path string, handlerList ...Handler) {
 	d.Handle(http.MethodGet, path, handlerList...)
 }
 
 // POST add http post method handle
-func (d *Cod) POST(path string, handlerList ...Handler) {
+func (d *Elton) POST(path string, handlerList ...Handler) {
 	d.Handle(http.MethodPost, path, handlerList...)
 }
 
 // PUT add http put method handle
-func (d *Cod) PUT(path string, handlerList ...Handler) {
+func (d *Elton) PUT(path string, handlerList ...Handler) {
 	d.Handle(http.MethodPut, path, handlerList...)
 }
 
 // PATCH add http patch method handle
-func (d *Cod) PATCH(path string, handlerList ...Handler) {
+func (d *Elton) PATCH(path string, handlerList ...Handler) {
 	d.Handle(http.MethodPatch, path, handlerList...)
 }
 
 // DELETE add http delete method handle
-func (d *Cod) DELETE(path string, handlerList ...Handler) {
+func (d *Elton) DELETE(path string, handlerList ...Handler) {
 	d.Handle(http.MethodDelete, path, handlerList...)
 }
 
 // HEAD add http head method handle
-func (d *Cod) HEAD(path string, handlerList ...Handler) {
+func (d *Elton) HEAD(path string, handlerList ...Handler) {
 	d.Handle(http.MethodHead, path, handlerList...)
 }
 
 // OPTIONS add http options method handle
-func (d *Cod) OPTIONS(path string, handlerList ...Handler) {
+func (d *Elton) OPTIONS(path string, handlerList ...Handler) {
 	d.Handle(http.MethodOptions, path, handlerList...)
 }
 
 // TRACE add http trace method handle
-func (d *Cod) TRACE(path string, handlerList ...Handler) {
+func (d *Elton) TRACE(path string, handlerList ...Handler) {
 	d.Handle(http.MethodTrace, path, handlerList...)
 }
 
 // ALL add http all method handle
-func (d *Cod) ALL(path string, handlerList ...Handler) {
+func (d *Elton) ALL(path string, handlerList ...Handler) {
 	for _, method := range methods {
 		d.Handle(method, path, handlerList...)
 	}
 }
 
 // Use add middleware function handle
-func (d *Cod) Use(handlerList ...Handler) {
+func (d *Elton) Use(handlerList ...Handler) {
 	if d.Middlewares == nil {
 		d.Middlewares = make([]Handler, 0)
 	}
@@ -468,7 +468,7 @@ func (d *Cod) Use(handlerList ...Handler) {
 }
 
 // Pre add pre middleware function handler
-func (d *Cod) Pre(handlerList ...PreHandler) {
+func (d *Elton) Pre(handlerList ...PreHandler) {
 	if d.PreMiddlewares == nil {
 		d.PreMiddlewares = make([]PreHandler, 0)
 	}
@@ -476,7 +476,7 @@ func (d *Cod) Pre(handlerList ...PreHandler) {
 }
 
 // NotFound not found handle
-func (d *Cod) NotFound(resp http.ResponseWriter, req *http.Request) {
+func (d *Elton) NotFound(resp http.ResponseWriter, req *http.Request) {
 	if d.NotFoundHandler != nil {
 		d.NotFoundHandler(resp, req)
 		return
@@ -486,7 +486,7 @@ func (d *Cod) NotFound(resp http.ResponseWriter, req *http.Request) {
 }
 
 // Error error handle
-func (d *Cod) Error(c *Context, err error) {
+func (d *Elton) Error(c *Context, err error) {
 	// 出错时清除部分响应头
 	for _, key := range []string{
 		HeaderETag,
@@ -513,7 +513,7 @@ func (d *Cod) Error(c *Context, err error) {
 }
 
 // EmitError emit error function
-func (d *Cod) EmitError(c *Context, err error) {
+func (d *Elton) EmitError(c *Context, err error) {
 	lns := d.errorListeners
 	for _, ln := range lns {
 		ln(c, err)
@@ -521,7 +521,7 @@ func (d *Cod) EmitError(c *Context, err error) {
 }
 
 // OnError on error function
-func (d *Cod) OnError(ln ErrorListener) {
+func (d *Elton) OnError(ln ErrorListener) {
 	if d.errorListeners == nil {
 		d.errorListeners = make([]ErrorListener, 0)
 	}
@@ -529,7 +529,7 @@ func (d *Cod) OnError(ln ErrorListener) {
 }
 
 // EmitTrace emit trace
-func (d *Cod) EmitTrace(c *Context, infos TraceInfos) {
+func (d *Elton) EmitTrace(c *Context, infos TraceInfos) {
 	lns := d.traceListeners
 	for _, ln := range lns {
 		ln(c, infos)
@@ -537,15 +537,15 @@ func (d *Cod) EmitTrace(c *Context, infos TraceInfos) {
 }
 
 // OnTrace on trace function
-func (d *Cod) OnTrace(ln TraceListener) {
+func (d *Elton) OnTrace(ln TraceListener) {
 	if d.traceListeners == nil {
 		d.traceListeners = make([]TraceListener, 0)
 	}
 	d.traceListeners = append(d.traceListeners, ln)
 }
 
-// AddGroup add the group to cod
-func (d *Cod) AddGroup(g *Group) {
+// AddGroup add the group to elton
+func (d *Elton) AddGroup(g *Group) {
 	for _, r := range g.routers {
 		d.Handle(r.Method, r.Path, r.HandleList...)
 	}

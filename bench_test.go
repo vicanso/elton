@@ -1,4 +1,4 @@
-package cod
+package elton
 
 import (
 	"net/http/httptest"
@@ -59,7 +59,7 @@ func BenchmarkConvertServerTiming(b *testing.B) {
 		})
 	}
 	for i := 0; i < b.N; i++ {
-		traceInfos.ServerTiming("cod-")
+		traceInfos.ServerTiming("elton-")
 	}
 }
 

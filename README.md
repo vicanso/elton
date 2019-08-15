@@ -1,9 +1,9 @@
-# cod 
+# elton 
 
-[![Build Status](https://img.shields.io/travis/vicanso/cod.svg?label=linux+build)](https://travis-ci.org/vicanso/cod)
+[![Build Status](https://img.shields.io/travis/vicanso/elton.svg?label=linux+build)](https://travis-ci.org/vicanso/elton)
 
 
-Cod的实现参考了[koa](https://github.com/koajs/koa)，统一中间件的形式，方便定制各类中间件，所有中间件的处理方式都非常简单，如果需要交付给下一中间件，则调用`Context.Next()`。如果当前中间件出错，则返回`Error`结束调用。如果当前处理函数已正常完成处理，则将响应数据赋值`Context.Body = 响应数据`，由响应中间件将Body转换为相应的响应数据，如JSON等。调用流程如koa的中间件调用流程图。
+Elton的实现参考了[koa](https://github.com/koajs/koa)，统一中间件的形式，方便定制各类中间件，所有中间件的处理方式都非常简单，如果需要交付给下一中间件，则调用`Context.Next()`。如果当前中间件出错，则返回`Error`结束调用。如果当前处理函数已正常完成处理，则将响应数据赋值`Context.Body = 响应数据`，由响应中间件将Body转换为相应的响应数据，如JSON等。调用流程如koa的中间件调用流程图。
 
 
 ![koa](./.data/koa.png)
@@ -17,22 +17,22 @@ import (
 	"log"
 	"time"
 
-	"github.com/vicanso/cod"
-	errorHandler "github.com/vicanso/cod-error-handler"
-	recover "github.com/vicanso/cod-recover"
-	responder "github.com/vicanso/cod-responder"
+	"github.com/vicanso/elton"
+	errorHandler "github.com/vicanso/elton-error-handler"
+	recover "github.com/vicanso/elton-recover"
+	responder "github.com/vicanso/elton-responder"
 )
 
 func main() {
 
-	d := cod.New()
+	d := elton.New()
 
 	// 捕捉panic异常，避免程序崩溃
 	d.Use(recover.New())
 	// 错误处理，将错误转换为json响应
 	d.Use(errorHandler.NewDefault())
 	// 请求处理时长
-	d.Use(func(c *cod.Context) (err error) {
+	d.Use(func(c *elton.Context) (err error) {
 		started := time.Now()
 		err = c.Next()
 		log.Printf("response time:%s", time.Since(started))
@@ -41,11 +41,11 @@ func main() {
 	// 对响应数据 c.Body 转换为相应的json响应
 	d.Use(responder.NewDefault())
 
-	getSession := func(c *cod.Context) error {
+	getSession := func(c *elton.Context) error {
 		c.Set("account", "tree.xie")
 		return c.Next()
 	}
-	d.GET("/users/me", getSession, func(c *cod.Context) (err error) {
+	d.GET("/users/me", getSession, func(c *elton.Context) (err error) {
 		c.Body = &struct {
 			Name string `json:"name"`
 			Type string `json:"type"`
@@ -56,7 +56,7 @@ func main() {
 		return
 	})
 
-	d.GET("/error", func(c *cod.Context) (err error) {
+	d.GET("/error", func(c *elton.Context) (err error) {
 		err = errors.New("abcd")
 		return
 	})
@@ -69,38 +69,38 @@ func main() {
 
 一些常用中间件如下：
 
-- [basic auth](https://github.com/vicanso/cod-basic-auth) HTTP Basic Auth，建议只用于内部管理系统使用
-- [body parser](https://github.com/vicanso/cod-body-parser) 请求数据的解析中间件，支持`application/json`以及`application/x-www-form-urlencoded`两种数据类型
-- [compress](https://github.com/vicanso/cod-compress) 数据压缩中间件，默认支持gzip、brotli(需要支持编译参数以及编译相应动态库)以及snappy，也可根据需要增加相应的压缩处理
-- [concurrent limiter](https://github.com/vicanso/cod-concurrent-limiter) 根据指定参数限制并发请求，可用于订单提交等防止重复提交或限制提交频率的场景
-- [etag](https://github.com/vicanso/cod-etag) 用于生成HTTP响应数据的ETag
-- [error handler](https://github.com/vicanso/cod-error-handler) 用于将处理函数的Error转换为对应的响应数据，如HTTP响应中的状态码(40x, 50x)，对应的出错类别等，建议在实际使用中根据项目自定义的Error对象生成相应的响应数据
-- [fresh](https://github.com/vicanso/cod-fresh) 判断HTTP请求是否未修改(Not Modified)
-- [json picker](https://github.com/vicanso/cod-json-picker) 用于从响应的JSON中筛选指定字段
-- [logger](https://github.com/vicanso/cod-logger) 生成HTTP请求日志，支持从请求头、响应头中获取相应信息
-- [proxy](https://github.com/vicanso/cod-proxy) Proxy中间件，可定义请求转发至其它的服务
-- [recover](https://github.com/vicanso/cod-recover) 捕获程序的panic异常，避免程序崩溃
-- [responder](https://github.com/vicanso/cod-responder) 响应处理中间件，用于将`Context.Body`(interface{})转换为对应的JSON数据并输出。如果系统使用xml等输出响应数据，可参考此中间件实现interface{}至xml的转换。
-- [router-concurrent-limiter](https://github.com/vicanso/cod-router-concurrent-limiter) 路由并发限制中间件，可以针对路由限制并发请求量。
-- [stats](https://github.com/vicanso/cod-stats) 请求处理的统计中间件，包括处理时长、状态码、响应数据长度、连接数等信息
-- [session](https://github.com/vicanso/cod-session) Session中间件，默认支持保存至redis或内存中，也可自定义相应的存储
-- [static serve](https://github.com/vicanso/cod-static-serve) 静态文件处理中间件，默认支持从目录中读取静态文件或实现StaticFile的相关接口，从[packr](github.com/gobuffalo/packr/v2)或者数据库(mongodb)等读取文件
-- [tracker](https://github.com/vicanso/cod-tracker) 可以用于在POST、PUT等提交类的接口中增加跟踪日志，此中间件将输出QueryString，Params以及RequestBody部分，并能将指定的字段做"***"的处理，避免输出敏感信息
+- [basic auth](https://github.com/vicanso/elton-basic-auth) HTTP Basic Auth，建议只用于内部管理系统使用
+- [body parser](https://github.com/vicanso/elton-body-parser) 请求数据的解析中间件，支持`application/json`以及`application/x-www-form-urlencoded`两种数据类型
+- [compress](https://github.com/vicanso/elton-compress) 数据压缩中间件，默认支持gzip、brotli(需要支持编译参数以及编译相应动态库)以及snappy，也可根据需要增加相应的压缩处理
+- [concurrent limiter](https://github.com/vicanso/elton-concurrent-limiter) 根据指定参数限制并发请求，可用于订单提交等防止重复提交或限制提交频率的场景
+- [etag](https://github.com/vicanso/elton-etag) 用于生成HTTP响应数据的ETag
+- [error handler](https://github.com/vicanso/elton-error-handler) 用于将处理函数的Error转换为对应的响应数据，如HTTP响应中的状态码(40x, 50x)，对应的出错类别等，建议在实际使用中根据项目自定义的Error对象生成相应的响应数据
+- [fresh](https://github.com/vicanso/elton-fresh) 判断HTTP请求是否未修改(Not Modified)
+- [json picker](https://github.com/vicanso/elton-json-picker) 用于从响应的JSON中筛选指定字段
+- [logger](https://github.com/vicanso/elton-logger) 生成HTTP请求日志，支持从请求头、响应头中获取相应信息
+- [proxy](https://github.com/vicanso/elton-proxy) Proxy中间件，可定义请求转发至其它的服务
+- [recover](https://github.com/vicanso/elton-recover) 捕获程序的panic异常，避免程序崩溃
+- [responder](https://github.com/vicanso/elton-responder) 响应处理中间件，用于将`Context.Body`(interface{})转换为对应的JSON数据并输出。如果系统使用xml等输出响应数据，可参考此中间件实现interface{}至xml的转换。
+- [router-concurrent-limiter](https://github.com/vicanso/elton-router-concurrent-limiter) 路由并发限制中间件，可以针对路由限制并发请求量。
+- [stats](https://github.com/vicanso/elton-stats) 请求处理的统计中间件，包括处理时长、状态码、响应数据长度、连接数等信息
+- [session](https://github.com/vicanso/elton-session) Session中间件，默认支持保存至redis或内存中，也可自定义相应的存储
+- [static serve](https://github.com/vicanso/elton-static-serve) 静态文件处理中间件，默认支持从目录中读取静态文件或实现StaticFile的相关接口，从[packr](github.com/gobuffalo/packr/v2)或者数据库(mongodb)等读取文件
+- [tracker](https://github.com/vicanso/elton-tracker) 可以用于在POST、PUT等提交类的接口中增加跟踪日志，此中间件将输出QueryString，Params以及RequestBody部分，并能将指定的字段做"***"的处理，避免输出敏感信息
 
-## Cod
+## Elton
 
 实现HTTP服务的监听、中间件的顺序调用以及路由的选择调用。
 
-创建一个Cod的实例，并初始化相应的http.Server。
+创建一个Elton的实例，并初始化相应的http.Server。
 
 ```go
-d := cod.New()
+d := elton.New()
 ```
 
-创建一个Cod的实例，并未初始化相应的http.Server，可根据需要再初始化。
+创建一个Elton的实例，并未初始化相应的http.Server，可根据需要再初始化。
 
 ```go
-d := cod.NewWithoutServer()
+d := elton.NewWithoutServer()
 s := &http.Server{
 	Handler: d,
 }
@@ -109,20 +109,20 @@ d.Server = s
 
 ### Server
 
-http.Server对象，在初始化Cod时，将创建一个默认的Server，可以再根据自己的应用场景调整Server的参数配置，如下：
+http.Server对象，在初始化Elton时，将创建一个默认的Server，可以再根据自己的应用场景调整Server的参数配置，如下：
 
 ```go
-d := cod.New()
+d := elton.New()
 d.Server.MaxHeaderBytes = 10 * 1024
 ```
 
 ### Router
 
-[httprouter.Router](https://github.com/julienschmidt/httprouter)对象，Cod使用httprouter来处理http的路由于处理函数的关系，此对象如无必要无需要做调整。
+[httprouter.Router](https://github.com/julienschmidt/httprouter)对象，Elton使用httprouter来处理http的路由于处理函数的关系，此对象如无必要无需要做调整。
 
 ### Routers
 
-记录当前Cod实例中所有的路由信息，为[]*RouterInfo，每个路由信息包括Method与Path，此属性只用于统计等场景使用，不需要调整。
+记录当前Elton实例中所有的路由信息，为[]*RouterInfo，每个路由信息包括Method与Path，此属性只用于统计等场景使用，不需要调整。
 
 ```go
 // RouterInfo router's info
@@ -134,19 +134,19 @@ RouterInfo struct {
 
 ### Middlewares
 
-当前Cod实例中的所有中间件处理函数，为[]Handler，如果需要添加中间件，尽量使用Use，不要直接append此属性。此类函数在匹配路由成功后才会调用，如果不匹配的路由则不会调用。
+当前Elton实例中的所有中间件处理函数，为[]Handler，如果需要添加中间件，尽量使用Use，不要直接append此属性。此类函数在匹配路由成功后才会调用，如果不匹配的路由则不会调用。
 
 ```go
-d := cod.New()
+d := elton.New()
 d.Use(responder.NewDefault())
 ```
 
 ### PreMiddlewares
 
-当前Cod实例中的前置中间件处理函数，为[]PreHandler，此类函数在匹配路由前调用。
+当前Elton实例中的前置中间件处理函数，为[]PreHandler，此类函数在匹配路由前调用。
 
 ```go
-d := cod.New()
+d := elton.New()
 d.Pre(func(req *http.Request) {
 
 })
@@ -159,9 +159,9 @@ d.Pre(func(req *http.Request) {
 注意若在处理过程中返回的Error已被处理（如Error Handler），则并不会触发此出错调用，尽量使用中间件将Error转换为相应的输出，如JSON。
 
 ```go
-d := cod.New()
+d := elton.New()
 
-d.ErrorHandler = func(c *cod.Context, err error) {
+d.ErrorHandler = func(c *elton.Context, err error) {
   if err != nil {
     log.Printf("未处理异常，url:%s, err:%v", c.Request.RequestURI, err)
   }
@@ -169,7 +169,7 @@ d.ErrorHandler = func(c *cod.Context, err error) {
   c.Response.Write([]byte(err.Error()))
 }
 
-d.GET("/ping", func(c *cod.Context) (err error) {
+d.GET("/ping", func(c *elton.Context) (err error) {
   return hes.New("abcd")
 })
 d.ListenAndServe(":8001")
@@ -180,7 +180,7 @@ d.ListenAndServe(":8001")
 未匹配到相应路由时的处理，当无法获取到相应路由时，则会调用此函数（未匹配相应路由时，所有的中间件也不会被调用）。如果有相关统计需要或者自定义的404页面，则可调整此函数，否则可不设置（使用默认）。
 
 ```go
-d := cod.New()
+d := elton.New()
 
 d.NotFoundHandler = func(resp http.ResponseWriter, req *http.Request) {
   // 要增加统计，方便分析404的处理是被攻击还是接口调用错误
@@ -188,7 +188,7 @@ d.NotFoundHandler = func(resp http.ResponseWriter, req *http.Request) {
   resp.Write([]byte("Not found"))
 }
 
-d.GET("/ping", func(c *cod.Context) (err error) {
+d.GET("/ping", func(c *elton.Context) (err error) {
   return hes.New("abcd")
 })
 d.ListenAndServe(":8001")
@@ -199,7 +199,7 @@ d.ListenAndServe(":8001")
 ID生成函数，用于每次请求调用时，生成唯一的ID值。
 
 ```go
-d := cod.New()
+d := elton.New()
 
 d.GenerateID = func() string {
   t := time.Now()
@@ -209,7 +209,7 @@ d.GenerateID = func() string {
 
 d.Use(responder.NewDefault())
 
-d.GET("/ping", func(c *cod.Context) (err error) {
+d.GET("/ping", func(c *elton.Context) (err error) {
   log.Println(c.ID)
   c.Body = "pong"
   return
@@ -222,16 +222,16 @@ d.ListenAndServe(":8001")
 是否启用调用跟踪，设置此参数为true，则会记录每个Handler的调用时长。
 
 ```go
-d := cod.New()
+d := elton.New()
 
 d.EnableTrace = true
-d.OnTrace(func(c *cod.Context, traceInfos []*cod.TraceInfo) {
+d.OnTrace(func(c *elton.Context, traceInfos []*elton.TraceInfo) {
 	log.Println(traceInfos[0])
 })
 
 d.Use(responder.NewDefault())
 
-d.GET("/ping", func(c *cod.Context) (err error) {
+d.GET("/ping", func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
@@ -243,8 +243,8 @@ d.ListenAndServe(":8001")
 用于生成带签名的cookie的密钥，基于[keygrip](https://github.com/vicanso/keygrip)来生成与校验是否合法。
 
 ```go
-d := cod.New()
-d.SignedKeys = new(cod.RWMutexSignedKeys)
+d := elton.New()
+d.SignedKeys = new(elton.RWMutexSignedKeys)
 ```
 
 ### SetFunctionName
@@ -253,18 +253,18 @@ d.SignedKeys = new(cod.RWMutexSignedKeys)
 
 ```go
 // 未设置函数名称
-d := cod.New()
+d := elton.New()
 
 d.EnableTrace = true
-d.OnTrace(func(c *cod.Context, traceInfos []*cod.TraceInfo) {
+d.OnTrace(func(c *elton.Context, traceInfos []*elton.TraceInfo) {
 	buf, _ := json.Marshal(traceInfos)
-	// [{"name":"github.com/vicanso/test/vendor/github.com/vicanso/cod/middleware.NewResponder.func1","duration":10488},{"name":"main.main.func2","duration":1160}]
+	// [{"name":"github.com/vicanso/test/vendor/github.com/vicanso/elton/middleware.NewResponder.func1","duration":10488},{"name":"main.main.func2","duration":1160}]
 	log.Println(string(buf))
 })
 
 d.Use(responder.NewDefault())
 
-d.GET("/ping", func(c *cod.Context) (err error) {
+d.GET("/ping", func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
@@ -273,21 +273,21 @@ d.ListenAndServe(":8001")
 
 ```go
 // 设置responder中间件的名称
-d := cod.New()
+d := elton.New()
 
 d.EnableTrace = true
-d.OnTrace(func(c *cod.Context, traceInfos cod.TraceInfos) {
+d.OnTrace(func(c *elton.Context, traceInfos elton.TraceInfos) {
 	buf, _ := json.Marshal(traceInfos)
 	// [{"name":"responder","duration":21755},{"name":"main.main.func2","duration":1750}]
 	log.Println(string(buf))
-	// cod-0;dur=0.021755;desc="responder",cod-1;dur=0.00175;desc="main.main.func2"
-	log.Println(traceInfos.ServerTiming("cod-"))
+	// elton-0;dur=0.021755;desc="responder",elton-1;dur=0.00175;desc="main.main.func2"
+	log.Println(traceInfos.ServerTiming("elton-"))
 })
 fn := responder.NewDefault()
 d.Use(fn)
 d.SetFunctionName(fn, "responder")
 
-d.GET("/ping", func(c *cod.Context) (err error) {
+d.GET("/ping", func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
@@ -299,7 +299,7 @@ d.ListenAndServe(":8001")
 监听并提供HTTP服务。
 
 ```go
-d := cod.New()
+d := elton.New()
 
 d.ListenAndServe(":8001")
 ```
@@ -310,7 +310,7 @@ d.ListenAndServe(":8001")
 
 ```go
 ln, _ := net.Listen("tcp", "127.0.0.1:0")
-d := cod.New()
+d := elton.New()
 d.Serve(ln)
 ```
 
@@ -327,26 +327,26 @@ http.Handler Interface的实现，在此函数中根据HTTP请求的Method与URL
 添加Handler的处理函数，配置请求的Method与Path，添加相应的处理函数，Path的相关配置与[httprouter](https://github.com/julienschmidt/httprouter)一致。
 
 ```go
-d := cod.New()
+d := elton.New()
 
 
 d.Use(responder.NewDefault())
 
-noop := func(c *cod.Context) error {
+noop := func(c *elton.Context) error {
 	return c.Next()
 }
 
-d.Handle("GET", "/ping", noop, func(c *cod.Context) (err error) {
+d.Handle("GET", "/ping", noop, func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
 
-d.Handle("POST", "/users/:type", func(c *cod.Context) (err error) {
+d.Handle("POST", "/users/:type", func(c *elton.Context) (err error) {
 	c.Body = "OK"
 	return
 })
 
-d.Handle("GET", "/files/*file", func(c *cod.Context) (err error) {
+d.Handle("GET", "/files/*file", func(c *elton.Context) (err error) {
 	c.Body = "file content"
 	return
 })
@@ -354,17 +354,17 @@ d.Handle("GET", "/files/*file", func(c *cod.Context) (err error) {
 d.ListenAndServe(":8001")
 ```
 
-Cod还支持GET，POST，PUT，PATCH，DELETE，HEAD，TRACE以及OPTIONS的方法，这几个方法与`Handle`一致，Method则为相对应的处理，下面两个例子的处理是完全相同的。
+Elton还支持GET，POST，PUT，PATCH，DELETE，HEAD，TRACE以及OPTIONS的方法，这几个方法与`Handle`一致，Method则为相对应的处理，下面两个例子的处理是完全相同的。
 
 ```go
-d.Handle("GET", "/ping", noop, func(c *cod.Context) (err error) {
+d.Handle("GET", "/ping", noop, func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
 ```
 
 ```go
-d.GET("/ping", noop, func(c *cod.Context) (err error) {
+d.GET("/ping", noop, func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
@@ -375,7 +375,7 @@ d.GET("/ping", noop, func(c *cod.Context) (err error) {
 添加8个Method的处理函数，包括GET，POST，PUT，PATCH，DELETE，HEAD，TRACE以及OPTIONS，尽量只根据路由需要，添加相应的Method，不建议直接使用此函数。
 
 ```go
-d.ALL("/ping", noop, func(c *cod.Context) (err error) {
+d.ALL("/ping", noop, func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
@@ -387,10 +387,10 @@ d.ALL("/ping", noop, func(c *cod.Context) (err error) {
 添加全局中间件处理函数，对于所有路由都需要使用到的中间件，则使用此函数添加，若非所有路由都使用到，可以只添加到相应的Group或者就单独添加至Handler。特别需要注意的是，如session之类需要读取数据库的，如非必要，不要使用全局中间件形式。
 
 ```go
-d := cod.New()
+d := elton.New()
 
 // 记录HTTP请求的时间、响应码
-d.Use(func(c *cod.Context) (err error) {
+d.Use(func(c *elton.Context) (err error) {
 	startedAt := time.Now()
 	req := c.Request
 	err = c.Next()
@@ -400,7 +400,7 @@ d.Use(func(c *cod.Context) (err error) {
 
 d.Use(responder.NewDefault())
 
-d.GET("/ping", func(c *cod.Context) (err error) {
+d.GET("/ping", func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
@@ -413,7 +413,7 @@ d.ListenAndServe(":8001")
 添加全局前置中间件处理函数，对于所有请求都会调用（包括无匹配路由的请求）。
 
 ```go
-d := cod.New()
+d := elton.New()
 // replace url prefix /api
 urlPrefix := "/api"
 d.Pre(func(req *http.Request) {
@@ -423,7 +423,7 @@ d.Pre(func(req *http.Request) {
 	}
 })
 
-d.GET("/ping", func(c *cod.Context) (err error) {
+d.GET("/ping", func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
@@ -436,7 +436,7 @@ d.ListenAndServe(":8001")
 增加参数校验函数，用于param的校验（在最后一个handler执行时调用）
 
 ```go
-d := cod.New()
+d := elton.New()
 d.AddValidator("id", func(value string) error {
 	reg := regexp.MustCompile(`^[0-9]{5}$`)
 	if !reg.MatchString(value) {
@@ -451,10 +451,10 @@ d.GET("/:id", func(c *Context) error {
 ```
 ### AddGroup
 
-将group中的所有路由处理添加至cod。
+将group中的所有路由处理添加至Elton。
 
 ```go
-d := cod.New()
+d := elton.New()
 userGroup := NewGroup("/users", func(c *Context) error {
 	return c.Next()
 })
@@ -466,16 +466,16 @@ d.AddGroup(userGroup)
 添加Error的监听函数，如果当任一Handler的处理返回Error，并且其它的Handler并未将此Error处理，则会触发error事件。
 
 ```go
-d := cod.New()
+d := elton.New()
 
-d.OnError(func(c *cod.Context, err error) {
+d.OnError(func(c *elton.Context, err error) {
 	// 发送邮件告警等
 	log.Println("unhandle error, " + err.Error())
 })
 
 d.Use(responder.NewDefault())
 
-d.GET("/ping", func(c *cod.Context) (err error) {
+d.GET("/ping", func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
@@ -507,7 +507,7 @@ HTTP响应头，默认初始化为Response的Headers，此http.Header为响应�
 
 ### ID
 
-Context ID，如果有设置Cod.GenerateID，则在每次接收到请求，创建Context之后，调用`GenerateID`生成，一般用于日志或者统计中唯一标识当前请求。
+Context ID，如果有设置Elton.GenerateID，则在每次接收到请求，创建Context之后，调用`GenerateID`生成，一般用于日志或者统计中唯一标识当前请求。
 
 ### Route
 
@@ -539,7 +539,7 @@ HTTP的响应数据缓冲（字节），此数据为真正返回的响应体，�
 
 ### RequestBody
 
-HTTP请求体，对于`POST`，`PUT`以及`PATCH`提交数据的请求，此字段用于保存请求体。注意：默认cod中并未从请求中读取相应的请求体，需要使用`body_parser`中间件来生成或者自定义相应的中间件。
+HTTP请求体，对于`POST`，`PUT`以及`PATCH`提交数据的请求，此字段用于保存请求体。注意：默认Elton中并未从请求中读取相应的请求体，需要使用`body_parser`中间件来生成或者自定义相应的中间件。
 
 ### Reset
 
@@ -548,7 +548,7 @@ HTTP请求体，对于`POST`，`PUT`以及`PATCH`提交数据的请求，此字�
 ```go
 req := httptest.NewRequest("GET", "/users/me", nil)
 resp := httptest.NewRecorder()
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 // &{GET /users/me HTTP/1.1 1 1 map[] {} <nil> 0 [] false example.com map[] map[] <nil> map[] 192.0.2.1:1234 /users/me <nil> <nil> <nil> <nil>}
 fmt.Println(c.Request)
 c.Reset()
@@ -572,7 +572,7 @@ fmt.Println(c.RemoteAddr())
 req := httptest.NewRequest("GET", "/users/me", nil)
 resp := httptest.NewRecorder()
 req.Header.Set("X-Forwarded-For", "8.8.8.8")
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 // 8.8.8.8
 fmt.Println(c.RealIP())
 ```
@@ -585,7 +585,7 @@ fmt.Println(c.RealIP())
 req := httptest.NewRequest("GET", "/users/me", nil)
 resp := httptest.NewRecorder()
 req.Header.Set("X-Forwarded-For", "127.0.0.1, 8.8.8.8")
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 // 8.8.8.8
 fmt.Println(c.ClientIP())
 ```
@@ -596,7 +596,7 @@ fmt.Println(c.ClientIP())
 
 ```go
 // curl 'http://127.0.0.1:8001/users/me'
-d.GET("/users/:type", func(c *cod.Context) (err error) {
+d.GET("/users/:type", func(c *elton.Context) (err error) {
   t := c.Param("type")
   // me
   fmt.Println(t)
@@ -612,7 +612,7 @@ d.GET("/users/:type", func(c *cod.Context) (err error) {
 ```go
 resp := httptest.NewRecorder()
 req := httptest.NewRequest("GET", "/users/me?type=vip", nil)
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 // vip
 fmt.Println(c.QueryParam("type"))
 ```
@@ -624,7 +624,7 @@ fmt.Println(c.QueryParam("type"))
 ```go
 resp := httptest.NewRecorder()
 req := httptest.NewRequest("GET", "/users/me?type=vip", nil)
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 // map[type:vip]
 fmt.Println(c.Query())
 ```
@@ -634,7 +634,7 @@ fmt.Println(c.Query())
 重定向当前请求。
 
 ```go
-d.GET("/redirect", func(c *cod.Context) (err error) {
+d.GET("/redirect", func(c *elton.Context) (err error) {
   c.Redirect(301, "/ping")
   return
 })
@@ -645,12 +645,12 @@ d.GET("/redirect", func(c *cod.Context) (err error) {
 设置临时保存的值至context，在context的生命周期内有效。
 
 ```go
-d.Use(func(c *cod.Context) error {
+d.Use(func(c *elton.Context) error {
   c.Set("id", rand.Int())
   return c.Next()
 })
 
-d.GET("/ping", func(c *cod.Context) (err error) {
+d.GET("/ping", func(c *elton.Context) (err error) {
   // 6129484611666145821
   fmt.Println(c.Get("id").(int))
   c.Body = "pong"
@@ -663,12 +663,12 @@ d.GET("/ping", func(c *cod.Context) (err error) {
 从context中获取保存的值，注意返回的为interface{}类型，需要自己做类型转换。
 
 ```go
-d.Use(func(c *cod.Context) error {
+d.Use(func(c *elton.Context) error {
   c.Set("id", rand.Int())
   return c.Next()
 })
 
-d.GET("/ping", func(c *cod.Context) (err error) {
+d.GET("/ping", func(c *elton.Context) (err error) {
   // 6129484611666145821
   fmt.Println(c.Get("id").(int))
   c.Body = "pong"
@@ -683,7 +683,7 @@ d.GET("/ping", func(c *cod.Context) (err error) {
 ```go
 req := httptest.NewRequest("GET", "/users/me", nil)
 resp := httptest.NewRecorder()
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 fmt.Println(c.GetRequestHeader("X-Token"))
 ```
 
@@ -694,7 +694,7 @@ fmt.Println(c.GetRequestHeader("X-Token"))
 ```go
 req := httptest.NewRequest("GET", "/users/me", nil)
 resp := httptest.NewRecorder()
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 c.SetHeader("X-Response-Id", "abc")
 // map[X-Response-Id:[abc]]
 fmt.Println(c.Header())
@@ -707,7 +707,7 @@ fmt.Println(c.Header())
 ```go
 req := httptest.NewRequest("GET", "/users/me", nil)
 resp := httptest.NewRecorder()
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 c.SetHeader("X-Response-Id", "abc")
 // abc
 fmt.Println(c.GetHeader("X-Response-Id"))
@@ -720,7 +720,7 @@ fmt.Println(c.GetHeader("X-Response-Id"))
 ```go
 req := httptest.NewRequest("GET", "/users/me", nil)
 resp := httptest.NewRecorder()
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 c.SetHeader("X-Response-Id", "abc")
 // abc
 fmt.Println(c.GetHeader("X-Response-Id"))
@@ -733,7 +733,7 @@ fmt.Println(c.GetHeader("X-Response-Id"))
 ```go
 req := httptest.NewRequest("GET", "/users/me", nil)
 resp := httptest.NewRecorder()
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 c.AddHeader("X-Response-Id", "abc")
 c.AddHeader("X-Response-Id", "def")
 // map[X-Response-Id:[abc def]]
@@ -742,7 +742,7 @@ fmt.Println(c.Header())
 
 ### Cookie/SignedCookie
 
-获取HTTP请求头中的cookie。SignedCookie则会根据初始化Cod时配置的Keys来校验cookie是否符合，符合才返回。
+获取HTTP请求头中的cookie。SignedCookie则会根据初始化Elton时配置的Keys来校验cookie是否符合，符合才返回。
 
 ```go
 req := httptest.NewRequest("GET", "/users/me", nil)
@@ -751,19 +751,19 @@ req.AddCookie(&http.Cookie{
   Value: "abc",
 })
 resp := httptest.NewRecorder()
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 // jt=abc <nil>
 fmt.Println(c.Cookie("jt"))
 ```
 
 ### AddCookie/AddSignedCookie
 
-设置Cookie至HTTP响应头中。AddSignedCookie则根据当前的Cookie以及初化cod时配置的Keys再生成一个校验cookie(Name为当前Cookie的Name + ".sig")。
+设置Cookie至HTTP响应头中。AddSignedCookie则根据当前的Cookie以及初化Elton时配置的Keys再生成一个校验cookie(Name为当前Cookie的Name + ".sig")。
 
 ```go
 req := httptest.NewRequest("GET", "/users/me", nil)
 resp := httptest.NewRecorder()
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 c.AddCookie(&http.Cookie{
   Name:  "jt",
   Value: "abc",
@@ -778,7 +778,7 @@ fmt.Println(c.Header())
 设置HTTP请求的响应状态码为204，响应体为空。
 
 ```go
-d.GET("/no-content", func(c *cod.Context) (err error) {
+d.GET("/no-content", func(c *elton.Context) (err error) {
   c.NoContent()
   return
 })
@@ -789,7 +789,7 @@ d.GET("/no-content", func(c *cod.Context) (err error) {
 设置HTTP请求的响应状态码为304，响应体为空。注意此方法判断是否客户端的缓存数据与服务端的响应数据一致再使用，不建议自己调用此函数，建议使用中间件`fresh`。
 
 ```go
-d.GET("/not-modified", func(c *cod.Context) (err error) {
+d.GET("/not-modified", func(c *elton.Context) (err error) {
   c.NotModified()
   return
 })
@@ -800,7 +800,7 @@ d.GET("/not-modified", func(c *cod.Context) (err error) {
 设置HTTP请求的响应码为201，并设置body。
 
 ```go
-d.POST("/users", func(c *cod.Context) (err error) {
+d.POST("/users", func(c *elton.Context) (err error) {
   c.Created(map[string]string{
     "account": "tree.xie",
   })
@@ -815,7 +815,7 @@ d.POST("/users", func(c *cod.Context) (err error) {
 ```go
 req := httptest.NewRequest("GET", "/users/me", nil)
 resp := httptest.NewRecorder()
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 c.NoCache()
 // map[Cache-Control:[no-cache]]
 fmt.Println(c.Header())
@@ -828,7 +828,7 @@ fmt.Println(c.Header())
 ```go
 req := httptest.NewRequest("GET", "/users/me", nil)
 resp := httptest.NewRecorder()
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 c.NoCache()
 // map[Cache-Control:[no-store]]
 fmt.Println(c.Header())
@@ -841,7 +841,7 @@ fmt.Println(c.Header())
 ```go
 req := httptest.NewRequest("GET", "/users/me", nil)
 resp := httptest.NewRecorder()
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 c.CacheMaxAge("1m")
 // map[Cache-Control:[public, max-age=60]]
 fmt.Println(c.Header())
@@ -854,7 +854,7 @@ fmt.Println(c.Header())
 ```go
 req := httptest.NewRequest("GET", "/users/me", nil)
 resp := httptest.NewRecorder()
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 c.SetContentTypeByExt("user.json")
 // map[Content-Type:[application/json]]
 fmt.Println(c.Header())
@@ -867,7 +867,7 @@ fmt.Println(c.Header())
 ```go
 req := httptest.NewRequest("GET", "/users/me", nil)
 resp := httptest.NewRecorder()
-c := cod.NewContext(resp, req)
+c := elton.NewContext(resp, req)
 c.DisableReuse()
 ```
 
@@ -887,16 +887,16 @@ c.Pipe(r)
 
 ### NewGroup 
 
-创建一个组，它包括Path的前缀以及组内公共中间件（非全局），适用于创建有相同前置校验条件的路由处理，如用户相关的操作。返回的Group对象包括`GET`，`POST`，`PUT`等方法，与Cod的似，之后可以通过`AddGroup`将所有路由处理添加至cod实例。
+创建一个组，它包括Path的前缀以及组内公共中间件（非全局），适用于创建有相同前置校验条件的路由处理，如用户相关的操作。返回的Group对象包括`GET`，`POST`，`PUT`等方法，与Elton的似，之后可以通过`AddGroup`将所有路由处理添加至Elton实例。
 
 ```go
-userGroup := cod.NewGroup("/users", noop)
-userGroup.GET("/me", func(c *cod.Context) (err error) {
+userGroup := elton.NewGroup("/users", noop)
+userGroup.GET("/me", func(c *elton.Context) (err error) {
 	// 从session中读取用户信息...
 	c.Body = "user info"
 	return
 })
-userGroup.POST("/login", func(c *cod.Context) (err error) {
+userGroup.POST("/login", func(c *elton.Context) (err error) {
 	// 登录验证处理...
 	c.Body = "login success"
 	return

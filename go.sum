@@ -11,5 +11,7 @@ github.com/vicanso/hes v0.1.4 h1:n8kG8krvNJF4Sj1PvZOEUzdUsmDSbCcGr8C1nYnoP+o=
 github.com/vicanso/hes v0.1.4/go.mod h1:bG0UJ3EihDKObFcLLwJYjxHHr9saFllsFcepyDIvFlo=
 github.com/vicanso/hes v0.2.0 h1:ONvSxpY41EmcLIVRXNbnQ3wT1YtjUmp+OfOTWIxgx14=
 github.com/vicanso/hes v0.2.0/go.mod h1:QcxOFmFfBQMhASTaLgnFayXYCgevdSeBVprt+o+3eKo=
+github.com/vicanso/hes v0.2.1 h1:jRFEADmiQ30koVY/sKwlkhyXM5B3QbVVizLqrjNJgPw=
+github.com/vicanso/hes v0.2.1/go.mod h1:QcxOFmFfBQMhASTaLgnFayXYCgevdSeBVprt+o+3eKo=
 github.com/vicanso/keygrip v0.1.0 h1:/zYzoVIbREAvaxSM7bo3/oSXuuYztaP71dPBfhRoNkM=
 github.com/vicanso/keygrip v0.1.0/go.mod h1:cI05iOjY00NJ7oH2Z9Zdm9eJPUkpoex3XnEubK78nho=

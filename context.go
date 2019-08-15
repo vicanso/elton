@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cod
+package elton
 
 import (
 	"bytes"
@@ -32,7 +32,7 @@ import (
 )
 
 type (
-	// Context cod context
+	// Context elton context
 	Context struct {
 		Request  *http.Request
 		Response http.ResponseWriter
@@ -64,8 +64,8 @@ type (
 		realIP string
 		// clientIP the clint ip
 		clientIP string
-		// cod instance
-		cod *Cod
+		// elton instance
+		elton *Elton
 		// reuseDisabled reuse disabled
 		reuseDisabled bool
 	}
@@ -98,7 +98,7 @@ func (c *Context) Reset() {
 	c.m = nil
 	c.realIP = ""
 	c.clientIP = ""
-	c.cod = nil
+	c.elton = nil
 	c.reuseDisabled = false
 }
 
@@ -303,7 +303,7 @@ func (c *Context) AddCookie(cookie *http.Cookie) error {
 }
 
 func (c *Context) getKeys() []string {
-	d := c.cod
+	d := c.elton
 	if d == nil || d.SignedKeys == nil {
 		return nil
 	}
@@ -462,13 +462,13 @@ func (c *Context) Push(target string, opts *http.PushOptions) (err error) {
 	return pusher.Push(target, opts)
 }
 
-// Cod get cod instance
-func (c *Context) Cod() *Cod {
-	return c.cod
+// Elton get elton instance
+func (c *Context) Elton() *Elton {
+	return c.elton
 }
 
-// Pass pass requst to another cod
-func (c *Context) Pass(another *Cod) {
+// Pass pass requst to another elton
+func (c *Context) Pass(another *Elton) {
 	// 设置为已commit，避免当前cod继续处理
 	c.Committed = true
 	another.ServeHTTP(c.Response, c.Request)

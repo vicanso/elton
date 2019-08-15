@@ -1,4 +1,4 @@
-package cod
+package elton
 
 import (
 	"bytes"
@@ -529,7 +529,7 @@ func TestConvertToServerTiming(t *testing.T) {
 			Name:     "b",
 			Duration: time.Millisecond + time.Microsecond,
 		})
-		assert.Equal(`cod-0;dur=0.01;desc="a",cod-1;dur=1;desc="b"`, string(traceInfos.ServerTiming("cod-")))
+		assert.Equal(`elton-0;dur=0.01;desc="a",elton-1;dur=1;desc="b"`, string(traceInfos.ServerTiming("elton-")))
 	})
 }
 

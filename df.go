@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cod
+package elton
 
 import (
 	"net/http"
@@ -54,8 +54,8 @@ var (
 )
 
 const (
-	// ErrCategoryCod cod category
-	ErrCategoryCod = "cod"
+	// ErrCategoryCod elton category
+	ErrCategoryCod = "elton"
 	// HeaderXForwardedFor x-forwarded-for
 	HeaderXForwardedFor = "X-Forwarded-For"
 	// HeaderXRealIP x-real-ip

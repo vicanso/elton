@@ -1,4 +1,4 @@
-package cod
+package elton
 
 import (
 	"bytes"
@@ -30,7 +30,7 @@ func TestReset(t *testing.T) {
 		m:             make(map[interface{}]interface{}),
 		realIP:        "abcd",
 		clientIP:      "abcd",
-		cod:           &Cod{},
+		elton:         &Elton{},
 		reuseDisabled: true,
 	}
 	c.Reset()
@@ -49,7 +49,7 @@ func TestReset(t *testing.T) {
 	assert.Nil(c.m)
 	assert.Equal("", c.realIP)
 	assert.Equal("", c.clientIP)
-	assert.Nil(c.cod)
+	assert.Nil(c.elton)
 	assert.False(c.reuseDisabled)
 }
 
@@ -259,7 +259,7 @@ func TestGetKeys(t *testing.T) {
 		keys: keys,
 	}
 	d.SignedKeys = ssk
-	c.cod = d
+	c.elton = d
 	assert.Equal(keys, c.getKeys())
 }
 
@@ -300,14 +300,14 @@ func TestSignedCookie(t *testing.T) {
 	sk.SetKeys([]string{
 		"secret",
 	})
-	cod := &Cod{
+	elton := &Elton{
 		SignedKeys: sk,
 	}
 	t.Run("set signed cookie", func(t *testing.T) {
 		assert := assert.New(t)
 		resp := httptest.NewRecorder()
 		c := NewContext(resp, nil)
-		c.cod = cod
+		c.elton = elton
 		cookie := &http.Cookie{
 			Name:     "a",
 			Value:    "b",
@@ -336,7 +336,7 @@ func TestSignedCookie(t *testing.T) {
 		_, err := c.SignedCookie("a")
 		assert.Equal(errSignKeyIsNil, err)
 
-		c.cod = cod
+		c.elton = elton
 		cookie, err := c.SignedCookie("a")
 		assert.Nil(err, "signed cookie should be successful")
 		assert.Equal("b", cookie.Value)
@@ -355,7 +355,7 @@ func TestSignedCookie(t *testing.T) {
 		})
 		resp := httptest.NewRecorder()
 		c := NewContext(resp, req)
-		c.cod = cod
+		c.elton = elton
 		cookie, err := c.SignedCookie("a")
 		assert.Equal(http.ErrNoCookie, err)
 		assert.Nil(cookie)
@@ -495,8 +495,8 @@ func TestPush(t *testing.T) {
 func TestGetCod(t *testing.T) {
 	assert := assert.New(t)
 	c := NewContext(nil, nil)
-	c.cod = &Cod{}
-	assert.Equal(c.cod, c.Cod())
+	c.elton = &Elton{}
+	assert.Equal(c.elton, c.Elton())
 }
 func TestNewContext(t *testing.T) {
 	assert := assert.New(t)
