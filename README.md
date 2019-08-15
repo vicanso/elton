@@ -65,7 +65,7 @@ func main() {
 }
 ```
 
-上面的例子已经实现了简单的HTTP响应（得益于golang自带http的强大），整个框架中主要有两个struct：Cod与Context，下面我们来详细介绍这两个struct。
+上面的例子已经实现了简单的HTTP响应（得益于golang自带http的强大），整个框架中主要有两个struct：Elton与Context，下面我们来详细介绍这两个struct。
 
 一些常用中间件如下：
 
