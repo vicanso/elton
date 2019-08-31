@@ -65,9 +65,18 @@ func main() {
 }
 ```
 
-上面的例子已经实现了简单的HTTP响应（得益于golang自带http的强大），整个框架中主要有两个struct：Elton与Context，下面我们来详细介绍这两个struct。
+## 入门说明
 
-一些常用中间件如下：
+- [elton的简要概述](https://github.com/vicanso/elton/wiki)
+- [body参数反序列化与校验](https://github.com/vicanso/elton/wiki/body%E5%8F%82%E6%95%B0%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B8%8E%E6%A0%A1%E9%AA%8C)
+- [启用Server Timing](https://github.com/vicanso/elton/wiki/%E5%90%AF%E7%94%A8%E4%B8%AD%E9%97%B4%E4%BB%B6%E5%A4%84%E7%90%86%E6%97%B6%E9%95%BF%E7%BB%9F%E8%AE%A1%E5%B9%B6%E8%BE%93%E5%87%BAServer-Timing)
+- [性能测试](https://github.com/vicanso/elton/wiki/%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95)
+- [禁止复用Context](https://github.com/vicanso/elton/wiki/%E7%A6%81%E6%AD%A2%E5%A4%8D%E7%94%A8context)
+- [自定义body parser中间件](https://github.com/vicanso/elton/wiki/%E8%87%AA%E5%AE%9A%E4%B9%89body-parser%E4%B8%AD%E9%97%B4%E4%BB%B6)
+- [自定义压缩中间件](https://github.com/vicanso/elton/wiki/%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8E%8B%E7%BC%A9%E4%B8%AD%E9%97%B4%E4%BB%B6)
+- [路由参数校验](https://github.com/vicanso/elton/wiki/%E8%B7%AF%E7%94%B1%E5%8F%82%E6%95%B0%E6%A0%A1%E9%AA%8C)
+
+## 常用中间件
 
 - [basic auth](https://github.com/vicanso/elton-basic-auth) HTTP Basic Auth，建议只用于内部管理系统使用
 - [body parser](https://github.com/vicanso/elton-body-parser) 请求数据的解析中间件，支持`application/json`以及`application/x-www-form-urlencoded`两种数据类型
