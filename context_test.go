@@ -22,16 +22,16 @@ func TestReset(t *testing.T) {
 		Next: func() error {
 			return nil
 		},
-		Params:        make(map[string]string),
-		StatusCode:    200,
-		Body:          make(map[string]string),
-		BodyBuffer:    bytes.NewBufferString("abcd"),
-		RequestBody:   []byte("abcd"),
-		m:             make(map[interface{}]interface{}),
-		realIP:        "abcd",
-		clientIP:      "abcd",
-		elton:         &Elton{},
-		reuseDisabled: true,
+		Params:      make(map[string]string),
+		StatusCode:  200,
+		Body:        make(map[string]string),
+		BodyBuffer:  bytes.NewBufferString("abcd"),
+		RequestBody: []byte("abcd"),
+		m:           make(map[interface{}]interface{}),
+		realIP:      "abcd",
+		clientIP:    "abcd",
+		elton:       &Elton{},
+		reuseStatus: ReuseContextEnabled,
 	}
 	c.Reset()
 	assert.Nil(c.Request)
@@ -50,7 +50,7 @@ func TestReset(t *testing.T) {
 	assert.Equal("", c.realIP)
 	assert.Equal("", c.clientIP)
 	assert.Nil(c.elton)
-	assert.False(c.reuseDisabled)
+	assert.Equal(int32(ReuseContextEnabled), c.reuseStatus)
 }
 
 func TestContext(t *testing.T) {
@@ -480,8 +480,9 @@ func TestSetContentTypeByExt(t *testing.T) {
 func TestDisableReuse(t *testing.T) {
 	assert := assert.New(t)
 	c := &Context{}
+	assert.True(c.isReuse())
 	c.DisableReuse()
-	assert.True(c.reuseDisabled)
+	assert.False(c.isReuse())
 }
 
 func TestPush(t *testing.T) {

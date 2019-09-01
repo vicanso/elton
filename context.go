@@ -24,11 +24,19 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/vicanso/hes"
 	"github.com/vicanso/keygrip"
+)
+
+const (
+	// ReuseContextEnabled resuse context enabled
+	ReuseContextEnabled int32 = iota
+	// ReuseContextDisabled reuse context disabled
+	ReuseContextDisabled
 )
 
 type (
@@ -66,8 +74,8 @@ type (
 		clientIP string
 		// elton instance
 		elton *Elton
-		// reuseDisabled reuse disabled
-		reuseDisabled bool
+		// reuseStatus reuse status
+		reuseStatus int32
 	}
 )
 
@@ -99,7 +107,7 @@ func (c *Context) Reset() {
 	c.realIP = ""
 	c.clientIP = ""
 	c.elton = nil
-	c.reuseDisabled = false
+	c.reuseStatus = ReuseContextEnabled
 }
 
 // GetRemoteAddr get remote addr
@@ -447,7 +455,12 @@ func (c *Context) SetContentTypeByExt(file string) {
 
 // DisableReuse set the context disable reuse
 func (c *Context) DisableReuse() {
-	c.reuseDisabled = true
+	atomic.StoreInt32(&c.reuseStatus, ReuseContextDisabled)
+}
+
+func (c *Context) isReuse() bool {
+	v := atomic.LoadInt32(&c.reuseStatus)
+	return v == ReuseContextEnabled
 }
 
 // Push http server push

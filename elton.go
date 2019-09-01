@@ -394,7 +394,7 @@ func (d *Elton) Handle(method, path string, handlerList ...Handler) {
 			}
 		}
 		c.Committed = true
-		if !c.reuseDisabled {
+		if !c.isReuse() {
 			d.ctxPool.Put(c)
 		}
 	})
