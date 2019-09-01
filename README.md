@@ -9,7 +9,6 @@ Elton的实现参考了[koa](https://github.com/koajs/koa)，统一中间件的�
 package main
 
 import (
-	"errors"
 	"log"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 	errorHandler "github.com/vicanso/elton-error-handler"
 	recover "github.com/vicanso/elton-recover"
 	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/hes"
 )
 
 func main() {
@@ -53,7 +53,12 @@ func main() {
 	})
 
 	d.GET("/error", func(c *elton.Context) (err error) {
-		err = errors.New("abcd")
+		// 自定义的error
+		err = &hes.Error{
+			StatusCode: 400,
+			Category:   "custom-error",
+			Message:    "error message",
+		}
 		return
 	})
 
@@ -114,7 +119,7 @@ d.Server = s
 
 ### Server
 
-http.Server对象，在初始化Elton时，将创建一个默认的Server，可以再根据自己的应用场景调整Server的参数配置，如下：
+http.Server对象，在初始化Elton时，将创建一个默认的Server，可以根据自己的应用场景调整Server的参数配置，如下：
 
 ```go
 d := elton.New()
@@ -123,7 +128,7 @@ d.Server.MaxHeaderBytes = 10 * 1024
 
 ### Router
 
-[httprouter.Router](https://github.com/julienschmidt/httprouter)对象，Elton使用httprouter来处理http的路由于处理函数的关系，此对象如无必要无需要做调整。
+[httprouter.Router](https://github.com/julienschmidt/httprouter)对象，Elton使用httprouter来处理http的路由对应关系，此对象如无必要无需要做调整。
 
 ### Routers
 
@@ -875,10 +880,25 @@ resp := httptest.NewRecorder()
 c := elton.NewContext(resp, req)
 c.DisableReuse()
 ```
+### Pass
+
+将当前context转至另一个新的server实例处理。
+
+```go
+d1 := elton.New()
+d2 := elton.New()
+
+
+d1.GET("/ping", func(c *elton.Context) (err error) {
+	c.Pass(d2)
+	return
+})
+d1.ListenAndServe(":8001")
+```
 
 ### Pipe
 
-将当前Reader pipe向Response，用于流式输出响应数据，节省内存。
+将当前Reader pipe向Response，用于流式输出响应数据，节省内存使用。
 
 ```go
 resp := httptest.NewRecorder()
@@ -888,6 +908,11 @@ r := bytes.NewReader(data)
 c.Pipe(r)
 ```
 
+### IsReaderBody
+
+判断该context的body是否io.Reader，主要用于流式响应处理。
+
+
 ## Group
 
 ### NewGroup 
@@ -895,6 +920,7 @@ c.Pipe(r)
 创建一个组，它包括Path的前缀以及组内公共中间件（非全局），适用于创建有相同前置校验条件的路由处理，如用户相关的操作。返回的Group对象包括`GET`，`POST`，`PUT`等方法，与Elton的似，之后可以通过`AddGroup`将所有路由处理添加至Elton实例。
 
 ```go
+d := elton.New()
 userGroup := elton.NewGroup("/users", noop)
 userGroup.GET("/me", func(c *elton.Context) (err error) {
 	// 从session中读取用户信息...
@@ -906,4 +932,5 @@ userGroup.POST("/login", func(c *elton.Context) (err error) {
 	c.Body = "login success"
 	return
 })
+d.AddGroup(userGroup)
 ```
