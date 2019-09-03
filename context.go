@@ -424,17 +424,13 @@ func (c *Context) NoStore() {
 }
 
 // CacheMaxAge set http response to cache for max age
-func (c *Context) CacheMaxAge(age string) {
+func (c *Context) CacheMaxAge(age string, args ...string) {
 	d, _ := time.ParseDuration(age)
 	cache := "public, max-age=" + strconv.Itoa(int(d.Seconds()))
-	c.SetHeader(HeaderCacheControl, cache)
-}
-
-// CacheSMaxAge set http response to cache for s-max age
-func (c *Context) CacheSMaxAge(age, sMaxAge string) {
-	d, _ := time.ParseDuration(age)
-	d1, _ := time.ParseDuration(sMaxAge)
-	cache := fmt.Sprintf("public, max-age=%d, s-maxage=%d", int(d.Seconds()), int(d1.Seconds()))
+	if len(args) != 0 {
+		d1, _ := time.ParseDuration(args[0])
+		cache += fmt.Sprintf(", s-maxage=%d", int(d1.Seconds()))
+	}
 	c.SetHeader(HeaderCacheControl, cache)
 }
 

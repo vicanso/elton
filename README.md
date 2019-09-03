@@ -855,6 +855,9 @@ c := elton.NewContext(resp, req)
 c.CacheMaxAge("1m")
 // map[Cache-Control:[public, max-age=60]]
 fmt.Println(c.Header())
+c.CacheMaxAge("1m", "10s")
+// map[Cache-Control:[public, max-age=60, s-maxage=10]]
+fmt.Println(c.Header()
 ```
 
 ### SetContentTypeByExt
