@@ -213,8 +213,10 @@ func (c *Context) Redirect(code int, url string) (err error) {
 		err = ErrInvalidRedirect
 		return
 	}
+
 	c.StatusCode = code
-	c.SetHeader(HeaderLocation, url)
+	c.Committed = true
+	http.Redirect(c.Response, c.Request, url, code)
 	return
 }
 

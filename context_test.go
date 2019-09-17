@@ -365,8 +365,9 @@ func TestSignedCookie(t *testing.T) {
 
 func TestRedirect(t *testing.T) {
 	assert := assert.New(t)
+	req := httptest.NewRequest("GET", "/", nil)
 	resp := httptest.NewRecorder()
-	c := NewContext(resp, nil)
+	c := NewContext(resp, req)
 	err := c.Redirect(299, "")
 	assert.Equal(err, ErrInvalidRedirect)
 
@@ -374,6 +375,7 @@ func TestRedirect(t *testing.T) {
 	err = c.Redirect(302, url)
 	assert.Nil(err)
 	assert.Equal(url, c.GetHeader(HeaderLocation))
+	assert.Equal(302, c.StatusCode)
 }
 
 func TestCreate(t *testing.T) {
