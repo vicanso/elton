@@ -216,6 +216,8 @@ func (c *Context) Redirect(code int, url string) (err error) {
 
 	c.StatusCode = code
 	c.Committed = true
+	c.Body = nil
+	c.BodyBuffer = nil
 	http.Redirect(c.Response, c.Request, url, code)
 	return
 }
