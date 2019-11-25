@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -525,6 +526,23 @@ func TestContextPass(t *testing.T) {
 	d.ServeHTTP(resp, req)
 	assert.Equal(http.StatusOK, resp.Code)
 	assert.Equal("new data", resp.Body.String())
+}
+
+func TestContextServerTiming(t *testing.T) {
+	assert := assert.New(t)
+	traceInfos := make(TraceInfos, 0)
+	traceInfos = append(traceInfos, &TraceInfo{
+		Name:     "a",
+		Duration: time.Microsecond * 10,
+	})
+	traceInfos = append(traceInfos, &TraceInfo{
+		Name:     "b",
+		Duration: time.Millisecond + time.Microsecond,
+	})
+	resp := httptest.NewRecorder()
+	c := NewContext(resp, nil)
+	c.ServerTiming(traceInfos, "elton-")
+	assert.Equal("elton-0;dur=0.01;desc=\"a\",elton-1;dur=1;desc=\"b\"", c.GetHeader(HeaderServerTiming))
 }
 
 func TestPipe(t *testing.T) {

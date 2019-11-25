@@ -507,6 +507,14 @@ func (c *Context) IsReaderBody() bool {
 	return ok
 }
 
+// ServerTiming convert trace info to http response server timing
+func (c *Context) ServerTiming(traceInfos TraceInfos, prefix string) {
+	value := traceInfos.ServerTiming(prefix)
+	if value != "" {
+		c.SetHeader(HeaderServerTiming, value)
+	}
+}
+
 // NewContext new a context
 func NewContext(resp http.ResponseWriter, req *http.Request) *Context {
 	c := &Context{}
