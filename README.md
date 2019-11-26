@@ -938,3 +938,16 @@ userGroup.POST("/login", func(c *elton.Context) (err error) {
 })
 d.AddGroup(userGroup)
 ```
+
+## bench
+
+```
+BenchmarkRoutes-8                	 3489271	       343 ns/op	     376 B/op	       4 allocs/op
+BenchmarkGetFunctionName-8       	129711422	         9.23 ns/op	       0 B/op	       0 allocs/op
+BenchmarkContextGet-8            	14131228	        84.4 ns/op	      16 B/op	       1 allocs/op
+BenchmarkContextNewMap-8         	183387170	         6.52 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConvertServerTiming-8   	 1430475	       839 ns/op	     360 B/op	      11 allocs/op
+BenchmarkGetStatus-8             	1000000000	         0.272 ns/op	       0 B/op	       0 allocs/op
+BenchmarkRWMutexSignedKeys-8     	35028435	        33.5 ns/op
+BenchmarkAtomicSignedKeys-8      	602747588	         1.99 ns/op
+```
