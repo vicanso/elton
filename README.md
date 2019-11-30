@@ -3,7 +3,7 @@
 [![Build Status](https://img.shields.io/travis/vicanso/elton.svg?label=linux+build)](https://travis-ci.org/vicanso/elton)
 
 
-Elton的实现参考了[koa](https://github.com/koajs/koa)，统一中间件的形式，方便定制各类中间件，所有中间件的处理方式都非常简单，如果需要交付给下一中间件，则调用`Context.Next()`，如果当前中间件出错，则返回`Error`结束调用。
+Elton的实现参考了[koa](https://github.com/koajs/koa)以及[echo](https://github.com/labstack/echo)，统一中间件的形式，方便定制各类中间件，所有中间件的处理方式都非常简单，如果需要交付给下一中间件，则调用`Context.Next()`，如果当前中间件出错，则返回`Error`结束调用。
 对于成功返回只需将响应数据赋值`Context.Body = 响应数据`，由响应中间件将Body转换为相应的响应数据，如JSON等。
 
 ```golang
@@ -82,7 +82,7 @@ func main() {
 
 - [basic auth](https://github.com/vicanso/elton-basic-auth) HTTP Basic Auth，建议只用于内部管理系统使用
 - [body parser](https://github.com/vicanso/elton-body-parser) 请求数据的解析中间件，支持`application/json`以及`application/x-www-form-urlencoded`两种数据类型
-- [compress](https://github.com/vicanso/elton-compress) 数据压缩中间件，默认支持gzip、brotli(需要支持编译参数以及编译相应动态库)以及snappy，也可根据需要增加相应的压缩处理
+- [compress](https://github.com/vicanso/elton-compress) 数据压缩中间件，默认支持gzip、brotli、snappy、s2、zstd以及lz4，也可根据需要增加相应的压缩处理
 - [concurrent limiter](https://github.com/vicanso/elton-concurrent-limiter) 根据指定参数限制并发请求，可用于订单提交等防止重复提交或限制提交频率的场景
 - [error handler](https://github.com/vicanso/elton-error-handler) 用于将处理函数的Error转换为对应的响应数据，如HTTP响应中的状态码(40x, 50x)，对应的出错类别等，建议在实际使用中根据项目自定义的Error对象生成相应的响应数据
 - [etag](https://github.com/vicanso/elton-etag) 用于生成HTTP响应数据的ETag
