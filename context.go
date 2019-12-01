@@ -29,6 +29,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/vicanso/hes"
+	intranetip "github.com/vicanso/intranet-ip"
 	"github.com/vicanso/keygrip"
 )
 
@@ -151,14 +152,14 @@ func GetClientIP(req *http.Request) string {
 	if ip != "" {
 		for _, value := range strings.Split(ip, ",") {
 			v := strings.TrimSpace(value)
-			if !IsPrivateIP(net.ParseIP(v)) {
+			if !intranetip.Is(net.ParseIP(v)) {
 				return v
 			}
 		}
 	}
 	ip = h.Get(HeaderXRealIP)
 	if ip != "" {
-		if !IsPrivateIP(net.ParseIP(ip)) {
+		if !intranetip.Is(net.ParseIP(ip)) {
 			return ip
 		}
 	}

@@ -41,11 +41,6 @@ const (
 	StatusClosed
 )
 
-var (
-	// privateIPBlocks private ip blocks
-	privateIPBlocks []*net.IPNet
-)
-
 type (
 	// Skipper check for skip middleware
 	Skipper func(c *Context) bool
@@ -123,36 +118,6 @@ type (
 // DefaultSkipper default skipper function(not skip)
 func DefaultSkipper(c *Context) bool {
 	return c.Committed
-}
-
-// https://stackoverflow.com/questions/43274579/golang-check-if-ip-address-is-in-a-network/43274687
-func initPrivateIPBlocks() {
-	for _, cidr := range []string{
-		"127.0.0.0/8",    // IPv4 loopback
-		"10.0.0.0/8",     // RFC1918
-		"172.16.0.0/12",  // RFC1918
-		"192.168.0.0/16", // RFC1918
-		"::1/128",        // IPv6 loopback
-		"fe80::/10",      // IPv6 link-local
-		"fc00::/7",       // IPv6 unique local addr
-	} {
-		_, block, _ := net.ParseCIDR(cidr)
-		privateIPBlocks = append(privateIPBlocks, block)
-	}
-}
-
-func init() {
-	initPrivateIPBlocks()
-}
-
-// IsPrivateIP check the ip is private
-func IsPrivateIP(ip net.IP) bool {
-	for _, block := range privateIPBlocks {
-		if block.Contains(ip) {
-			return true
-		}
-	}
-	return false
 }
 
 // New create a elton instance

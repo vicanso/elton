@@ -17,13 +17,6 @@ import (
 	"github.com/vicanso/hes"
 )
 
-func TestIsPrivateIP(t *testing.T) {
-	assert := assert.New(t)
-	assert.True(IsPrivateIP(net.ParseIP("127.0.0.1")))
-	assert.True(IsPrivateIP(net.ParseIP("10.0.0.1")))
-	assert.True(IsPrivateIP(net.ParseIP("172.16.0.1")))
-}
-
 func TestSkipper(t *testing.T) {
 	c := &Context{
 		Committed: true,
