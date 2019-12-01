@@ -413,6 +413,7 @@ func (c *Context) NotModified() {
 	c.StatusCode = http.StatusNotModified
 	c.SetHeader(HeaderContentType, "")
 	c.SetHeader(HeaderContentLength, "")
+	c.SetHeader(HeaderContentEncoding, "")
 	c.Body = nil
 	c.BodyBuffer = nil
 }
