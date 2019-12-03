@@ -207,7 +207,10 @@ func (d *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	// 非运行中的状态
 	if status != StatusRunning {
 		resp.WriteHeader(http.StatusServiceUnavailable)
-		resp.Write([]byte(fmt.Sprintf("service is not available, status is %d", status)))
+		_, err := resp.Write([]byte(fmt.Sprintf("service is not available, status is %d", status)))
+		if err != nil {
+			d.emitError(resp, req, err)
+		}
 		return
 	}
 	for _, preHandler := range d.PreMiddlewares {
@@ -447,7 +450,10 @@ func (d *Elton) NotFound(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 	resp.WriteHeader(http.StatusNotFound)
-	resp.Write([]byte("Not found"))
+	_, err := resp.Write([]byte("Not found"))
+	if err != nil {
+		d.emitError(resp, req, err)
+	}
 }
 
 // Error error handle
@@ -468,12 +474,16 @@ func (d *Elton) Error(c *Context, err error) {
 
 	resp := c.Response
 	he, ok := err.(*hes.Error)
+	status := http.StatusInternalServerError
+	message := err.Error()
 	if ok {
-		resp.WriteHeader(he.StatusCode)
-		resp.Write([]byte(he.Error()))
-	} else {
-		resp.WriteHeader(http.StatusInternalServerError)
-		resp.Write([]byte(err.Error()))
+		status = he.StatusCode
+		message = he.Error()
+	}
+	resp.WriteHeader(status)
+	_, err = resp.Write([]byte(message))
+	if err != nil {
+		d.EmitError(c, err)
 	}
 }
 
@@ -483,6 +493,13 @@ func (d *Elton) EmitError(c *Context, err error) {
 	for _, ln := range lns {
 		ln(c, err)
 	}
+}
+
+func (d *Elton) emitError(resp http.ResponseWriter, req *http.Request, err error) {
+	d.EmitError(&Context{
+		Request:  req,
+		Response: resp,
+	}, err)
 }
 
 // OnError on error function

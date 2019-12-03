@@ -72,8 +72,7 @@ func TestAtomicSignedKeys(t *testing.T) {
 }
 
 func BenchmarkRWMutexSignedKeys(b *testing.B) {
-	var sk SignedKeysGenerator
-	sk = new(RWMutexSignedKeys)
+	sk := new(RWMutexSignedKeys)
 	sk.SetKeys([]string{"a"})
 	for i := 0; i < b.N; i++ {
 		sk.GetKeys()
@@ -81,8 +80,7 @@ func BenchmarkRWMutexSignedKeys(b *testing.B) {
 }
 
 func BenchmarkAtomicSignedKeys(b *testing.B) {
-	var sk SignedKeysGenerator
-	sk = new(AtomicSignedKeys)
+	sk := new(AtomicSignedKeys)
 	sk.SetKeys([]string{"a"})
 	for i := 0; i < b.N; i++ {
 		sk.GetKeys()

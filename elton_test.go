@@ -50,7 +50,9 @@ func TestSkipper(t *testing.T) {
 func TestListenAndServe(t *testing.T) {
 	assert := assert.New(t)
 	d := New()
-	go d.ListenAndServe("")
+	go func() {
+		_ = d.ListenAndServe("")
+	}()
 	time.Sleep(10 * time.Millisecond)
 	req := httptest.NewRequest("GET", "/users/me", nil)
 	resp := httptest.NewRecorder()
@@ -65,7 +67,9 @@ func TestServe(t *testing.T) {
 	d := New()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	assert.Nil(err, "net listen should be successful")
-	go d.Serve(ln)
+	go func() {
+		_ = d.Serve(ln)
+	}()
 	time.Sleep(10 * time.Millisecond)
 	req := httptest.NewRequest("GET", "/users/me", nil)
 	resp := httptest.NewRecorder()

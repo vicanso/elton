@@ -60,8 +60,8 @@ func TestContext(t *testing.T) {
 	c := NewContext(nil, nil)
 	c.WriteHeader(http.StatusBadRequest)
 	assert.Equal(c.StatusCode, http.StatusBadRequest)
-	c.Write([]byte(data))
-
+	_, err := c.Write([]byte(data))
+	assert.Nil(err)
 	assert.Equal(data, c.BodyBuffer.String())
 }
 
@@ -290,7 +290,8 @@ func TestCookie(t *testing.T) {
 			Path:     "/",
 			HttpOnly: true,
 		}
-		c.AddCookie(cookie)
+		err := c.AddCookie(cookie)
+		assert.Nil(err)
 		assert.Equal("a=b; Path=/; Max-Age=300; HttpOnly; Secure", c.GetHeader(HeaderSetCookie))
 	})
 
@@ -317,7 +318,8 @@ func TestSignedCookie(t *testing.T) {
 			Path:     "/",
 			HttpOnly: true,
 		}
-		c.AddSignedCookie(cookie)
+		err := c.AddSignedCookie(cookie)
+		assert.Nil(err)
 		assert.Equal("a=b; Path=/; Max-Age=300; HttpOnly; Secure,a.sig=9yv2rWFijew8K8a5Uw9jxRJE53s; Path=/; Max-Age=300; HttpOnly; Secure", strings.Join(c.Headers[HeaderSetCookie], ","))
 	})
 
@@ -423,7 +425,7 @@ func TestNotModified(t *testing.T) {
 func TestCacheControl(t *testing.T) {
 	checkCacheControl := func(resp *httptest.ResponseRecorder, value string, t *testing.T) {
 		assert := assert.New(t)
-		assert.Equal(value, resp.HeaderMap["Cache-Control"][0])
+		assert.Equal(value, resp.Header().Get("Cache-Control"))
 	}
 	t.Run("no cache", func(t *testing.T) {
 		resp := httptest.NewRecorder()

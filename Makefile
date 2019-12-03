@@ -13,5 +13,5 @@ test-cover:
 bench:
 	go test -bench=. ./...
 
-release:
-	go mod tidy
+lint:
+	golangci-lint run
