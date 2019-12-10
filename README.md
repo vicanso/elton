@@ -22,27 +22,27 @@ import (
 
 func main() {
 
-	d := elton.New()
+	e := elton.New()
 
 	// 捕捉panic异常，避免程序崩溃
-	d.Use(recover.New())
+	e.Use(recover.New())
 	// 错误处理，将错误转换为json响应
-	d.Use(errorHandler.NewDefault())
+	e.Use(errorHandler.NewDefault())
 	// 请求处理时长
-	d.Use(func(c *elton.Context) (err error) {
+	e.Use(func(c *elton.Context) (err error) {
 		started := time.Now()
 		err = c.Next()
 		log.Printf("response time:%s", time.Since(started))
 		return
 	})
 	// 对响应数据 c.Body 转换为相应的json响应
-	d.Use(responder.NewDefault())
+	e.Use(responder.NewDefault())
 
 	getSession := func(c *elton.Context) error {
 		c.Set("account", "tree.xie")
 		return c.Next()
 	}
-	d.GET("/users/me", getSession, func(c *elton.Context) (err error) {
+	e.GET("/users/me", getSession, func(c *elton.Context) (err error) {
 		c.Body = &struct {
 			Name string `json:"name"`
 			Type string `json:"type"`
@@ -53,7 +53,7 @@ func main() {
 		return
 	})
 
-	d.GET("/error", func(c *elton.Context) (err error) {
+	e.GET("/error", func(c *elton.Context) (err error) {
 		// 自定义的error
 		err = &hes.Error{
 			StatusCode: 400,
@@ -63,7 +63,7 @@ func main() {
 		return
 	})
 
-	err := d.ListenAndServe(":3000")
+	err := e.ListenAndServe(":3000")
 	if err != nil {
 		panic(err)
 	}
@@ -108,17 +108,17 @@ func main() {
 创建一个Elton的实例，并初始化相应的http.Server。
 
 ```go
-d := elton.New()
+e := elton.New()
 ```
 
 创建一个Elton的实例，并未初始化相应的http.Server，可根据需要再初始化。
 
 ```go
-d := elton.NewWithoutServer()
+e := elton.NewWithoutServer()
 s := &http.Server{
 	Handler: d,
 }
-d.Server = s
+e.Server = s
 ```
 
 ### Server
@@ -126,8 +126,8 @@ d.Server = s
 http.Server对象，在初始化Elton时，将创建一个默认的Server，可以根据自己的应用场景调整Server的参数配置，如下：
 
 ```go
-d := elton.New()
-d.Server.MaxHeaderBytes = 10 * 1024
+e := elton.New()
+e.Server.MaxHeaderBytes = 10 * 1024
 ```
 
 ### Router
@@ -151,8 +151,8 @@ RouterInfo struct {
 当前Elton实例中的所有中间件处理函数，为[]Handler，如果需要添加中间件，尽量使用Use，不要直接append此属性。此类函数在匹配路由成功后才会调用，如果不匹配的路由则不会调用。
 
 ```go
-d := elton.New()
-d.Use(responder.NewDefault())
+e := elton.New()
+e.Use(responder.NewDefault())
 ```
 
 ### PreMiddlewares
@@ -160,8 +160,8 @@ d.Use(responder.NewDefault())
 当前Elton实例中的前置中间件处理函数，为[]PreHandler，此类函数在匹配路由前调用。
 
 ```go
-d := elton.New()
-d.Pre(func(req *http.Request) {
+e := elton.New()
+e.Pre(func(req *http.Request) {
 
 })
 ```
@@ -173,9 +173,9 @@ d.Pre(func(req *http.Request) {
 注意若在处理过程中返回的Error已被处理（如Error Handler），则并不会触发此出错调用，尽量使用中间件将Error转换为相应的输出，如JSON。
 
 ```go
-d := elton.New()
+e := elton.New()
 
-d.ErrorHandler = func(c *elton.Context, err error) {
+e.ErrorHandler = func(c *elton.Context, err error) {
   if err != nil {
     log.Printf("未处理异常，url:%s, err:%v", c.Request.RequestURI, err)
   }
@@ -183,10 +183,10 @@ d.ErrorHandler = func(c *elton.Context, err error) {
   c.Response.Write([]byte(err.Error()))
 }
 
-d.GET("/ping", func(c *elton.Context) (err error) {
+e.GET("/ping", func(c *elton.Context) (err error) {
   return hes.New("abcd")
 })
-d.ListenAndServe(":8001")
+e.ListenAndServe(":8001")
 ```
 
 ### NotFoundHandler
@@ -194,18 +194,18 @@ d.ListenAndServe(":8001")
 未匹配到相应路由时的处理，当无法获取到相应路由时，则会调用此函数（未匹配相应路由时，所有的中间件也不会被调用）。如果有相关统计需要或者自定义的404页面，则可调整此函数，否则可不设置（使用默认）。
 
 ```go
-d := elton.New()
+e := elton.New()
 
-d.NotFoundHandler = func(resp http.ResponseWriter, req *http.Request) {
+e.NotFoundHandler = func(resp http.ResponseWriter, req *http.Request) {
   // 要增加统计，方便分析404的处理是被攻击还是接口调用错误
   resp.WriteHeader(http.StatusNotFound)
   resp.Write([]byte("Not found"))
 }
 
-d.GET("/ping", func(c *elton.Context) (err error) {
+e.GET("/ping", func(c *elton.Context) (err error) {
   return hes.New("abcd")
 })
-d.ListenAndServe(":8001")
+e.ListenAndServe(":8001")
 ```
 
 ### GenerateID
@@ -213,22 +213,22 @@ d.ListenAndServe(":8001")
 ID生成函数，用于每次请求调用时，生成唯一的ID值。
 
 ```go
-d := elton.New()
+e := elton.New()
 
-d.GenerateID = func() string {
+e.GenerateID = func() string {
   t := time.Now()
   entropy := rand.New(rand.NewSource(t.UnixNano()))
   return ulid.MustNew(ulid.Timestamp(t), entropy).String()
 }
 
-d.Use(responder.NewDefault())
+e.Use(responder.NewDefault())
 
-d.GET("/ping", func(c *elton.Context) (err error) {
+e.GET("/ping", func(c *elton.Context) (err error) {
   log.Println(c.ID)
   c.Body = "pong"
   return
 })
-d.ListenAndServe(":8001")
+e.ListenAndServe(":8001")
 ```
 
 ### EnableTrace
@@ -236,20 +236,20 @@ d.ListenAndServe(":8001")
 是否启用调用跟踪，设置此参数为true，则会记录每个Handler的调用时长。
 
 ```go
-d := elton.New()
+e := elton.New()
 
-d.EnableTrace = true
-d.OnTrace(func(c *elton.Context, traceInfos []*elton.TraceInfo) {
+e.EnableTrace = true
+e.OnTrace(func(c *elton.Context, traceInfos []*elton.TraceInfo) {
 	log.Println(traceInfos[0])
 })
 
-d.Use(responder.NewDefault())
+e.Use(responder.NewDefault())
 
-d.GET("/ping", func(c *elton.Context) (err error) {
+e.GET("/ping", func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
-d.ListenAndServe(":8001")
+e.ListenAndServe(":8001")
 ```
 
 ### SignedKeys
@@ -257,8 +257,8 @@ d.ListenAndServe(":8001")
 用于生成带签名的cookie的密钥，基于[keygrip](https://github.com/vicanso/keygrip)来生成与校验是否合法。
 
 ```go
-d := elton.New()
-d.SignedKeys = new(elton.RWMutexSignedKeys)
+e := elton.New()
+e.SignedKeys = new(elton.RWMutexSignedKeys)
 ```
 
 ### SetFunctionName
@@ -267,30 +267,30 @@ d.SignedKeys = new(elton.RWMutexSignedKeys)
 
 ```go
 // 未设置函数名称
-d := elton.New()
+e := elton.New()
 
-d.EnableTrace = true
-d.OnTrace(func(c *elton.Context, traceInfos []*elton.TraceInfo) {
+e.EnableTrace = true
+e.OnTrace(func(c *elton.Context, traceInfos []*elton.TraceInfo) {
 	buf, _ := json.Marshal(traceInfos)
 	// [{"name":"github.com/vicanso/test/vendor/github.com/vicanso/elton/middleware.NewResponder.func1","duration":10488},{"name":"main.main.func2","duration":1160}]
 	log.Println(string(buf))
 })
 
-d.Use(responder.NewDefault())
+e.Use(responder.NewDefault())
 
-d.GET("/ping", func(c *elton.Context) (err error) {
+e.GET("/ping", func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
-d.ListenAndServe(":8001")
+e.ListenAndServe(":8001")
 ```
 
 ```go
 // 设置responder中间件的名称
-d := elton.New()
+e := elton.New()
 
-d.EnableTrace = true
-d.OnTrace(func(c *elton.Context, traceInfos elton.TraceInfos) {
+e.EnableTrace = true
+e.OnTrace(func(c *elton.Context, traceInfos elton.TraceInfos) {
 	buf, _ := json.Marshal(traceInfos)
 	// [{"name":"responder","duration":21755},{"name":"main.main.func2","duration":1750}]
 	log.Println(string(buf))
@@ -298,14 +298,14 @@ d.OnTrace(func(c *elton.Context, traceInfos elton.TraceInfos) {
 	log.Println(traceInfos.ServerTiming("elton-"))
 })
 fn := responder.NewDefault()
-d.Use(fn)
-d.SetFunctionName(fn, "responder")
+e.Use(fn)
+e.SetFunctionName(fn, "responder")
 
-d.GET("/ping", func(c *elton.Context) (err error) {
+e.GET("/ping", func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
-d.ListenAndServe(":8001")
+e.ListenAndServe(":8001")
 ```
 
 ### ListenAndServe
@@ -313,9 +313,9 @@ d.ListenAndServe(":8001")
 监听并提供HTTP服务。
 
 ```go
-d := elton.New()
+e := elton.New()
 
-d.ListenAndServe(":8001")
+e.ListenAndServe(":8001")
 ```
 
 ### Serve
@@ -324,8 +324,8 @@ d.ListenAndServe(":8001")
 
 ```go
 ln, _ := net.Listen("tcp", "127.0.0.1:0")
-d := elton.New()
-d.Serve(ln)
+e := elton.New()
+e.Serve(ln)
 ```
 
 ### Close
@@ -341,44 +341,44 @@ http.Handler Interface的实现，在此函数中根据HTTP请求的Method与URL
 添加Handler的处理函数，配置请求的Method与Path，添加相应的处理函数，Path的相关配置与[httprouter](https://github.com/julienschmidt/httprouter)一致。
 
 ```go
-d := elton.New()
+e := elton.New()
 
 
-d.Use(responder.NewDefault())
+e.Use(responder.NewDefault())
 
 noop := func(c *elton.Context) error {
 	return c.Next()
 }
 
-d.Handle("GET", "/ping", noop, func(c *elton.Context) (err error) {
+e.Handle("GET", "/ping", noop, func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
 
-d.Handle("POST", "/users/:type", func(c *elton.Context) (err error) {
+e.Handle("POST", "/users/:type", func(c *elton.Context) (err error) {
 	c.Body = "OK"
 	return
 })
 
-d.Handle("GET", "/files/*file", func(c *elton.Context) (err error) {
+e.Handle("GET", "/files/*file", func(c *elton.Context) (err error) {
 	c.Body = "file content"
 	return
 })
 
-d.ListenAndServe(":8001")
+e.ListenAndServe(":8001")
 ```
 
 Elton还支持GET，POST，PUT，PATCH，DELETE，HEAD，TRACE以及OPTIONS的方法，这几个方法与`Handle`一致，Method则为相对应的处理，下面两个例子的处理是完全相同的。
 
 ```go
-d.Handle("GET", "/ping", noop, func(c *elton.Context) (err error) {
+e.Handle("GET", "/ping", noop, func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
 ```
 
 ```go
-d.GET("/ping", noop, func(c *elton.Context) (err error) {
+e.GET("/ping", noop, func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
@@ -389,7 +389,7 @@ d.GET("/ping", noop, func(c *elton.Context) (err error) {
 添加8个Method的处理函数，包括GET，POST，PUT，PATCH，DELETE，HEAD，TRACE以及OPTIONS，尽量只根据路由需要，添加相应的Method，不建议直接使用此函数。
 
 ```go
-d.ALL("/ping", noop, func(c *elton.Context) (err error) {
+e.ALL("/ping", noop, func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
@@ -401,10 +401,10 @@ d.ALL("/ping", noop, func(c *elton.Context) (err error) {
 添加全局中间件处理函数，对于所有路由都需要使用到的中间件，则使用此函数添加，若非所有路由都使用到，可以只添加到相应的Group或者就单独添加至Handler。特别需要注意的是，如session之类需要读取数据库的，如非必要，不要使用全局中间件形式。
 
 ```go
-d := elton.New()
+e := elton.New()
 
 // 记录HTTP请求的时间、响应码
-d.Use(func(c *elton.Context) (err error) {
+e.Use(func(c *elton.Context) (err error) {
 	startedAt := time.Now()
 	req := c.Request
 	err = c.Next()
@@ -412,14 +412,14 @@ d.Use(func(c *elton.Context) (err error) {
 	return err
 })
 
-d.Use(responder.NewDefault())
+e.Use(responder.NewDefault())
 
-d.GET("/ping", func(c *elton.Context) (err error) {
+e.GET("/ping", func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
 
-d.ListenAndServe(":8001")
+e.ListenAndServe(":8001")
 ```
 
 ### Pre
@@ -427,22 +427,22 @@ d.ListenAndServe(":8001")
 添加全局前置中间件处理函数，对于所有请求都会调用（包括无匹配路由的请求）。
 
 ```go
-d := elton.New()
+e := elton.New()
 // replace url prefix /api
 urlPrefix := "/api"
-d.Pre(func(req *http.Request) {
+e.Pre(func(req *http.Request) {
 	path := req.URL.Path
 	if strings.HasPrefix(path, urlPrefix) {
 		req.URL.Path = path[len(urlPrefix):]
 	}
 })
 
-d.GET("/ping", func(c *elton.Context) (err error) {
+e.GET("/ping", func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
 
-d.ListenAndServe(":8001")
+e.ListenAndServe(":8001")
 ```
 
 ### AddValidator
@@ -450,15 +450,15 @@ d.ListenAndServe(":8001")
 增加参数校验函数，用于param的校验（在最后一个handler执行时调用）
 
 ```go
-d := elton.New()
-d.AddValidator("id", func(value string) error {
+e := elton.New()
+e.AddValidator("id", func(value string) error {
 	reg := regexp.MustCompile(`^[0-9]{5}$`)
 	if !reg.MatchString(value) {
 		return errors.New("id should be numbers")
 	}
 	return nil
 })
-d.GET("/:id", func(c *Context) error {
+e.GET("/:id", func(c *Context) error {
 	c.NoContent()
 	return nil
 })
@@ -468,11 +468,11 @@ d.GET("/:id", func(c *Context) error {
 将group中的所有路由处理添加至Elton。
 
 ```go
-d := elton.New()
+e := elton.New()
 userGroup := NewGroup("/users", func(c *Context) error {
 	return c.Next()
 })
-d.AddGroup(userGroup)
+e.AddGroup(userGroup)
 ```
 
 ### OnError
@@ -480,21 +480,21 @@ d.AddGroup(userGroup)
 添加Error的监听函数，如果当任一Handler的处理返回Error，并且其它的Handler并未将此Error处理，则会触发error事件。
 
 ```go
-d := elton.New()
+e := elton.New()
 
-d.OnError(func(c *elton.Context, err error) {
+e.OnError(func(c *elton.Context, err error) {
 	// 发送邮件告警等
 	log.Println("unhandle error, " + err.Error())
 })
 
-d.Use(responder.NewDefault())
+e.Use(responder.NewDefault())
 
-d.GET("/ping", func(c *elton.Context) (err error) {
+e.GET("/ping", func(c *elton.Context) (err error) {
 	c.Body = "pong"
 	return
 })
 
-d.ListenAndServe(":8001")
+e.ListenAndServe(":8001")
 ```
 
 
@@ -610,7 +610,7 @@ fmt.Println(c.ClientIP())
 
 ```go
 // curl 'http://127.0.0.1:8001/users/me'
-d.GET("/users/:type", func(c *elton.Context) (err error) {
+e.GET("/users/:type", func(c *elton.Context) (err error) {
   t := c.Param("type")
   // me
   fmt.Println(t)
@@ -648,7 +648,7 @@ fmt.Println(c.Query())
 重定向当前请求。
 
 ```go
-d.GET("/redirect", func(c *elton.Context) (err error) {
+e.GET("/redirect", func(c *elton.Context) (err error) {
   c.Redirect(301, "/ping")
   return
 })
@@ -659,12 +659,12 @@ d.GET("/redirect", func(c *elton.Context) (err error) {
 设置临时保存的值至context，在context的生命周期内有效。
 
 ```go
-d.Use(func(c *elton.Context) error {
+e.Use(func(c *elton.Context) error {
   c.Set("id", rand.Int())
   return c.Next()
 })
 
-d.GET("/ping", func(c *elton.Context) (err error) {
+e.GET("/ping", func(c *elton.Context) (err error) {
   // 6129484611666145821
   fmt.Println(c.Get("id").(int))
   c.Body = "pong"
@@ -677,12 +677,12 @@ d.GET("/ping", func(c *elton.Context) (err error) {
 从context中获取保存的值，注意返回的为interface{}类型，需要自己做类型转换。
 
 ```go
-d.Use(func(c *elton.Context) error {
+e.Use(func(c *elton.Context) error {
   c.Set("id", rand.Int())
   return c.Next()
 })
 
-d.GET("/ping", func(c *elton.Context) (err error) {
+e.GET("/ping", func(c *elton.Context) (err error) {
   // 6129484611666145821
   fmt.Println(c.Get("id").(int))
   c.Body = "pong"
@@ -792,7 +792,7 @@ fmt.Println(c.Header())
 设置HTTP请求的响应状态码为204，响应体为空。
 
 ```go
-d.GET("/no-content", func(c *elton.Context) (err error) {
+e.GET("/no-content", func(c *elton.Context) (err error) {
   c.NoContent()
   return
 })
@@ -803,7 +803,7 @@ d.GET("/no-content", func(c *elton.Context) (err error) {
 设置HTTP请求的响应状态码为304，响应体为空。注意此方法判断是否客户端的缓存数据与服务端的响应数据一致再使用，不建议自己调用此函数，建议使用中间件`fresh`。
 
 ```go
-d.GET("/not-modified", func(c *elton.Context) (err error) {
+e.GET("/not-modified", func(c *elton.Context) (err error) {
   c.NotModified()
   return
 })
@@ -814,7 +814,7 @@ d.GET("/not-modified", func(c *elton.Context) (err error) {
 设置HTTP请求的响应码为201，并设置body。
 
 ```go
-d.POST("/users", func(c *elton.Context) (err error) {
+e.POST("/users", func(c *elton.Context) (err error) {
   c.Created(map[string]string{
     "account": "tree.xie",
   })
@@ -892,15 +892,15 @@ c.DisableReuse()
 将当前context转至另一个新的server实例处理。
 
 ```go
-d1 := elton.New()
-d2 := elton.New()
+e1 := elton.New()
+e2 := elton.New()
 
 
-d1.GET("/ping", func(c *elton.Context) (err error) {
-	c.Pass(d2)
+e1.GET("/ping", func(c *elton.Context) (err error) {
+	c.Pass(e2)
 	return
 })
-d1.ListenAndServe(":8001")
+e1.ListenAndServe(":8001")
 ```
 
 ### Pipe
@@ -927,7 +927,7 @@ c.Pipe(r)
 创建一个组，它包括Path的前缀以及组内公共中间件（非全局），适用于创建有相同前置校验条件的路由处理，如用户相关的操作。返回的Group对象包括`GET`，`POST`，`PUT`等方法，与Elton的似，之后可以通过`AddGroup`将所有路由处理添加至Elton实例。
 
 ```go
-d := elton.New()
+e := elton.New()
 userGroup := elton.NewGroup("/users", noop)
 userGroup.GET("/me", func(c *elton.Context) (err error) {
 	// 从session中读取用户信息...
@@ -939,7 +939,7 @@ userGroup.POST("/login", func(c *elton.Context) (err error) {
 	c.Body = "login success"
 	return
 })
-d.AddGroup(userGroup)
+e.AddGroup(userGroup)
 ```
 
 ## bench
