@@ -316,11 +316,11 @@ func (c *Context) AddCookie(cookie *http.Cookie) error {
 }
 
 func (c *Context) getKeys() []string {
-	d := c.elton
-	if d == nil || d.SignedKeys == nil {
+	e := c.elton
+	if e == nil || e.SignedKeys == nil {
 		return nil
 	}
-	return d.SignedKeys.GetKeys()
+	return e.SignedKeys.GetKeys()
 }
 
 // GetSignedCookie get signed cookie

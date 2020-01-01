@@ -251,7 +251,7 @@ func TestGetKeys(t *testing.T) {
 	assert := assert.New(t)
 	c := NewContext(nil, nil)
 	assert.Nil(c.getKeys())
-	d := New()
+	e := New()
 	keys := []string{
 		"a",
 		"b",
@@ -259,8 +259,8 @@ func TestGetKeys(t *testing.T) {
 	ssk := &SimpleSignedKeys{
 		keys: keys,
 	}
-	d.SignedKeys = ssk
-	c.elton = d
+	e.SignedKeys = ssk
+	c.elton = e
 	assert.Equal(keys, c.getKeys())
 }
 
@@ -511,7 +511,7 @@ func TestNewContext(t *testing.T) {
 
 func TestContextPass(t *testing.T) {
 	assert := assert.New(t)
-	d := New()
+	e := New()
 	another := New()
 	another.GET("/", func(c *Context) error {
 		c.BodyBuffer = bytes.NewBufferString("new data")
@@ -519,13 +519,13 @@ func TestContextPass(t *testing.T) {
 	})
 	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
 	resp := httptest.NewRecorder()
-	d.GET("/", func(c *Context) error {
+	e.GET("/", func(c *Context) error {
 		c.Pass(another)
 		// the data will be ignored
 		c.BodyBuffer = bytes.NewBufferString("original data")
 		return nil
 	})
-	d.ServeHTTP(resp, req)
+	e.ServeHTTP(resp, req)
 	assert.Equal(http.StatusOK, resp.Code)
 	assert.Equal("new data", resp.Body.String())
 }
