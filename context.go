@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -150,7 +151,9 @@ func GetClientIP(req *http.Request) string {
 	h := req.Header
 	ip := h.Get(HeaderXForwardedFor)
 	if ip != "" {
-		for _, value := range strings.Split(ip, ",") {
+		arr := sort.StringSlice(strings.Split(ip, ","))
+		sort.Sort(sort.Reverse(arr))
+		for _, value := range arr {
 			v := strings.TrimSpace(value)
 			if !intranetip.Is(net.ParseIP(v)) {
 				return v

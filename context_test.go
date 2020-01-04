@@ -133,7 +133,7 @@ func TestGetClientIP(t *testing.T) {
 		assert := assert.New(t)
 		defer req.Header.Del(HeaderXForwardedFor)
 		req.Header.Set(HeaderXForwardedFor, "192.168.1.1, 1.1.1.1, 2.2.2.2")
-		assert.Equal("1.1.1.1", c.ClientIP(), "client ip shold get the first public ip from x-forwarded-for")
+		assert.Equal("2.2.2.2", c.ClientIP(), "client ip shold get the first public ip from x-forwarded-for")
 		c.clientIP = ""
 	})
 
