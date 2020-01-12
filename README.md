@@ -80,6 +80,7 @@ func main() {
 - [自定义body parser中间件](https://github.com/vicanso/elton/wiki/%E8%87%AA%E5%AE%9A%E4%B9%89body-parser%E4%B8%AD%E9%97%B4%E4%BB%B6)
 - [自定义压缩中间件](https://github.com/vicanso/elton/wiki/%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8E%8B%E7%BC%A9%E4%B8%AD%E9%97%B4%E4%BB%B6)
 - [路由参数校验](https://github.com/vicanso/elton/wiki/%E8%B7%AF%E7%94%B1%E5%8F%82%E6%95%B0%E6%A0%A1%E9%AA%8C)
+- [启用http2与http3](https://github.com/vicanso/elton/wiki/%E5%90%AF%E7%94%A8http2%E4%B8%8Ehttp3)
 
 ## 常用中间件
 
