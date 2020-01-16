@@ -21,6 +21,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -78,6 +79,8 @@ type (
 		elton *Elton
 		// reuseStatus reuse status
 		reuseStatus int32
+		// cacheQuery the cache query
+		cacheQuery url.Values
 	}
 )
 
@@ -110,6 +113,7 @@ func (c *Context) Reset() {
 	c.clientIP = ""
 	c.elton = nil
 	c.reuseStatus = ReuseContextEnabled
+	c.cacheQuery = nil
 }
 
 // GetRemoteAddr get remote addr
@@ -188,9 +192,18 @@ func (c *Context) Param(name string) string {
 	return c.Params[name]
 }
 
+// getCacheQuery get the cache query
+func (c *Context) getCacheQuery() url.Values {
+	if c.cacheQuery == nil {
+		c.cacheQuery = c.Request.URL.Query()
+	}
+	return c.cacheQuery
+}
+
 // QueryParam get the query value
 func (c *Context) QueryParam(name string) string {
-	values := c.Request.URL.Query()[name]
+	query := c.getCacheQuery()
+	values := query[name]
 	if len(values) == 0 {
 		return ""
 	}
@@ -200,12 +213,9 @@ func (c *Context) QueryParam(name string) string {
 // Query get the query map.
 // It will return map[string]string, not the same as url.Values
 func (c *Context) Query() map[string]string {
-	values := c.Request.URL.Query()
-	if len(values) == 0 {
-		return nil
-	}
+	query := c.getCacheQuery()
 	m := make(map[string]string)
-	for key, values := range values {
+	for key, values := range query {
 		m[key] = values[0]
 	}
 	return m

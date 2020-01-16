@@ -176,10 +176,6 @@ func TestQuery(t *testing.T) {
 	q := c.Query()
 	assert.Equal("tree.xie", q["name"])
 	assert.Equal("1", q["type"])
-
-	req = httptest.NewRequest("GET", "https://aslant.site/", nil)
-	c = NewContext(nil, req)
-	assert.Nil(c.Query())
 }
 
 func TestSetGet(t *testing.T) {
