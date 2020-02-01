@@ -47,27 +47,29 @@ type (
 	Context struct {
 		Request  *http.Request
 		Response http.ResponseWriter
-		// Headers http response's header
+		// Headers http response's header, it's equal to response's header
 		Headers http.Header
-		// Committed commit the data to response
+		// Committed commit the data to response, when it's true, the response has been sent.
+		// If using custom response handler, please set it true.
 		Committed bool
-		// ID context id
+		// ID context id, using unique string function to generate it.
 		ID string
-		// Route route path
+		// Route route path, it's equal to the http router path with params.
 		Route string
-		// Next next function
+		// Next next function, it will be auto generated.
 		Next func() error
-		// Params uri params
+		// Params route params
 		Params map[string]string
 		// RawParams http router params
 		RawParams httprouter.Params
-		// StatusCode http response's status code
+		// StatusCode http response's status code, default is 0 which will be handle as 200
 		StatusCode int
-		// Body http response's body
+		// Body http response's body, which should be converted to bytes by response middlware.
+		// JSON response middlware,  xml respons middleware and so on.
 		Body interface{}
-		// BodyBuffer http response's body buffer
+		// BodyBuffer http response's body buffer, it should be set by response middleware.
 		BodyBuffer *bytes.Buffer
-		// RequestBody http request body
+		// RequestBody http request body, which should be converted by request body parser middleware.
 		RequestBody []byte
 		// store for context
 		m map[interface{}]interface{}
