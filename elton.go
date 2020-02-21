@@ -120,7 +120,7 @@ func DefaultSkipper(c *Context) bool {
 	return c.Committed
 }
 
-// New create a elton instance
+// New create an elton instance
 func New() *Elton {
 	e := NewWithoutServer()
 	s := &http.Server{
@@ -130,7 +130,7 @@ func New() *Elton {
 	return e
 }
 
-// NewWithoutServer create a elton instance without server
+// NewWithoutServer create an elton instance without http server
 func NewWithoutServer() *Elton {
 	e := &Elton{
 		Router:        httprouter.New(),
@@ -197,7 +197,8 @@ func (e *Elton) Close() error {
 	return e.Server.Close()
 }
 
-// GracefulClose graceful close the http server
+// GracefulClose graceful close the http server.
+// It sets the status to be closing and delay to close.
 func (e *Elton) GracefulClose(delay time.Duration) error {
 	atomic.StoreInt32(&e.status, StatusClosing)
 	time.Sleep(delay)
@@ -212,7 +213,7 @@ func (e *Elton) GetStatus() int32 {
 
 // ServeHTTP http handler
 func (e *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	status := atomic.LoadInt32(&e.status)
+	status := e.GetStatus()
 	// 非运行中的状态
 	if status != StatusRunning {
 		resp.WriteHeader(http.StatusServiceUnavailable)

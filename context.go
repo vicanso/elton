@@ -65,7 +65,7 @@ type (
 		// StatusCode http response's status code, default is 0 which will be handle as 200
 		StatusCode int
 		// Body http response's body, which should be converted to bytes by response middlware.
-		// JSON response middlware,  xml respons middleware and so on.
+		// JSON response middlware,  xml response middleware and so on.
 		Body interface{}
 		// BodyBuffer http response's body buffer, it should be set by response middleware.
 		BodyBuffer *bytes.Buffer
@@ -186,7 +186,7 @@ func (c *Context) ClientIP() string {
 	return c.clientIP
 }
 
-// Param get the param value
+// Param get the value from route params
 func (c *Context) Param(name string) string {
 	if c.Params == nil {
 		return ""
@@ -202,7 +202,7 @@ func (c *Context) getCacheQuery() url.Values {
 	return c.cacheQuery
 }
 
-// QueryParam get the query value
+// QueryParam get the value from query
 func (c *Context) QueryParam(name string) string {
 	query := c.getCacheQuery()
 	values := query[name]
@@ -254,12 +254,13 @@ func (c *Context) Get(key interface{}) interface{} {
 	return c.m[key]
 }
 
-// GetRequestHeader get from http request header
+// GetRequestHeader get header value from http request
 func (c *Context) GetRequestHeader(key string) string {
 	return c.Request.Header.Get(key)
 }
 
-// SetRequestHeader set http request header
+// SetRequestHeader set http header to request.
+// It replaces any existing values of the key.
 func (c *Context) SetRequestHeader(key, value string) {
 	h := c.Request.Header
 	if value == "" {
@@ -269,7 +270,8 @@ func (c *Context) SetRequestHeader(key, value string) {
 	h.Set(key, value)
 }
 
-// AddRequestHeader add http request header
+// AddRequestHeader add http header to request.
+// It appends to any existing value of the key.
 func (c *Context) AddRequestHeader(key, value string) {
 	c.Request.Header.Add(key, value)
 }
@@ -297,7 +299,8 @@ func (c *Context) GetHeader(key string) string {
 	return c.Headers.Get(key)
 }
 
-// SetHeader set header to the http response
+// SetHeader set http header to response.
+// It replaces any existing values of the key.
 func (c *Context) SetHeader(key, value string) {
 	if value == "" {
 		c.Headers.Del(key)
@@ -306,7 +309,8 @@ func (c *Context) SetHeader(key, value string) {
 	c.Headers.Set(key, value)
 }
 
-// AddHeader add header to the http response
+// AddHeader add http header to response.
+// It appends to any existing value of the key.
 func (c *Context) AddHeader(key, value string) {
 	c.Headers.Add(key, value)
 }
