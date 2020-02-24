@@ -153,11 +153,11 @@ func TestHandle(t *testing.T) {
 			return c.Next()
 		})
 		e.Use(func(c *Context) error {
-			v := c.Get(key).(int)
+			v := c.GetInt(key)
 			c.Set(key, v+1)
 			return c.Next()
 		}, func(c *Context) error {
-			v := c.Get(key).(int)
+			v := c.GetInt(key)
 			c.Set(key, v+2)
 			return c.Next()
 		})
@@ -168,7 +168,7 @@ func TestHandle(t *testing.T) {
 		})
 		doneCount := 0
 		userGroup.ALL("/me", func(c *Context) (err error) {
-			v := c.Get(key).(int)
+			v := c.GetInt(key)
 			assert.Equal(countValue, v)
 			assert.Equal(userGroupPath+"/me", c.Route, "route url is invalid")
 			doneCount++

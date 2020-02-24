@@ -181,9 +181,49 @@ func TestQuery(t *testing.T) {
 func TestSetGet(t *testing.T) {
 	assert := assert.New(t)
 	c := Context{}
-	assert.Nil(c.Get("name"), "should return nil when store is not initialized")
+	value, _ := c.Get("name")
+	assert.Nil(value, "should return nil when store is not initialized")
 	c.Set("name", "tree.xie")
-	assert.Equal("tree.xie", c.Get("name").(string))
+	value, _ = c.Get("name")
+	assert.Equal("tree.xie", value.(string))
+
+	i := 1
+	c.Set("int", i)
+	assert.Equal(i, c.GetInt("int"))
+
+	var i64 int64 = 1
+	c.Set("int64", i64)
+	assert.Equal(i64, c.GetInt64("int64"))
+
+	s := "s"
+	c.Set("string", s)
+	assert.Equal(s, c.GetString("string"))
+
+	b := true
+	c.Set("bool", b)
+	assert.Equal(b, c.GetBool("bool"))
+
+	var f32 float32 = 1.0
+	c.Set("float32", f32)
+	assert.Equal(f32, c.GetFloat32("float32"))
+
+	f64 := 1.0
+	c.Set("float64", f64)
+	assert.Equal(f64, c.GetFloat64("float64"))
+
+	now := time.Now()
+	c.Set("time", now)
+	assert.Equal(now, c.GetTime("time"))
+
+	d := time.Second
+	c.Set("duration", d)
+	assert.Equal(d, c.GetDuration("duration"))
+
+	arr := []string{
+		"a",
+	}
+	c.Set("stringSlice", arr)
+	assert.Equal(arr, c.GetStringSlice("stringSlice"))
 }
 
 func TestGetSetHeader(t *testing.T) {

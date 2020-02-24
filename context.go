@@ -247,11 +247,84 @@ func (c *Context) Set(key, value interface{}) {
 }
 
 // Get get the value from context
-func (c *Context) Get(key interface{}) interface{} {
+func (c *Context) Get(key interface{}) (value interface{}, exists bool) {
 	if c.m == nil {
-		return nil
+		return nil, false
 	}
-	return c.m[key]
+	value, exists = c.m[key]
+	return
+}
+
+// GetInt get int value from context, if not exists, it will return zero.
+func (c *Context) GetInt(key interface{}) (i int) {
+	if value, exists := c.Get(key); exists && value != nil {
+		i, _ = value.(int)
+	}
+	return
+}
+
+// GetInt64 get int64 value from context, if not exists, it will return zero.
+func (c *Context) GetInt64(key interface{}) (i int64) {
+	if value, exists := c.Get(key); exists && value != nil {
+		i, _ = value.(int64)
+	}
+	return
+}
+
+// GetString get string value from context, if not exists, it will return empty string.
+func (c *Context) GetString(key interface{}) (s string) {
+	if value, exists := c.Get(key); exists && value != nil {
+		s, _ = value.(string)
+	}
+	return
+}
+
+// GetBool get bool value from context, if not exists, it will return false.
+func (c *Context) GetBool(key interface{}) (b bool) {
+	if value, exists := c.Get(key); exists && value != nil {
+		b, _ = value.(bool)
+	}
+	return
+}
+
+// GetFloat32 get float32 value from context, if not exists, it will return 0.
+func (c *Context) GetFloat32(key interface{}) (f float32) {
+	if value, exists := c.Get(key); exists && value != nil {
+		f, _ = value.(float32)
+	}
+	return
+}
+
+// GetFloat64 get float64 value from context, if not exists, it will return 0.
+func (c *Context) GetFloat64(key interface{}) (f float64) {
+	if value, exists := c.Get(key); exists && value != nil {
+		f, _ = value.(float64)
+	}
+	return
+}
+
+// GetTime get time value from context
+func (c *Context) GetTime(key interface{}) (t time.Time) {
+	if value, exists := c.Get(key); exists && value != nil {
+		t, _ = value.(time.Time)
+	}
+	return
+}
+
+// GetDuration get duration from context
+func (c *Context) GetDuration(key interface{}) (d time.Duration) {
+	if value, exists := c.Get(key); exists && value != nil {
+		d, _ = value.(time.Duration)
+	}
+	return
+}
+
+// GetStringSlice get string slice from context
+func (c *Context) GetStringSlice(key interface{}) (arr []string) {
+	if value, exists := c.Get(key); exists && value != nil {
+		arr, _ = value.([]string)
+	}
+	return
 }
 
 // GetRequestHeader get header value from http request

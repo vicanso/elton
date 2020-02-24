@@ -38,7 +38,7 @@ func BenchmarkContextGet(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		c.Set(key, "abc")
-		_ = c.Get(key).(string)
+		_, _ = c.Get(key)
 	}
 }
 
