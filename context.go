@@ -16,6 +16,7 @@ package elton
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"mime"
@@ -341,6 +342,17 @@ func (c *Context) SetRequestHeader(key, value string) {
 		return
 	}
 	h.Set(key, value)
+}
+
+// Context get context of request
+func (c *Context) Context() context.Context {
+	return c.Request.Context()
+}
+
+// WithContext set context of request
+func (c *Context) WithContext(ctx context.Context) *Context {
+	c.Request = c.Request.WithContext(ctx)
+	return c
 }
 
 // AddRequestHeader add http header to request.
