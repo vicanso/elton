@@ -50,7 +50,7 @@ HTTP响应数据，此属性为interface{}，因此可以设置不同的数据�
 
 ## BodyBuffer
 
-HTTP的响应数据缓冲（字节），此数据为真正返回的响应体，一般不需要赋值此参数，而由responder中间件将Body转换为字节(BodyBuffer)，并写入相应的`Content-Type`。
+HTTP的响应数据缓冲（字节），此数据为真正返回的响应体，一般不需要赋值此属性，而由responder中间件将Body转换为字节(BodyBuffer)，并写入相应的`Content-Type`。
 
 ## RequestBody
 

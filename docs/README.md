@@ -3,7 +3,7 @@
 [![Build Status](https://img.shields.io/travis/vicanso/elton.svg?label=linux+build)](https://travis-ci.org/vicanso/elton)
 
 
-Elton的实现参考了[koa](https://github.com/koajs/koa)以及[echo](https://github.com/labstack/echo)，统一中间件的形式，方便定制各类中间件，所有中间件的处理方式都非常简单，如果需要交付给下一中间件，则调用`Context.Next()`，如果当前中间件出错，则返回`Error`结束调用。
+Elton的实现参考了[koa](https://github.com/koajs/koa)以及[echo](https://github.com/labstack/echo)，统一中间件的形式，方便定制各类中间件，所有中间件的处理方式都非常简单，如果需要转给下一中间件，则调用`Context.Next()`，如果当前中间件出错，则返回`Error`结束调用，如果无需要转至下一中间件，则无需要调用`Context.Next()`。
 对于成功返回只需将响应数据赋值`Context.Body = 响应数据`，由响应中间件将Body转换为相应的响应数据，如JSON等。
 
 
@@ -80,7 +80,7 @@ e.GET("/users/me", func(c *elton.Context) error {
 
 ### responser
 
-HTTP请求响应数据时，需要将数据转换为Buffer返回，而在实际开发时响应数据一般为各类的struct或map等结构化数据，因此elton提供了Body(interface{})字段来保存这些数据，再使用自定义的中间件将数据转换为对于的字节数据，[elton-responder](https://github.com/vicanso/elton-responder)提供了转数据转换为json字节并设置对应的Content-Type。
+HTTP请求响应数据时，需要将数据转换为Buffer返回，而在应用时响应数据一般为各类的struct或map等结构化数据，因此elton提供了Body(interface{})字段来保存这些数据，再使用自定义的中间件将数据转换为对应的字节数据，[elton-responder](https://github.com/vicanso/elton-responder)提供了转数据转换为json字节并设置对应的Content-Type。
 
 ```go
 package main
