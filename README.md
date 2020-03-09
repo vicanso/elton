@@ -1,4 +1,4 @@
-# elton 
+# Elton 
 
 [![Build Status](https://img.shields.io/travis/vicanso/elton.svg?label=linux+build)](https://travis-ci.org/vicanso/elton)
 

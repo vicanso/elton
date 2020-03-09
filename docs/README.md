@@ -1,7 +1,5 @@
 # Summary
 
-* [Elton](README.md)
-
 * [Application](application.md)
 
 * [Context](context.md)
