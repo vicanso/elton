@@ -109,11 +109,15 @@ import (
 	"bytes"
 	"crypto/tls"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/lucas-clemente/quic-go/http3"
 	"github.com/vicanso/elton"
 )
+
+const listenAddr = ":4000"
 
 // 获取证书内容
 func getCert() (cert []byte, key []byte, err error) {
@@ -129,21 +133,26 @@ func getCert() (cert []byte, key []byte, err error) {
 	return
 }
 
-func main() {
+func http3Get() {
+	client := &http.Client{
+		Transport: &http3.RoundTripper{},
+	}
+	resp, err := client.Get("https://127.0.0.1" + listenAddr + "/")
+	if err != nil {
+		log.Fatalln("http3 get fail ", err)
+		return
+	}
+	log.Println("http3 get success", resp.Proto, resp.Status, resp.Header)
+}
 
-	listenAddr := ":3000"
+func main() {
+	// 延时一秒后以http3的访问访问
+	go func() {
+		time.Sleep(time.Second)
+		http3Get()
+	}()
 
 	e := elton.New()
-
-	e.Use(func(c *elton.Context) error {
-		c.SetHeader("Alt-Srv", `h3-24="`+listenAddr+`"; ma=86400`)
-		return c.Next()
-	})
-
-	e.GET("/", func(c *elton.Context) error {
-		c.BodyBuffer = bytes.NewBufferString("hello " + c.Request.Proto + "!")
-		return nil
-	})
 
 	cert, key, err := getCert()
 	if err != nil {
@@ -166,6 +175,17 @@ func main() {
 		},
 	}
 	http3Server.TLSConfig = tlsConfig.Clone()
+
+	e.Use(func(c *elton.Context) error {
+		http3Server.SetQuicHeaders(c.Header())
+		return c.Next()
+	})
+
+	e.GET("/", func(c *elton.Context) error {
+		c.BodyBuffer = bytes.NewBufferString("hello " + c.Request.Proto + "!")
+		return nil
+	})
+
 	go func() {
 		// http3
 		err := http3Server.ListenAndServe()
