@@ -23,7 +23,7 @@ func TestReset(t *testing.T) {
 		Next: func() error {
 			return nil
 		},
-		Params:      make(map[string]string),
+		Params:      new(RouteParams),
 		StatusCode:  200,
 		Body:        make(map[string]string),
 		BodyBuffer:  bytes.NewBufferString("abcd"),
@@ -154,9 +154,9 @@ func TestParam(t *testing.T) {
 	assert := assert.New(t)
 	c := Context{}
 	assert.Equal(c.Param("name"), "", "params is not initialized, it should be nil")
-	c.Params = map[string]string{
-		"name": "tree.xie",
-	}
+	params := new(RouteParams)
+	params.Add("name", "tree.xie")
+	c.Params = params
 	assert.Equal("tree.xie", c.Param("name"))
 }
 

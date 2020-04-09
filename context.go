@@ -1,16 +1,24 @@
-// Copyright 2018 tree xie
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// MIT License
+
+// Copyright (c) 2020 Tree Xie
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 package elton
 
@@ -30,7 +38,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/vicanso/hes"
 	intranetip "github.com/vicanso/intranet-ip"
 	"github.com/vicanso/keygrip"
@@ -60,9 +67,7 @@ type (
 		// Next next function, it will be auto generated.
 		Next func() error
 		// Params route params
-		Params map[string]string
-		// RawParams http router params
-		RawParams httprouter.Params
+		Params *RouteParams
 		// StatusCode http response's status code, default is 0 which will be handle as 200
 		StatusCode int
 		// Body http response's body, which should be converted to bytes by response middlware.
@@ -106,7 +111,6 @@ func (c *Context) Reset() {
 	c.Route = ""
 	c.Next = nil
 	c.Params = nil
-	c.RawParams = nil
 	c.StatusCode = 0
 	c.Body = nil
 	c.BodyBuffer = nil
@@ -192,7 +196,7 @@ func (c *Context) Param(name string) string {
 	if c.Params == nil {
 		return ""
 	}
-	return c.Params[name]
+	return c.Params.Get(name)
 }
 
 // getCacheQuery get the cache query

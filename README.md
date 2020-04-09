@@ -59,7 +59,7 @@ elton的路由使用[httprouter](https://github.com/julienschmidt/httprouter)，
 
 ```go
 // 带参数的路由配置
-e.GET("/books/:type", func(c *elton.Context) error {
+e.GET("/books/{type}", func(c *elton.Context) error {
     c.BodyBuffer = bytes.NewBufferString(c.Param("type"))
     return nil
 })
@@ -159,12 +159,12 @@ func main() {
 ## bench
 
 ```
-BenchmarkRoutes-8                	 3489271	       343 ns/op	     376 B/op	       4 allocs/op
-BenchmarkGetFunctionName-8       	129711422	         9.23 ns/op	       0 B/op	       0 allocs/op
-BenchmarkContextGet-8            	14131228	        84.4 ns/op	      16 B/op	       1 allocs/op
-BenchmarkContextNewMap-8         	183387170	         6.52 ns/op	       0 B/op	       0 allocs/op
-BenchmarkConvertServerTiming-8   	 1430475	       839 ns/op	     360 B/op	      11 allocs/op
-BenchmarkGetStatus-8             	1000000000	         0.272 ns/op	       0 B/op	       0 allocs/op
-BenchmarkRWMutexSignedKeys-8     	35028435	        33.5 ns/op
-BenchmarkAtomicSignedKeys-8      	602747588	         1.99 ns/op
+BenchmarkRoutes-8                        2808996               417 ns/op             424 B/op          5 allocs/op
+BenchmarkGetFunctionName-8              130826358                9.31 ns/op            0 B/op          0 allocs/op
+BenchmarkContextGet-8                   14899309                79.9 ns/op            16 B/op          1 allocs/op
+BenchmarkContextNewMap-8                184250533                6.47 ns/op            0 B/op          0 allocs/op
+BenchmarkConvertServerTiming-8           1421496               854 ns/op             360 B/op         11 allocs/op
+BenchmarkGetStatus-8                    1000000000               0.542 ns/op           0 B/op          0 allocs/op
+BenchmarkRWMutexSignedKeys-8            33935337                33.8 ns/op
+BenchmarkAtomicSignedKeys-8             1000000000               0.402 ns/op
 ```
