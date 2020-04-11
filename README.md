@@ -9,27 +9,54 @@ Elton的实现参考了[koa](https://github.com/koajs/koa)以及[echo](https://g
 
 ## Hello, World!
 
-下面我们来演示如何使用`elton`返回`Hello, World!`。
+下面我们来演示如何使用`elton`返回`Hello, World!`，并且添加了一些常用的中间件。
 
 ```go
 package main
 
 import (
 	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
-    e := elton.New()
+	e := elton.New()
 
-    e.GET("/", func(c *elton.Context) error {
-        c.BodyBuffer = bytes.NewBufferString("Hello, World!")
-        return nil
-    })
+	// panic处理
+	e.Use(middleware.NewRecover())
 
-    err := e.ListenAndServe(":3000")
-    if err != nil {
-        panic(err)
-    }
+	// 出错处理
+	e.Use(middleware.NewDefaultError())
+
+	// 默认的请求数据解析
+	e.Use(middleware.NewDefaultBodyParser())
+
+	// not modified 304的处理
+	e.Use(middleware.NewDefaultFresh())
+	e.Use(middleware.NewDefaultETag())
+
+	// 响应数据转换为json
+	e.Use(middleware.NewDefaultResponder())
+
+	e.GET("/", func(c *elton.Context) error {
+		c.Body = &struct {
+			Message string `json:"message,omitempty"`
+		}{
+			"Hello, World!",
+		}
+		return nil
+	})
+
+	e.POST("/login", func(c *elton.Context) error {
+		c.SetContentTypeByExt(".json")
+		c.Body = c.RequestBody
+		return nil
+	})
+
+	err := e.ListenAndServe(":3000")
+	if err != nil {
+		panic(err)
+	}
 }
 ```
 
