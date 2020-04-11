@@ -12,10 +12,6 @@ http.Request实例，包含HTTP请求的各相关信息，相关的使用方式�
 
 http.ResponseWriter，用于设置HTTP响应相关状态码、响应头与响应数据，context有各类函数操作此对象，一般无需通过直接操作此对象。
 
-## Headers
-
-HTTP响应头，默认初始化为Response的Headers，此http.Header为响应头。
-
 ## Committed
 
 是否已将响应数据返回（状态码、数据等已写入至Response），除非需要单独处理数据的响应，否则不要设置此属性。
@@ -34,11 +30,7 @@ next函数，此函数会在获取请求时自动生成，无需调整。
 
 ## Params
 
-路由参数对象，它由httprouter的路由参数`httprouter.Params`转换得来map[string]string。
-
-## RawParams
-
-路由参数对象，httprouter的路由参数`httprouter.Params`。
+路由参数对象，提供获取路由中参数方法
 
 ## StatusCode
 
@@ -68,13 +60,13 @@ import (
 	"log"
 
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		log.Println(c.RemoteAddr())
@@ -100,13 +92,13 @@ import (
 	"log"
 
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		log.Println(c.RealIP())
@@ -132,13 +124,13 @@ import (
 	"log"
 
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		log.Println(c.ClientIP())
@@ -163,15 +155,15 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
-	e.GET("/users/:type", func(c *elton.Context) (err error) {
+	e.GET("/users/{type}", func(c *elton.Context) (err error) {
 		c.Body = c.Param("type")
 		return
 	})
@@ -188,18 +180,18 @@ func main() {
 
 **Example**
 ```go
-// http://127.0.0.1:3000/?type=vip&count=10
+// curl http://127.0.0.1:3000/?type=vip&count=10
 package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.Body = c.QueryParam("type")
@@ -218,18 +210,18 @@ func main() {
 
 **Example**
 ```go
-// http://127.0.0.1:3000/?type=vip&count=10
+// curl http://127.0.0.1:3000/?type=vip&count=10
 package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.Body = c.Query()
@@ -252,13 +244,13 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.Body = "Hello, World!"
@@ -287,13 +279,13 @@ import (
 	"math/rand"
 
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.Use(func(c *elton.Context) error {
 		c.Set("id", rand.Int())
@@ -301,7 +293,7 @@ func main() {
 	})
 
 	e.GET("/", func(c *elton.Context) (err error) {
-		value, ok := c.Get("id")
+		value, _ := c.Get("id")
 		c.Body = value
 		return
 	})
@@ -322,13 +314,13 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.Body = c.GetRequestHeader("User-Agent")
@@ -351,13 +343,13 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.SetRequestHeader("User-Agent", "go-agent")
@@ -381,13 +373,13 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.AddRequestHeader("User-Agent", "go-agent")
@@ -414,13 +406,13 @@ import (
 	"strconv"
 
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.SetHeader("X-Response-Id", strconv.Itoa(rand.Int()))
@@ -447,13 +439,13 @@ import (
 	"strconv"
 
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.SetHeader("X-Response-Id", strconv.Itoa(rand.Int()))
@@ -480,13 +472,13 @@ import (
 	"strconv"
 
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.SetHeader("X-Response-Id", strconv.Itoa(rand.Int()))
@@ -510,13 +502,13 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.AddHeader("X-Response-Id", "1")
@@ -541,13 +533,13 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.AddHeader("X-Response-Id", "1")
@@ -577,13 +569,13 @@ import (
 	"strconv"
 
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		cookie, _ := c.Cookie("jt")
@@ -617,7 +609,7 @@ import (
 	"strconv"
 
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
@@ -627,7 +619,7 @@ func main() {
 		"secret key",
 	})
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		cookie, _ := c.SignedCookie("jt")
@@ -658,13 +650,13 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.NoContent()
@@ -688,13 +680,13 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.NotModified()
@@ -718,13 +710,13 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.POST("/", func(c *elton.Context) (err error) {
 		c.Created(map[string]string{
@@ -749,13 +741,13 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 	e.Use(func(c *elton.Context) error {
 		c.NoCache()
 		return c.Next()
@@ -782,13 +774,13 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.NoStore()
@@ -812,13 +804,13 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.CacheMaxAge("1m", "10s")
@@ -842,13 +834,13 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.SetContentTypeByExt(".html")
@@ -879,13 +871,13 @@ import (
 	"time"
 
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		go func() {
@@ -914,13 +906,13 @@ import (
 	"bytes"
 
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		buf := new(bytes.Buffer)

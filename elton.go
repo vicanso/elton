@@ -1,16 +1,24 @@
-// Copyright 2018 tree xie
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// MIT License
+
+// Copyright (c) 2020 Tree Xie
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 package elton
 
@@ -28,7 +36,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/vicanso/hes"
 )
 
@@ -55,10 +62,9 @@ type (
 	Elton struct {
 		// status of elton
 		status int32
+		tree   *node
 		// Server http server
 		Server *http.Server
-		// Router http router
-		Router *httprouter.Router
 		// Routers all router infos
 		Routers []*RouterInfo
 		// Middlewares middleware function
@@ -80,7 +86,6 @@ type (
 		// functionInfos the function address:name map
 		functionInfos map[uintptr]string
 		ctxPool       sync.Pool
-		validators    map[string]Validator
 	}
 	// TraceInfo trace's info
 	TraceInfo struct {
@@ -133,11 +138,14 @@ func New() *Elton {
 // NewWithoutServer create an elton instance without http server
 func NewWithoutServer() *Elton {
 	e := &Elton{
-		Router:        httprouter.New(),
+		tree:          new(node),
 		functionInfos: make(map[uintptr]string),
 	}
 	e.ctxPool.New = func() interface{} {
-		return &Context{}
+		return &Context{
+			elton:  e,
+			Params: new(RouteParams),
+		}
 	}
 	return e
 }
@@ -226,21 +234,28 @@ func (e *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	for _, preHandler := range e.PreMiddlewares {
 		preHandler(req)
 	}
-	fn, params, _ := e.Router.Lookup(req.Method, req.URL.Path)
-	if fn != nil {
-		fn(resp, req, params)
+
+	c := e.ctxPool.Get().(*Context)
+	c.Reset()
+	method := methodMap[req.Method]
+	rn := e.tree.findRoute(method, req.URL.Path, c.Params)
+	if rn == nil {
+		// 404处理
+		e.NotFound(resp, req)
+		// 404的所有context都可复用
+		e.ctxPool.Put(c)
 		return
 	}
-	// 404处理
-	e.NotFound(resp, req)
-}
-
-// fillContext fill the context
-func (e *Elton) fillContext(c *Context, resp http.ResponseWriter, req *http.Request) {
 	c.Request = req
 	c.Response = resp
-	if resp != nil {
-		c.Headers = resp.Header()
+
+	if e.GenerateID != nil {
+		c.ID = e.GenerateID()
+	}
+
+	rn.endpoints[method].handler(c)
+	if c.isReuse() {
+		e.ctxPool.Put(c)
 	}
 }
 
@@ -258,23 +273,8 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) {
 		Method: method,
 		Path:   path,
 	})
-	e.Router.Handle(method, path, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		c := e.ctxPool.Get().(*Context)
-		c.Reset()
-		e.fillContext(c, resp, req)
-		c.RawParams = params
-		if len(params) != 0 {
-			c.Params = make(map[string]string)
-			for _, item := range params {
-				c.Params[item.Key] = item.Value
-			}
-		}
-
-		if e.GenerateID != nil {
-			c.ID = e.GenerateID()
-		}
+	e.tree.InsertRoute(methodMap[method], path, func(c *Context) {
 		c.Route = path
-		c.elton = e
 		mids := e.Middlewares
 		maxMid := len(mids)
 		maxNext := maxMid + len(handlerList)
@@ -295,17 +295,6 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) {
 				return nil
 			}
 
-			// 在最后一个handler执行时，如果有配置参数校验，则校验
-			if index == maxNext-1 && e.validators != nil {
-				for key, value := range c.Params {
-					if e.validators[key] != nil {
-						e := e.validators[key](value)
-						if e != nil {
-							return e
-						}
-					}
-				}
-			}
 			// 如果已执行完公共添加的中间件，执行handler list
 			if index >= maxMid {
 				fn = handlerList[index-maxMid]
@@ -347,43 +336,33 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) {
 			e.EmitError(c, err)
 		}
 		// 如果已commit 表示返回数据已设置，无需处理
-		if !c.Committed {
-			if err != nil {
-				e.Error(c, err)
-			} else {
-				if c.BodyBuffer != nil {
-					c.SetHeader(HeaderContentLength, strconv.Itoa(c.BodyBuffer.Len()))
+		if c.Committed {
+			return
+		}
+		c.Committed = true
+		if err != nil {
+			e.Error(c, err)
+		} else {
+			if c.BodyBuffer != nil {
+				c.SetHeader(HeaderContentLength, strconv.Itoa(c.BodyBuffer.Len()))
+			}
+			if c.StatusCode != 0 {
+				c.Response.WriteHeader(c.StatusCode)
+			}
+			if c.BodyBuffer != nil {
+				_, responseErr := c.Response.Write(c.BodyBuffer.Bytes())
+				if responseErr != nil {
+					e.EmitError(c, responseErr)
 				}
-				if c.StatusCode != 0 {
-					resp.WriteHeader(c.StatusCode)
-				}
-				if c.BodyBuffer != nil {
-					_, responseErr := resp.Write(c.BodyBuffer.Bytes())
-					if responseErr != nil {
-						e.EmitError(c, responseErr)
-					}
-				} else if c.IsReaderBody() {
-					r, _ := c.Body.(io.Reader)
-					_, pipeErr := c.Pipe(r)
-					if pipeErr != nil {
-						e.EmitError(c, pipeErr)
-					}
+			} else if c.IsReaderBody() {
+				r, _ := c.Body.(io.Reader)
+				_, pipeErr := c.Pipe(r)
+				if pipeErr != nil {
+					e.EmitError(c, pipeErr)
 				}
 			}
 		}
-		c.Committed = true
-		if !c.isReuse() {
-			e.ctxPool.Put(c)
-		}
 	})
-}
-
-// AddValidator add validate function
-func (e *Elton) AddValidator(key string, fn Validator) {
-	if e.validators == nil {
-		e.validators = make(map[string]Validator)
-	}
-	e.validators[key] = fn
 }
 
 // GET add http get method handle

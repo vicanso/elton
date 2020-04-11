@@ -1,3 +1,25 @@
+// MIT License
+
+// Copyright (c) 2020 Tree Xie
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package elton
 
 import (
@@ -8,7 +30,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -137,12 +158,12 @@ func TestHandle(t *testing.T) {
 		e.ALL(allMethods)
 		for index, r := range e.Routers {
 			p := path
-			if index >= 8 {
+			if index >= len(methods) {
 				p = allMethods
 			}
 			assert.Equal(p, r.Path)
 		}
-		assert.Equal(16, len(e.Routers), "method handle add fail")
+		assert.Equal(2*len(methods), len(e.Routers), "method handle add fail")
 	})
 	t.Run("group", func(t *testing.T) {
 		assert := assert.New(t)
@@ -180,7 +201,7 @@ func TestHandle(t *testing.T) {
 			resp := httptest.NewRecorder()
 			e.ServeHTTP(resp, req)
 		}
-		assert.Equal(doneCount, len(methods), "not all method request is done")
+		assert.Equal(len(methods), doneCount, "not all method request is done")
 	})
 
 	route := "/system/info"
@@ -286,33 +307,6 @@ func TestHandle(t *testing.T) {
 		assert.Equal(http.StatusOK, resp.Code)
 		assert.Equal(data, resp.Body.String())
 	})
-}
-
-func TestParamValidate(t *testing.T) {
-	e := New()
-	runMid := false
-	assert := assert.New(t)
-	e.AddValidator("id", func(value string) error {
-		reg := regexp.MustCompile(`^[0-9]{5}$`)
-		if !reg.MatchString(value) {
-			return errors.New("id should be 5 numbers")
-		}
-		return nil
-	})
-	e.Use(func(c *Context) error {
-		runMid = true
-		return c.Next()
-	})
-	e.GET("/:id", func(c *Context) error {
-		c.NoContent()
-		return nil
-	})
-	req := httptest.NewRequest("GET", "/1", nil)
-	resp := httptest.NewRecorder()
-	e.ServeHTTP(resp, req)
-	assert.True(runMid)
-	assert.Equal(500, resp.Code)
-	assert.Equal("id should be 5 numbers", resp.Body.String())
 }
 
 func TestErrorHandler(t *testing.T) {

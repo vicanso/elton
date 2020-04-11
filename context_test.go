@@ -1,3 +1,25 @@
+// MIT License
+
+// Copyright (c) 2020 Tree Xie
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package elton
 
 import (
@@ -13,17 +35,18 @@ import (
 
 func TestReset(t *testing.T) {
 	assert := assert.New(t)
+	params := new(RouteParams)
+	params.Add("key", "value")
 	c := Context{
 		Request:   httptest.NewRequest("GET", "https://aslant.site/", nil),
 		Response:  httptest.NewRecorder(),
-		Headers:   make(http.Header),
 		Committed: true,
 		ID:        "abcd",
 		Route:     "/users/me",
 		Next: func() error {
 			return nil
 		},
-		Params:      make(map[string]string),
+		Params:      params,
 		StatusCode:  200,
 		Body:        make(map[string]string),
 		BodyBuffer:  bytes.NewBufferString("abcd"),
@@ -31,18 +54,17 @@ func TestReset(t *testing.T) {
 		m:           make(map[interface{}]interface{}),
 		realIP:      "abcd",
 		clientIP:    "abcd",
-		elton:       &Elton{},
 		reuseStatus: ReuseContextEnabled,
 	}
 	c.Reset()
 	assert.Nil(c.Request)
 	assert.Nil(c.Response)
-	assert.Nil(c.Headers)
 	assert.False(c.Committed)
 	assert.Equal("", c.ID)
 	assert.Equal("", c.Route)
 	assert.Nil(c.Next)
-	assert.Nil(c.Params)
+	assert.Empty(params.Keys)
+	assert.Empty(params.Values)
 	assert.Equal(0, c.StatusCode)
 	assert.Nil(c.Body)
 	assert.Nil(c.BodyBuffer)
@@ -50,7 +72,6 @@ func TestReset(t *testing.T) {
 	assert.Nil(c.m)
 	assert.Equal("", c.realIP)
 	assert.Equal("", c.clientIP)
-	assert.Nil(c.elton)
 	assert.Equal(int32(ReuseContextEnabled), c.reuseStatus)
 }
 
@@ -154,9 +175,9 @@ func TestParam(t *testing.T) {
 	assert := assert.New(t)
 	c := Context{}
 	assert.Equal(c.Param("name"), "", "params is not initialized, it should be nil")
-	c.Params = map[string]string{
-		"name": "tree.xie",
-	}
+	params := new(RouteParams)
+	params.Add("name", "tree.xie")
+	c.Params = params
 	assert.Equal("tree.xie", c.Param("name"))
 }
 
@@ -356,7 +377,7 @@ func TestSignedCookie(t *testing.T) {
 		}
 		err := c.AddSignedCookie(cookie)
 		assert.Nil(err)
-		assert.Equal("a=b; Path=/; Max-Age=300; HttpOnly; Secure,a.sig=9yv2rWFijew8K8a5Uw9jxRJE53s; Path=/; Max-Age=300; HttpOnly; Secure", strings.Join(c.Headers[HeaderSetCookie], ","))
+		assert.Equal("a=b; Path=/; Max-Age=300; HttpOnly; Secure,a.sig=9yv2rWFijew8K8a5Uw9jxRJE53s; Path=/; Max-Age=300; HttpOnly; Secure", strings.Join(c.Header()[HeaderSetCookie], ","))
 	})
 
 	t.Run("get signed cookie", func(t *testing.T) {
@@ -448,8 +469,8 @@ func TestNotModified(t *testing.T) {
 	c := NewContext(resp, nil)
 	c.Body = map[string]string{}
 	c.BodyBuffer = bytes.NewBufferString("abc")
-	c.Headers.Set(HeaderContentEncoding, "gzip")
-	c.Headers.Set(HeaderContentType, "text/html")
+	c.SetHeader(HeaderContentEncoding, "gzip")
+	c.SetHeader(HeaderContentType, "text/html")
 	c.NotModified()
 	assert.Equal(http.StatusNotModified, c.StatusCode)
 	assert.Nil(c.Body)

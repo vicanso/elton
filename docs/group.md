@@ -14,13 +14,13 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	noop := func(c *elton.Context) error {
 		return c.Next()

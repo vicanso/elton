@@ -58,19 +58,19 @@ e.Method(path string, ...func(*elton.Context) error)
 elton的路由使用[httprouter](https://github.com/julienschmidt/httprouter)，下面是两个简单的示例，更多的使用方式可以参考httprouter。
 
 ```go
-// 带参数的路由配置
-e.GET("/books/:type", func(c *elton.Context) error {
-    c.BodyBuffer = bytes.NewBufferString(c.Param("type"))
-    return nil
+// 带参数路由
+e.GET("/users/{type}", func(c *elton.Context) error {
+	c.BodyBuffer = bytes.NewBufferString(c.Param("type"))
+	return nil
 })
 
 // 带中间件的路由配置
 e.GET("/users/me", func(c *elton.Context) error {
-    c.Set("account", "tree.xie")
-    return c.Next()
+	c.Set("account", "tree.xie")
+	return c.Next()
 }, func(c *elton.Context) error {
-    c.BodyBuffer = bytes.NewBufferString(c.GetString("account"))
-    return nil
+	c.BodyBuffer = bytes.NewBufferString(c.GetString("account"))
+	return nil
 })
 ```
 
@@ -80,21 +80,21 @@ e.GET("/users/me", func(c *elton.Context) error {
 
 ### responser
 
-HTTP请求响应数据时，需要将数据转换为Buffer返回，而在应用时响应数据一般为各类的struct或map等结构化数据，因此elton提供了Body(interface{})字段来保存这些数据，再使用自定义的中间件将数据转换为对应的字节数据，[elton-responder](https://github.com/vicanso/elton-responder)提供了转数据转换为json字节并设置对应的Content-Type。
+HTTP请求响应数据时，需要将数据转换为Buffer返回，而在应用时响应数据一般为各类的struct或map等结构化数据，因此elton提供了Body(interface{})字段来保存这些数据，再使用自定义的中间件将数据转换为对应的字节数据，`elton-responder`提供了将struct(map)转换为json字节并设置对应的Content-Type，对于string([]byte)则直接输出。
 
 ```go
 package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 
 	e := elton.New()
 	// 对响应数据 c.Body 转换为相应的json响应
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	getSession := func(c *elton.Context) error {
 		c.Set("account", "tree.xie")
@@ -116,19 +116,18 @@ func main() {
 		panic(err)
 	}
 }
-
 ```
 
-### error-handler
+### error
 
-当请求处理失败时，直接返回error则可，elton从error中获取出错信息并输出。默认的出错处理并不适合实际应用场景，建议使用自定义出错类配合中间件，便于统一的错误处理，程序监控。
+当请求处理失败时，直接返回error则可，elton从error中获取出错信息并输出。默认的出错处理并不适合实际应用场景，建议使用自定义出错类配合中间件，便于统一的错误处理，程序监控，下面是引入错误中间件将出错转换为json形式的响应。
 
 ```go
 package main
 
 import (
 	"github.com/vicanso/elton"
-	errorhandler "github.com/vicanso/elton-error-handler"
+	"github.com/vicanso/elton/middleware"
 	"github.com/vicanso/hes"
 )
 
@@ -136,7 +135,7 @@ func main() {
 
 	e := elton.New()
 	// 指定出错以json的形式返回
-	e.Use(errorhandler.New(errorhandler.Config{
+	e.Use(middleware.NewError(middleware.ErrorConfig{
 		ResponseType: "json",
 	}))
 
@@ -159,12 +158,16 @@ func main() {
 ## bench
 
 ```
-BenchmarkRoutes-8                	 3489271	       343 ns/op	     376 B/op	       4 allocs/op
-BenchmarkGetFunctionName-8       	129711422	         9.23 ns/op	       0 B/op	       0 allocs/op
-BenchmarkContextGet-8            	14131228	        84.4 ns/op	      16 B/op	       1 allocs/op
-BenchmarkContextNewMap-8         	183387170	         6.52 ns/op	       0 B/op	       0 allocs/op
-BenchmarkConvertServerTiming-8   	 1430475	       839 ns/op	     360 B/op	      11 allocs/op
-BenchmarkGetStatus-8             	1000000000	         0.272 ns/op	       0 B/op	       0 allocs/op
-BenchmarkRWMutexSignedKeys-8     	35028435	        33.5 ns/op
-BenchmarkAtomicSignedKeys-8      	602747588	         1.99 ns/op
+BenchmarkRoutes-8                	 5626749	       220 ns/op	     152 B/op	       3 allocs/op
+BenchmarkGetFunctionName-8       	121043851	         9.61 ns/op	       0 B/op	       0 allocs/op
+BenchmarkContextGet-8            	14413359	        82.3 ns/op	      16 B/op	       1 allocs/op
+BenchmarkContextNewMap-8         	182361898	         6.60 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConvertServerTiming-8   	 1377422	       878 ns/op	     360 B/op	      11 allocs/op
+BenchmarkGetStatus-8             	1000000000	         0.275 ns/op	       0 B/op	       0 allocs/op
+BenchmarkStatic-8                	   21412	     55142 ns/op	   25940 B/op	     628 allocs/op
+BenchmarkGitHubAPI-8             	   13143	     91191 ns/op	   33816 B/op	     812 allocs/op
+BenchmarkGplusAPI-8              	  271857	      4359 ns/op	    2144 B/op	      52 allocs/op
+BenchmarkParseAPI-8              	  136795	      8806 ns/op	    4287 B/op	     104 allocs/op
+BenchmarkRWMutexSignedKeys-8     	34447268	        33.8 ns/op
+BenchmarkAtomicSignedKeys-8      	1000000000	         0.412 ns/op
 ```
