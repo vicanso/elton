@@ -34,6 +34,13 @@ func (s *RouteParams) Add(key, value string) {
 	s.Values = append(s.Values, value)
 }
 
+// Reset reset the params
+func (s *RouteParams) Reset() {
+	s.Keys = s.Keys[:0]
+	s.Values = s.Values[:0]
+	s.methodNotAllowed = false
+}
+
 // Get get param's value by key
 func (s *RouteParams) Get(key string) (value string) {
 	index := -1

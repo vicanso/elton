@@ -24,4 +24,4 @@
 
 * [Custom compress](./docs/custom_compress.md)
 
-* [Router param validate](./docs/router_param_validate.md)
+* [Router params](./docs/router_params.md)

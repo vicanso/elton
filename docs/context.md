@@ -34,11 +34,7 @@ next函数，此函数会在获取请求时自动生成，无需调整。
 
 ## Params
 
-路由参数对象，它由httprouter的路由参数`httprouter.Params`转换得来map[string]string。
-
-## RawParams
-
-路由参数对象，httprouter的路由参数`httprouter.Params`。
+路由参数对象，提供获取路由中参数方法
 
 ## StatusCode
 
@@ -171,7 +167,7 @@ func main() {
 
 	e.Use(responder.NewDefault())
 
-	e.GET("/users/:type", func(c *elton.Context) (err error) {
+	e.GET("/users/{type}", func(c *elton.Context) (err error) {
 		c.Body = c.Param("type")
 		return
 	})

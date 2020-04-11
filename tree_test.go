@@ -1,8 +1,29 @@
+// MIT License
+
+// Copyright (c) 2020 Tree Xie
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package elton
 
 import (
 	"fmt"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,27 +32,27 @@ import (
 func TestTree(t *testing.T) {
 	assert := assert.New(t)
 
-	hStub := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hIndex := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hFavicon := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hArticleList := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hArticleNear := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hArticleShow := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hArticleShowRelated := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hArticleShowOpts := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hArticleSlug := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hArticleByUser := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hUserList := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hUserShow := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hAdminCatchall := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hAdminAppShow := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hAdminAppShowCatchall := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hUserProfile := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hUserSuper := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hUserAll := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hHubView1 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hHubView2 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hHubView3 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
+	hStub := func(c *Context) {}
+	hIndex := func(c *Context) {}
+	hFavicon := func(c *Context) {}
+	hArticleList := func(c *Context) {}
+	hArticleNear := func(c *Context) {}
+	hArticleShow := func(c *Context) {}
+	hArticleShowRelated := func(c *Context) {}
+	hArticleShowOpts := func(c *Context) {}
+	hArticleSlug := func(c *Context) {}
+	hArticleByUser := func(c *Context) {}
+	hUserList := func(c *Context) {}
+	hUserShow := func(c *Context) {}
+	hAdminCatchall := func(c *Context) {}
+	hAdminAppShow := func(c *Context) {}
+	hAdminAppShowCatchall := func(c *Context) {}
+	hUserProfile := func(c *Context) {}
+	hUserSuper := func(c *Context) {}
+	hUserAll := func(c *Context) {}
+	hHubView1 := func(c *Context) {}
+	hHubView2 := func(c *Context) {}
+	hHubView3 := func(c *Context) {}
 
 	tr := &node{}
 
@@ -100,7 +121,7 @@ func TestTree(t *testing.T) {
 		{r: "/article/22//related", h: hArticleShowRelated, k: []string{"id"}, v: []string{"22"}},
 		{r: "/article/111/edit", h: hStub, k: []string{"iffd"}, v: []string{"111"}},
 		{r: "/article/slug/sept/-/4/2015", h: hArticleSlug, k: []string{"month", "day", "year"}, v: []string{"sept", "4", "2015"}},
-		{r: "/article/:id", h: hArticleShow, k: []string{"id"}, v: []string{":id"}},
+		{r: "/article/{id}", h: hArticleShow, k: []string{"id"}, v: []string{"{id}"}},
 
 		{r: "/admin/user", h: hUserList, k: nil, v: nil},
 		{r: "/admin/user/", h: hUserList, k: nil, v: nil},
@@ -141,26 +162,26 @@ func TestTree(t *testing.T) {
 
 func TestTreeMoar(t *testing.T) {
 	assert := assert.New(t)
-	hStub := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub1 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub2 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub3 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub4 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub5 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub6 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub7 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub8 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub9 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub10 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub11 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub12 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub13 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub14 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub15 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub16 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
+	hStub := func(c *Context) {}
+	hStub1 := func(c *Context) {}
+	hStub2 := func(c *Context) {}
+	hStub3 := func(c *Context) {}
+	hStub4 := func(c *Context) {}
+	hStub5 := func(c *Context) {}
+	hStub6 := func(c *Context) {}
+	hStub7 := func(c *Context) {}
+	hStub8 := func(c *Context) {}
+	hStub9 := func(c *Context) {}
+	hStub10 := func(c *Context) {}
+	hStub11 := func(c *Context) {}
+	hStub12 := func(c *Context) {}
+	hStub13 := func(c *Context) {}
+	hStub14 := func(c *Context) {}
+	hStub15 := func(c *Context) {}
+	hStub16 := func(c *Context) {}
 
 	// TODO: panic if we see {id}{x} because we're missing a delimiter, its not possible.
-	// also {:id}* is not possible.
+	// also {{id}}* is not possible.
 
 	tr := &node{}
 
@@ -237,13 +258,13 @@ func TestTreeMoar(t *testing.T) {
 
 func TestTreeRegexp(t *testing.T) {
 	assert := assert.New(t)
-	hStub1 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub2 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub3 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub4 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub5 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub6 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
-	hStub7 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
+	hStub1 := func(c *Context) {}
+	hStub2 := func(c *Context) {}
+	hStub3 := func(c *Context) {}
+	hStub4 := func(c *Context) {}
+	hStub5 := func(c *Context) {}
+	hStub6 := func(c *Context) {}
+	hStub7 := func(c *Context) {}
 
 	tr := &node{}
 	tr.InsertRoute(mGET, "/articles/{rid:^[0-9]{5,6}}", hStub7)
@@ -282,7 +303,7 @@ func TestTreeRegexp(t *testing.T) {
 
 func TestTreeRegexMatchWholeParam(t *testing.T) {
 	assert := assert.New(t)
-	hStub1 := func(w http.ResponseWriter, r *http.Request, params *RouteParams) {}
+	hStub1 := func(c *Context) {}
 
 	tr := &node{}
 	tr.InsertRoute(mGET, "/{id:[0-9]+}", hStub1)

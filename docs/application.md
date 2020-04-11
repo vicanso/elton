@@ -165,9 +165,9 @@ func main() {
 
 	e.Use(responder.NewDefault())
 
-	e.GET("/ping", func(c *elton.Context) (err error) {
+	e.GET("/", func(c *elton.Context) (err error) {
 		log.Println(c.ID)
-		c.Body = "pong"
+		c.Body = c.ID
 		return
 	})
 	err := e.ListenAndServe(":3000")
@@ -207,8 +207,8 @@ func main() {
 	e.SetFunctionName(fn, "responder")
 	e.Use(fn)
 
-	e.GET("/ping", func(c *elton.Context) (err error) {
-		c.Body = "pong"
+	e.GET("/", func(c *elton.Context) (err error) {
+		c.Body = "Hello, World!"
 		return
 	})
 	err := e.ListenAndServe(":3000")
@@ -390,17 +390,17 @@ func main() {
 		return c.Next()
 	}
 
-	e.Handle("GET", "/ping", noop, func(c *elton.Context) (err error) {
-		c.Body = "pong"
+	e.Handle("GET", "/", noop, func(c *elton.Context) (err error) {
+		c.Body = "Hello, World!"
 		return
 	})
 
-	e.POST("/users/:type", func(c *elton.Context) (err error) {
+	e.POST("/users/{type}", func(c *elton.Context) (err error) {
 		c.Body = "OK"
 		return
 	})
 
-	e.GET("/files/*file", func(c *elton.Context) (err error) {
+	e.GET("/files/*", func(c *elton.Context) (err error) {
 		c.Body = "file content"
 		return
 	})
@@ -410,6 +410,7 @@ func main() {
 		panic(err)
 	}
 }
+
 ```
 
 ## Use
@@ -442,8 +443,8 @@ func main() {
 
 	e.Use(responder.NewDefault())
 
-	e.GET("/ping", func(c *elton.Context) (err error) {
-		c.Body = "pong"
+	e.GET("/", func(c *elton.Context) (err error) {
+		c.Body = "Hello, World!"
 		return
 	})
 
@@ -482,46 +483,9 @@ func main() {
 	})
 	e.Use(responder.NewDefault())
 
-	e.GET("/ping", func(c *elton.Context) (err error) {
-		c.Body = "pong"
+	e.GET("/", func(c *elton.Context) (err error) {
+		c.Body = "Hello, World!"
 		return
-	})
-	err := e.ListenAndServe(":3000")
-	if err != nil {
-		panic(err)
-	}
-}
-```
-
-## AddValidator
-
-增加路由参数校验函数，用于param的校验（在最后一个handler执行时调用）。
-
-**Example**
-```go
-package main
-
-import (
-	"errors"
-	"regexp"
-
-	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
-)
-
-func main() {
-	e := elton.New()
-	e.Use(responder.NewDefault())
-	e.AddValidator("id", func(value string) error {
-		reg := regexp.MustCompile(`^[0-9]{5}$`)
-		if !reg.MatchString(value) {
-			return errors.New("id should be numbers")
-		}
-		return nil
-	})
-	e.GET("/:id", func(c *elton.Context) error {
-		c.Body = c.Param("id")
-		return nil
 	})
 	err := e.ListenAndServe(":3000")
 	if err != nil {
@@ -564,7 +528,7 @@ func main() {
 
 ## OnError
 
-添加Error的监听函数，如果当任一Handler的处理返回Error，并且其它的Handler并未将此Error处理，则会触发error事件，建议使用此事件来监控程序未处理异常。
+添加Error的监听函数，如果当任一Handler的处理返回Error，并且其它的Handler并未将此Error处理(建议使用专门的中间件处理出错)，则会触发error事件，建议使用此事件来监控程序未处理异常。
 
 **Example**
 ```go
@@ -588,8 +552,8 @@ func main() {
 
 	e.Use(responder.NewDefault())
 
-	e.GET("/ping", func(c *elton.Context) (err error) {
-		c.Body = "pong"
+	e.GET("/", func(c *elton.Context) (err error) {
+		c.Body = "Hello, World!"
 		return
 	})
 	// 由于未设置公共的出错处理中间件，此error会触发事件

@@ -80,7 +80,7 @@ type node struct {
 }
 
 type nodes []*node
-type EndpointHandler func(http.ResponseWriter, *http.Request, *RouteParams)
+type EndpointHandler func(c *Context)
 
 type endpoint struct {
 	// endpoint handler

@@ -142,7 +142,10 @@ func NewWithoutServer() *Elton {
 		functionInfos: make(map[uintptr]string),
 	}
 	e.ctxPool.New = func() interface{} {
-		return &Context{}
+		return &Context{
+			elton:  e,
+			Params: new(RouteParams),
+		}
 	}
 	return e
 }
@@ -231,21 +234,28 @@ func (e *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	for _, preHandler := range e.PreMiddlewares {
 		preHandler(req)
 	}
-	fn, params := e.tree.FindRoute(methodMap[req.Method], req.URL.Path)
-	if fn != nil {
-		fn(resp, req, params)
+
+	c := e.ctxPool.Get().(*Context)
+	c.Reset()
+	method := methodMap[req.Method]
+	rn := e.tree.findRoute(method, req.URL.Path, c.Params)
+	if rn == nil {
+		// 404处理
+		e.NotFound(resp, req)
+		// 404的所有context都可复用
+		e.ctxPool.Put(c)
 		return
 	}
-	// 404处理
-	e.NotFound(resp, req)
-}
-
-// fillContext fill the context
-func (e *Elton) fillContext(c *Context, resp http.ResponseWriter, req *http.Request) {
 	c.Request = req
 	c.Response = resp
-	if resp != nil {
-		c.Headers = resp.Header()
+
+	if e.GenerateID != nil {
+		c.ID = e.GenerateID()
+	}
+
+	rn.endpoints[method].handler(c)
+	if c.isReuse() {
+		e.ctxPool.Put(c)
 	}
 }
 
@@ -263,17 +273,8 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) {
 		Method: method,
 		Path:   path,
 	})
-	e.tree.InsertRoute(methodMap[method], path, func(resp http.ResponseWriter, req *http.Request, params *RouteParams) {
-		c := e.ctxPool.Get().(*Context)
-		c.Reset()
-		e.fillContext(c, resp, req)
-		c.Params = params
-
-		if e.GenerateID != nil {
-			c.ID = e.GenerateID()
-		}
+	e.tree.InsertRoute(methodMap[method], path, func(c *Context) {
 		c.Route = path
-		c.elton = e
 		mids := e.Middlewares
 		maxMid := len(mids)
 		maxNext := maxMid + len(handlerList)
@@ -335,33 +336,31 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) {
 			e.EmitError(c, err)
 		}
 		// 如果已commit 表示返回数据已设置，无需处理
-		if !c.Committed {
-			if err != nil {
-				e.Error(c, err)
-			} else {
-				if c.BodyBuffer != nil {
-					c.SetHeader(HeaderContentLength, strconv.Itoa(c.BodyBuffer.Len()))
-				}
-				if c.StatusCode != 0 {
-					resp.WriteHeader(c.StatusCode)
-				}
-				if c.BodyBuffer != nil {
-					_, responseErr := resp.Write(c.BodyBuffer.Bytes())
-					if responseErr != nil {
-						e.EmitError(c, responseErr)
-					}
-				} else if c.IsReaderBody() {
-					r, _ := c.Body.(io.Reader)
-					_, pipeErr := c.Pipe(r)
-					if pipeErr != nil {
-						e.EmitError(c, pipeErr)
-					}
-				}
-			}
+		if c.Committed {
+			return
 		}
 		c.Committed = true
-		if !c.isReuse() {
-			e.ctxPool.Put(c)
+		if err != nil {
+			e.Error(c, err)
+		} else {
+			if c.BodyBuffer != nil {
+				c.SetHeader(HeaderContentLength, strconv.Itoa(c.BodyBuffer.Len()))
+			}
+			if c.StatusCode != 0 {
+				c.Response.WriteHeader(c.StatusCode)
+			}
+			if c.BodyBuffer != nil {
+				_, responseErr := c.Response.Write(c.BodyBuffer.Bytes())
+				if responseErr != nil {
+					e.EmitError(c, responseErr)
+				}
+			} else if c.IsReaderBody() {
+				r, _ := c.Body.(io.Reader)
+				_, pipeErr := c.Pipe(r)
+				if pipeErr != nil {
+					e.EmitError(c, pipeErr)
+				}
+			}
 		}
 	})
 }

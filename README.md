@@ -58,19 +58,19 @@ e.Method(path string, ...func(*elton.Context) error)
 elton的路由使用[httprouter](https://github.com/julienschmidt/httprouter)，下面是两个简单的示例，更多的使用方式可以参考httprouter。
 
 ```go
-// 带参数的路由配置
-e.GET("/books/{type}", func(c *elton.Context) error {
-    c.BodyBuffer = bytes.NewBufferString(c.Param("type"))
-    return nil
+// 带参数路由
+e.GET("/users/{type}", func(c *elton.Context) error {
+	c.BodyBuffer = bytes.NewBufferString(c.Param("type"))
+	return nil
 })
 
 // 带中间件的路由配置
 e.GET("/users/me", func(c *elton.Context) error {
-    c.Set("account", "tree.xie")
-    return c.Next()
+	c.Set("account", "tree.xie")
+	return c.Next()
 }, func(c *elton.Context) error {
-    c.BodyBuffer = bytes.NewBufferString(c.GetString("account"))
-    return nil
+	c.BodyBuffer = bytes.NewBufferString(c.GetString("account"))
+	return nil
 })
 ```
 
@@ -116,7 +116,6 @@ func main() {
 		panic(err)
 	}
 }
-
 ```
 
 ### error-handler
@@ -159,12 +158,16 @@ func main() {
 ## bench
 
 ```
-BenchmarkRoutes-8                        2808996               417 ns/op             424 B/op          5 allocs/op
-BenchmarkGetFunctionName-8              130826358                9.31 ns/op            0 B/op          0 allocs/op
-BenchmarkContextGet-8                   14899309                79.9 ns/op            16 B/op          1 allocs/op
-BenchmarkContextNewMap-8                184250533                6.47 ns/op            0 B/op          0 allocs/op
-BenchmarkConvertServerTiming-8           1421496               854 ns/op             360 B/op         11 allocs/op
-BenchmarkGetStatus-8                    1000000000               0.542 ns/op           0 B/op          0 allocs/op
-BenchmarkRWMutexSignedKeys-8            33935337                33.8 ns/op
-BenchmarkAtomicSignedKeys-8             1000000000               0.402 ns/op
+BenchmarkRoutes-8                	 5626749	       220 ns/op	     152 B/op	       3 allocs/op
+BenchmarkGetFunctionName-8       	121043851	         9.61 ns/op	       0 B/op	       0 allocs/op
+BenchmarkContextGet-8            	14413359	        82.3 ns/op	      16 B/op	       1 allocs/op
+BenchmarkContextNewMap-8         	182361898	         6.60 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConvertServerTiming-8   	 1377422	       878 ns/op	     360 B/op	      11 allocs/op
+BenchmarkGetStatus-8             	1000000000	         0.275 ns/op	       0 B/op	       0 allocs/op
+BenchmarkStatic-8                	   21412	     55142 ns/op	   25940 B/op	     628 allocs/op
+BenchmarkGitHubAPI-8             	   13143	     91191 ns/op	   33816 B/op	     812 allocs/op
+BenchmarkGplusAPI-8              	  271857	      4359 ns/op	    2144 B/op	      52 allocs/op
+BenchmarkParseAPI-8              	  136795	      8806 ns/op	    4287 B/op	     104 allocs/op
+BenchmarkRWMutexSignedKeys-8     	34447268	        33.8 ns/op
+BenchmarkAtomicSignedKeys-8      	1000000000	         0.412 ns/op
 ```

@@ -55,8 +55,6 @@ type (
 	Context struct {
 		Request  *http.Request
 		Response http.ResponseWriter
-		// Headers http response's header, it's equal to response's header
-		Headers http.Header
 		// Committed commit the data to response, when it's true, the response has been sent.
 		// If using custom response handler, please set it true.
 		Committed bool
@@ -105,12 +103,11 @@ const (
 func (c *Context) Reset() {
 	c.Request = nil
 	c.Response = nil
-	c.Headers = nil
 	c.Committed = false
 	c.ID = ""
 	c.Route = ""
 	c.Next = nil
-	c.Params = nil
+	c.Params.Reset()
 	c.StatusCode = 0
 	c.Body = nil
 	c.BodyBuffer = nil
@@ -118,7 +115,6 @@ func (c *Context) Reset() {
 	c.m = nil
 	c.realIP = ""
 	c.clientIP = ""
-	c.elton = nil
 	c.reuseStatus = ReuseContextEnabled
 	c.cacheQuery = nil
 }
@@ -367,7 +363,7 @@ func (c *Context) AddRequestHeader(key, value string) {
 
 // Header get headers of http response
 func (c *Context) Header() http.Header {
-	return c.Headers
+	return c.Response.Header()
 }
 
 // WriteHeader set the http status code
@@ -385,23 +381,23 @@ func (c *Context) Write(buf []byte) (int, error) {
 
 // GetHeader get header from http response
 func (c *Context) GetHeader(key string) string {
-	return c.Headers.Get(key)
+	return c.Header().Get(key)
 }
 
 // SetHeader set http header to response.
 // It replaces any existing values of the key.
 func (c *Context) SetHeader(key, value string) {
 	if value == "" {
-		c.Headers.Del(key)
+		c.Header().Del(key)
 		return
 	}
-	c.Headers.Set(key, value)
+	c.Header().Set(key, value)
 }
 
 // AddHeader add http header to response.
 // It appends to any existing value of the key.
 func (c *Context) AddHeader(key, value string) {
-	c.Headers.Add(key, value)
+	c.Header().Add(key, value)
 }
 
 // ResetHeader reset response header
@@ -569,8 +565,7 @@ func (c *Context) DisableReuse() {
 }
 
 func (c *Context) isReuse() bool {
-	v := atomic.LoadInt32(&c.reuseStatus)
-	return v == ReuseContextEnabled
+	return atomic.LoadInt32(&c.reuseStatus) == ReuseContextEnabled
 }
 
 // Push http server push
@@ -630,8 +625,5 @@ func NewContext(resp http.ResponseWriter, req *http.Request) *Context {
 	c := &Context{}
 	c.Request = req
 	c.Response = resp
-	if resp != nil {
-		c.Headers = resp.Header()
-	}
 	return c
 }
