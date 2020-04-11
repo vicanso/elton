@@ -2,7 +2,7 @@
 description: body反序列化与校验
 ---
 
-elton中[body-parser](https://github.com/vicanso/elton-body-parser)中间件只将数据读取为字节，并没有做反序列化以及参数的校验。使用`json`来反序列化时，只能简单的对参数类型做校验，下面介绍如何使用[govalidator](https://github.com/asaskevich/govalidator)增强参数校验。
+elton中`body-parser`中间件只将数据读取为字节，并没有做反序列化以及参数的校验。使用`json`来反序列化时，只能简单的对参数类型做校验，下面介绍如何使用[govalidator](https://github.com/asaskevich/govalidator)增强参数校验。
 
 下面的例子是用户登录功能，参数为账号与密码，两个参数的限制如下：
 
@@ -18,8 +18,7 @@ import (
 
 	"github.com/asaskevich/govalidator"
 	"github.com/vicanso/elton"
-	bodyparser "github.com/vicanso/elton-body-parser"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 var (
@@ -95,8 +94,11 @@ func doValidate(s interface{}, data interface{}) (err error) {
 func main() {
 	e := elton.New()
 
-	e.Use(bodyparser.NewDefault())
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewError(middleware.ErrorConfig{
+		ResponseType: "json",
+	}))
+	e.Use(middleware.NewDefaultBodyParser())
+	e.Use(middleware.NewDefaultResponder())
 	e.POST("/users/login", func(c *elton.Context) (err error) {
 		params := &loginParams{}
 		err = doValidate(params, c.RequestBody)
@@ -111,6 +113,7 @@ func main() {
 		panic(err)
 	}
 }
+
 ```
 
 

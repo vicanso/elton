@@ -2,7 +2,7 @@
 description: 自定义Body Parser
 ---
 
-elton-body-parser只提供对`application/json`以及`application/x-www-form-urlencoded`转换为json字节的处理，在实际使用中还存在一些其它的场景。如`xml`，自定义数据结构等。
+`elton-body-parser`只提供对`application/json`以及`application/x-www-form-urlencoded`转换为json字节的处理，在实际使用中还存在一些其它的场景。如`xml`，自定义数据结构等。
 
 在实际项目中，统计数据我一般记录至influxdb，为了性能的考虑，统计数据是批量提交（如每1000个统计点提交一次）。数据提交的时候，重复的字符比较多，为了减少带宽的占用，所以先做压缩处理。考虑到性能的原因，采用了`snappy`压缩处理。下面是抽取出来的示例代码：
 
@@ -101,7 +101,7 @@ func main() {
 
 通过各类自定义的中间件，可以实现各种不同的提交数据的解析，只要将解析结果保存至`Context.RequestBody`中，后续则由处理函数再将字节转换为相对应的结构，简单易用。
 
-[elton-body-parser](https://github.com/vicanso/elton-body-parser)提供自定义Decoder方式，可以按实际使用添加Decoder，上面的实现可以简化为：
+`elton-body-parser`提供自定义Decoder方式，可以按实际使用添加Decoder，上面的实现可以简化为：
 
 ```go
 package main
@@ -118,7 +118,7 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/vicanso/elton"
-	bodyparser "github.com/vicanso/elton-body-parser"
+	"github.com/vicanso/elton/middleware"
 )
 
 // 仅示例，对于出错直接panic
@@ -158,7 +158,7 @@ func main() {
 		post()
 	}()
 
-	conf := bodyparser.Config{
+	conf := middleware.BodyParserConfig{
 		// 设置对哪些content type处理，默认只处理application/json
 		ContentTypeValidate: func(c *elton.Context) bool {
 			ct := c.GetRequestHeader(elton.HeaderContentType)
@@ -166,11 +166,11 @@ func main() {
 		},
 	}
 	// gzip解压
-	conf.AddDecoder(bodyparser.NewGzipDecoder())
+	conf.AddDecoder(middleware.NewGzipDecoder())
 	// json decoder
-	conf.AddDecoder(bodyparser.NewJSONDecoder())
+	conf.AddDecoder(middleware.NewJSONDecoder())
 	// 添加自定义influx的decoder
-	conf.AddDecoder(&bodyparser.Decoder{
+	conf.AddDecoder(&middleware.BodyDecoder{
 		// 判断是否符合该decoder
 		Validate: func(c *elton.Context) bool {
 			return c.GetRequestHeader(elton.HeaderContentType) == ContentTypeIfx
@@ -183,7 +183,7 @@ func main() {
 		},
 	})
 
-	e.Use(bodyparser.New(conf))
+	e.Use(middleware.NewBodyParser(conf))
 
 	e.POST("/influx", func(c *elton.Context) (err error) {
 		points := strings.SplitN(string(c.RequestBody), "\n", -1)
