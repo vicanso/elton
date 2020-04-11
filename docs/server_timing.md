@@ -14,7 +14,7 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
@@ -36,7 +36,7 @@ func main() {
 	// 对于公共的中间件，建议指定名称
 	e.SetFunctionName(entry, "entry")
 
-	fn := responder.NewDefault()
+	fn := middleware.NewDefaultResponder()
 	e.Use(fn)
 	e.SetFunctionName(fn, "responder")
 

@@ -123,7 +123,7 @@ func main() {
 		// 可增加统计，方便分析404的处理是被攻击还是接口调用错误
 		log.Printf("404，url:%s", req.RequestURI)
 		resp.WriteHeader(http.StatusNotFound)
-		resp.Write([]byte("Not found"))
+		resp.Write([]byte("Custom not found"))
 	}
 
 	e.GET("/ping", func(c *elton.Context) (err error) {
@@ -151,7 +151,7 @@ import (
 
 	"github.com/oklog/ulid"
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
@@ -163,7 +163,7 @@ func main() {
 		return ulid.MustNew(ulid.Timestamp(t), entropy).String()
 	}
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		log.Println(c.ID)
@@ -189,7 +189,7 @@ import (
 	"log"
 
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
@@ -197,13 +197,13 @@ func main() {
 
 	e.EnableTrace = true
 	e.OnTrace(func(c *elton.Context, traceInfos elton.TraceInfos) {
-        log.Println(traceInfos[0])
-        // 设置HTTP响应头：Server-Timing
+		log.Println(traceInfos[0])
+		// 设置HTTP响应头：Server-Timing
 		c.ServerTiming(traceInfos, "elton-")
 	})
 
-    fn := responder.NewDefault()
-    // 自定义该中间件的名称，如果设置为"-"，则忽略该中间件
+	fn := middleware.NewDefaultResponder()
+	// 自定义该中间件的名称，如果设置为"-"，则忽略该中间件
 	e.SetFunctionName(fn, "responder")
 	e.Use(fn)
 
@@ -378,13 +378,13 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	noop := func(c *elton.Context) error {
 		return c.Next()
@@ -410,7 +410,6 @@ func main() {
 		panic(err)
 	}
 }
-
 ```
 
 ## Use
@@ -426,7 +425,7 @@ import (
 	"time"
 
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
@@ -441,7 +440,7 @@ func main() {
 		return err
 	})
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.Body = "Hello, World!"
@@ -468,7 +467,7 @@ import (
 	"strings"
 
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
@@ -481,7 +480,7 @@ func main() {
 			req.URL.Path = path[len(urlPrefix):]
 		}
 	})
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.Body = "Hello, World!"
@@ -504,12 +503,12 @@ package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 	userGroup := elton.NewGroup("/users", func(c *elton.Context) error {
 		return c.Next()
 	})
@@ -539,7 +538,7 @@ import (
 	"log"
 
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
@@ -550,7 +549,7 @@ func main() {
 		log.Println("error: " + err.Error())
 	})
 
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.Body = "Hello, World!"

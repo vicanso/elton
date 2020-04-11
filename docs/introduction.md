@@ -128,11 +128,11 @@ func main() {
 
 HTTP的响应主要分三部分，HTTP响应状态码，HTTP响应头以及HTTP响应体。前两部分比较简单，格式统一，但是HTTP响应体对于不同的应用有所不同。在elton的处理中，会将BodyBuffer的相应数据在响应时作为HTTP响应体输出。在实际应用中，有些会使用json，有些是xml或者自定义的响应格式。因此在elton是提供了Body(interface{})属性，允许将响应数据赋值至此字段，再由相应的中间件转换为对应的BodyBuffer以及设置`Content-Type`。
 
-在实际使用中，HTTP接口的响应主要还是以`json`为主，因此[elton-responder](https://github.com/vicanso/elton-responder)提供了将Body转换为对应的BodyBuffer(json)的处理，主要的处理如下：
+在实际使用中，HTTP接口的响应主要还是以`json`为主，因此`elton-responder`提供了将Body转换为对应的BodyBuffer(json)的处理，主要的处理如下：
 
 ```go
-// New create a responder
-func New(config Config) elton.Handler {
+// NewResponder create a responder
+func NewResponder(config ResponderConfig) elton.Handler {
 	skipper := config.Skipper
 	if skipper == nil {
 		skipper = elton.DefaultSkipper
@@ -162,7 +162,7 @@ func New(config Config) elton.Handler {
 
 		if c.StatusCode == 0 && c.Body == nil {
 			// 如果status code 与 body 都为空，则为非法响应
-			err = errInvalidResponse
+			err = ErrInvalidResponse
 			return
 		}
 		// 如果body是reader，则跳过
@@ -228,17 +228,17 @@ func New(config Config) elton.Handler {
 
 3、如果Body的类型为[]byte，如果未设置数据类型，则设置为`application/octet-stream`
 
-4、对于其它类型，则使用`json.Marshal`转换为对应的[]byte，如果未设置数据类型，则设置为`application/json; charset=UTF-8`
+4、对于其它类型，则使用marshal(默认为json.Marshal)转换为对应的[]byte，如果未设置数据类型，则设置Content-Type(默认为application/json; charset=UTF-8)
 
 通过此中间件，在开发时可以简单的将各种struct对象，map对象以`json`的形式返回，无需要单独处理数据转换，方便快捷。如果应用需要以xml等其它形式返回，则可自定义marshal与contentType。
 
 ### error handler中间件
 
-elton中默认的Error处理只是简单的输出`err.Error()`，而且状态码也只是简单的使用`StatusInternalServerError`，无法满足应用中的各类定制的出错方式。因此一般建议编写自定义的出错处理中间件，根据自定义的Error对象生成相应的出错响应数据。如[elton-error-handler](https://github.com/vicanso/elton-error-handler)则针对返回的[hes.Error](https://github.com/vicanso/hes)对应生成相应的状态码，响应类型以及响应数据(json)：
+elton中默认的Error处理只是简单的输出`err.Error()`，而且状态码也只是简单的使用`StatusInternalServerError`，无法满足应用中的各类定制的出错方式。因此一般建议编写自定义的出错处理中间件，根据自定义的Error对象生成相应的出错响应数据。如`elton-error`则针对返回的[hes.Error](https://github.com/vicanso/hes)对应生成相应的状态码，响应类型以及响应数据(json)：
 
 ```go
-// New create a error handler
-func New(config Config) elton.Handler {
+// NewError create a error handler
+func NewError(config ErrorConfig) elton.Handler {
 	skipper := config.Skipper
 	if skipper == nil {
 		skipper = elton.DefaultSkipper
@@ -257,11 +257,11 @@ func New(config Config) elton.Handler {
 			he = hes.Wrap(err)
 			he.StatusCode = http.StatusInternalServerError
 			he.Exception = true
-			he.Category = ErrCategory
+			he.Category = ErrErrorCategory
 		}
 		c.StatusCode = he.StatusCode
 		if config.ResponseType == "json" ||
-		    strings.Contains(c.GetRequestHeader("Accept"), "application/json") {
+			strings.Contains(c.GetRequestHeader("Accept"), "application/json") {
 			buf := he.ToJSON()
 			c.BodyBuffer = bytes.NewBuffer(buf)
 			c.SetHeader(elton.HeaderContentType, elton.MIMEApplicationJSON)

@@ -80,21 +80,21 @@ e.GET("/users/me", func(c *elton.Context) error {
 
 ### responser
 
-HTTP请求响应数据时，需要将数据转换为Buffer返回，而在应用时响应数据一般为各类的struct或map等结构化数据，因此elton提供了Body(interface{})字段来保存这些数据，再使用自定义的中间件将数据转换为对应的字节数据，[elton-responder](https://github.com/vicanso/elton-responder)提供了转数据转换为json字节并设置对应的Content-Type。
+HTTP请求响应数据时，需要将数据转换为Buffer返回，而在应用时响应数据一般为各类的struct或map等结构化数据，因此elton提供了Body(interface{})字段来保存这些数据，再使用自定义的中间件将数据转换为对应的字节数据，`elton-responder`提供了将struct(map)转换为json字节并设置对应的Content-Type，对于string([]byte)则直接输出。
 
 ```go
 package main
 
 import (
 	"github.com/vicanso/elton"
-	responder "github.com/vicanso/elton-responder"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 
 	e := elton.New()
 	// 对响应数据 c.Body 转换为相应的json响应
-	e.Use(responder.NewDefault())
+	e.Use(middleware.NewDefaultResponder())
 
 	getSession := func(c *elton.Context) error {
 		c.Set("account", "tree.xie")
@@ -118,16 +118,16 @@ func main() {
 }
 ```
 
-### error-handler
+### error
 
-当请求处理失败时，直接返回error则可，elton从error中获取出错信息并输出。默认的出错处理并不适合实际应用场景，建议使用自定义出错类配合中间件，便于统一的错误处理，程序监控。
+当请求处理失败时，直接返回error则可，elton从error中获取出错信息并输出。默认的出错处理并不适合实际应用场景，建议使用自定义出错类配合中间件，便于统一的错误处理，程序监控，下面是引入错误中间件将出错转换为json形式的响应。
 
 ```go
 package main
 
 import (
 	"github.com/vicanso/elton"
-	errorhandler "github.com/vicanso/elton-error-handler"
+	"github.com/vicanso/elton/middleware"
 	"github.com/vicanso/hes"
 )
 
@@ -135,7 +135,7 @@ func main() {
 
 	e := elton.New()
 	// 指定出错以json的形式返回
-	e.Use(errorhandler.New(errorhandler.Config{
+	e.Use(middleware.NewError(middleware.ErrorConfig{
 		ResponseType: "json",
 	}))
 
