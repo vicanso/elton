@@ -78,7 +78,7 @@ e.GET("/users/me", func(c *elton.Context) error {
 
 简单方便的中间件机制，依赖各类定制的中间件，通过各类中间件的组合，方便快捷实现各类HTTP服务，简单介绍数据响应与出错处理的中间件。
 
-### responser
+### responder
 
 HTTP请求响应数据时，需要将数据转换为Buffer返回，而在应用时响应数据一般为各类的struct或map等结构化数据，因此elton提供了Body(interface{})字段来保存这些数据，再使用自定义的中间件将数据转换为对应的字节数据，`elton-responder`提供了将struct(map)转换为json字节并设置对应的Content-Type，对于string([]byte)则直接输出。
 
@@ -154,6 +154,8 @@ func main() {
 	}
 }
 ```
+
+更多的中间件可以参考[middlewares](./docs/middlewares.md)
 
 ## bench
 
