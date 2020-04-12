@@ -57,7 +57,7 @@ func main() {
 
 ## ErrorHandler
 
-自定义的Error处理，若路由处理过程中返回Error，则会触发此调用，若未指定此处理函数，则使用默认的处理。
+自定义的Error处理，若路由处理过程中返回Error，则会触发此调用，若未指定此处理函数，则使用默认的处理，简单的输出`err.Error()`。
 
 注意若在处理过程中返回的Error已被处理（如Error Handler），则并不会触发此出错调用，尽量使用中间件将Error转换为相应的输出，如JSON。
 
@@ -102,7 +102,7 @@ func main() {
 
 ## NotFoundHandler
 
-未匹配到相应路由时的处理，当无法获取到相应路由时，则会调用此函数（未匹配相应路由时，所有的中间件也不会被调用）。如果有相关统计需要或者自定义的404页面，则可调整此函数，否则可不设置（使用默认）。
+未匹配到相应路由时的处理，当无法获取到相应路由时，则会调用此函数（未匹配相应路由时，所有的中间件也不会被调用）。如果有相关统计需要或者自定义的404页面，则可调整此函数，否则可不设置使用默认处理(返回404 Not Found)。
 
 **Example**
 ```go
@@ -370,7 +370,7 @@ func main() {
 
 ## Handle
 
-添加Handler的处理函数，配置请求的Method与Path，添加相应的处理函数，Path的相关配置与[httprouter](https://github.com/julienschmidt/httprouter)一致。Elton还支持GET，POST，PUT，PATCH，DELETE，HEAD，TRACE以及OPTIONS的方法，这几个方法与`Handle`一致，Method则为相对应的处理，以及可使用ALL来指定支持所有的http method。
+添加Handler的处理函数，配置请求的Method与Path，添加相应的处理函数。Elton还支持GET，POST，PUT，PATCH，DELETE，HEAD，TRACE以及OPTIONS的方法，这几个方法与`Handle`一致，Method则为相对应的处理，以及可使用ALL来指定支持所有的http method。
 
 **Example**
 ```go

@@ -68,7 +68,7 @@ go run main.go
 
 ## 路由
 
-elton与gin一样使用httprouter来处理路由，而每个路由可以添加多个中间件处理函数，根据路由与及HTTP请求方法指定不同的路由处理函数。而全局的中间件则可通过`Use`方法来添加。
+elton每个路由可以添加多个中间件处理函数，根据路由与及HTTP请求方法指定不同的路由处理函数。而全局的中间件则可通过`Use`方法来添加。
 
 ```go
 e.Use(...func(*elton.Context) error)
@@ -82,7 +82,7 @@ e.Method(path string, ...func(*elton.Context) error)
 
 ### 路由示例
 
-elton的路由使用[httprouter](https://github.com/julienschmidt/httprouter)，下面是两个简单的示例，更多的使用方式可以参考httprouter。
+elton的路由使用[chi](https://github.com/go-chi/chi)的路由简化而来，下面是两个简单的示例。
 
 ```go
 // 带参数路由
