@@ -68,13 +68,13 @@ const (
 	mbytes = 1024 * 1024
 
 	// LoggerCommon combined log format
-	LoggerCombined = `{remote} {when-iso} "{method} {uri} {proto}" {status} {sizeHuman} "{referer}" "{userAgent}"`
+	LoggerCombined = `{remote} {when-iso} "{method} {uri} {proto}" {status} {size-human} "{referer}" "{userAgent}"`
 	// LoggerCommon common log format
-	LoggerCommon = `{remote} {when-iso} "{method} {uri} {proto}" {status} {sizeHuman}`
+	LoggerCommon = `{remote} {when-iso} "{method} {uri} {proto}" {status} {size-human}`
 	// LoggerShort short log format
-	LoggerShort = `{remote} {method} {uri} {proto} {status} {sizeHuman} - {latency-ms} ms`
+	LoggerShort = `{remote} {method} {uri} {proto} {status} {size-human} - {latency-ms} ms`
 	// LoggerTiny tiny log format
-	LoggerTiny = `{method} {url} {status} {sizeHuman} - {latency-ms} ms`
+	LoggerTiny = `{method} {url} {status} {size-human} - {latency-ms} ms`
 )
 
 type (

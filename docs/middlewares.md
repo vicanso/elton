@@ -12,7 +12,8 @@ description: 各类常用的中间件
 - `etag` 用于生成HTTP响应数据的ETag
 - `fresh` 判断HTTP请求是否未修改(Not Modified)
 - [json picker](https://github.com/vicanso/elton-json-picker) 用于从响应的JSON中筛选指定字段
-- [logger](https://github.com/vicanso/elton-logger) 生成HTTP请求日志，支持从请求头、响应头中获取相应信息
+- [jwt](https://github.com/vicanso/elton-jwt) jwt中间件
+- `logger` 生成HTTP请求日志，支持从请求头、响应头中获取相应信息
 - `proxy` Proxy中间件，可定义请求转发至其它的服务
 - `recover` 捕获程序的panic异常，避免程序崩溃
 - `responder` 响应处理中间件，用于将`Context.Body`(interface{})转换为对应的JSON数据并输出。如果系统使用xml等输出响应数据，可参考此中间件实现interface{}至xml的转换
@@ -225,6 +226,66 @@ func main() {
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.BodyBuffer = bytes.NewBufferString("abcd")
 		return
+	})
+
+	err := e.ListenAndServe(":3000")
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+## logger
+
+Logger中间件，支持从请求头、响应头等获取信息，支持以下标签：
+
+{host} {remote} {real-ip} {method} {path} {proto} {query} {scheme} {uri} {referer} {userAgent} {size} {size-human} {status} {payload-size} {payload-size-human}
+
+其中`size-human`以及`payload-size-human`是将字节格式化带单位的形式，主要讲解三种字段的使用：
+
+- `~cookie` 表示获取cookie的值，必须以~开头，后面的表示cookie的key
+- `>header` 表示获取请求头的值，必须以>开头，后面表示header的key
+- `<header` 表示获取响应头的值，必须以<开头，后面表示header的key
+
+预定义了四种格式化模板(建议使用时自定义日志模板)：
+- `LoggerCombined`: `{remote} {when-iso} "{method} {uri} {proto}" {status} {size-human} "{referer}" "{userAgent}"`
+- `LoggerCommon`: `{remote} {when-iso} "{method} {uri} {proto}" {status} {size-human}`
+- `LoggerShort`: `{remote} {method} {uri} {proto} {status} {size-human} - {latency-ms} ms`
+- `LoggerTiny`: `{method} {url} {status} {size-human} - {latency-ms} ms`
+
+**Example**
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/middleware"
+)
+
+func main() {
+	e := elton.New()
+
+	// panic处理
+	e.Use(middleware.NewRecover())
+	e.Use(middleware.NewLogger(middleware.LoggerConfig{
+		Format: middleware.LoggerCombined,
+		OnLog: func(str string, _ *elton.Context) {
+			fmt.Println(str)
+		},
+	}))
+
+	// 响应数据转换为json
+	e.Use(middleware.NewDefaultResponder())
+
+	e.GET("/", func(c *elton.Context) error {
+		c.Body = &struct {
+			Message string `json:"message,omitempty"`
+		}{
+			"Hello, World!",
+		}
+		return nil
 	})
 
 	err := e.ListenAndServe(":3000")
