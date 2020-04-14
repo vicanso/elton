@@ -4,24 +4,24 @@ description: 各类常用的中间件
 
 # Middlewares
 
-- `basic auth` HTTP Basic Auth，建议只用于内部管理系统使用
-- `body parser` 请求数据的解析中间件，支持`application/json`以及`application/x-www-form-urlencoded`两种数据类型
+- [basic auth](#basic-auth) HTTP Basic Auth，建议只用于内部管理系统使用
+- [body parser](#body-parser) 请求数据的解析中间件，支持`application/json`以及`application/x-www-form-urlencoded`两种数据类型
 - [compress](https://github.com/vicanso/elton-compress) 数据压缩中间件，默认支持gzip、brotli、snappy、s2、zstd以及lz4，也可根据需要增加相应的压缩处理
-- [concurrent limiter](https://github.com/vicanso/elton-concurrent-limiter) 根据指定参数限制并发请求，可用于订单提交等防止重复提交或限制提交频率的场景
-- `error handler` 用于将处理函数的Error转换为对应的响应数据，如HTTP响应中的状态码(40x, 50x)，对应的出错类别等，建议在实际使用中根据项目自定义的Error对象生成相应的响应数据
-- `etag` 用于生成HTTP响应数据的ETag
-- `fresh` 判断HTTP请求是否未修改(Not Modified)
+- [concurrent limiter](#concurrent-limiter) 根据指定参数限制并发请求，可用于订单提交等防止重复提交或限制提交频率的场景
+- [error handler](#error-handler) 用于将处理函数的Error转换为对应的响应数据，如HTTP响应中的状态码(40x, 50x)，对应的出错类别等，建议在实际使用中根据项目自定义的Error对象生成相应的响应数据
+- [etag](#etag) 用于生成HTTP响应数据的ETag
+- [fresh](#fresh) 判断HTTP请求是否未修改(Not Modified)
 - [json picker](https://github.com/vicanso/elton-json-picker) 用于从响应的JSON中筛选指定字段
 - [jwt](https://github.com/vicanso/elton-jwt) jwt中间件
-- `logger` 生成HTTP请求日志，支持从请求头、响应头中获取相应信息
-- `proxy` Proxy中间件，可定义请求转发至其它的服务
-- `recover` 捕获程序的panic异常，避免程序崩溃
-- `responder` 响应处理中间件，用于将`Context.Body`(interface{})转换为对应的JSON数据并输出。如果系统使用xml等输出响应数据，可参考此中间件实现interface{}至xml的转换
-- [router-concurrent-limiter](https://github.com/vicanso/elton-router-concurrent-limiter) 路由并发限制中间件，可以针对路由限制并发请求量。
+- [logger](#logger) 生成HTTP请求日志，支持从请求头、响应头中获取相应信息
+- [proxy](#proxy) Proxy中间件，可定义请求转发至其它的服务
+- [recover](#recover) 捕获程序的panic异常，避免程序崩溃
+- [responder](#responder) 响应处理中间件，用于将`Context.Body`(interface{})转换为对应的JSON数据并输出。如果系统使用xml等输出响应数据，可参考此中间件实现interface{}至xml的转换
+- [router-concurrent-limiter](#router-concurrent-limiter) 路由并发限制中间件，可以针对路由限制并发请求量。
 - [session](https://github.com/vicanso/elton-session) Session中间件，默认支持保存至redis或内存中，也可自定义相应的存储
-- `stats` 请求处理的统计中间件，包括处理时长、状态码、响应数据长度、连接数等信息
-- `static serve` 静态文件处理中间件，默认支持从目录中读取静态文件或实现StaticFile的相关接口，从[packr](github.com/gobuffalo/packr/v2)或者数据库(mongodb)等读取文件
-- `tracker` 可以用于在POST、PUT等提交类的接口中增加跟踪日志，此中间件将输出QueryString，Params以及RequestBody部分，并能将指定的字段做"***"的处理，避免输出敏感信息
+- [stats](#stats) 请求处理的统计中间件，包括处理时长、状态码、响应数据长度、连接数等信息
+- [static serve](static-serve) 静态文件处理中间件，默认支持从目录中读取静态文件或实现StaticFile的相关接口，从[packr](github.com/gobuffalo/packr/v2)或者数据库(mongodb)等读取文件
+- [tracker](#tracker) 可以用于在POST、PUT等提交类的接口中增加跟踪日志，此中间件将输出QueryString，Params以及RequestBody部分，并能将指定的字段做"***"的处理，避免输出敏感信息
 
 ## basic auth
 
@@ -128,6 +128,67 @@ func main() {
 
 	e.POST("/user/login", func(c *elton.Context) (err error) {
 		c.BodyBuffer = bytes.NewBuffer(c.RequestBody)
+		return
+	})
+
+	err := e.ListenAndServe(":3000")
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+## Concurrent Limiter
+
+并发请求限制，可以通过指定请求的参数，如IP、query的字段或者body等获取，限制同时并发性的提交请求，主要用于避免相同的请求多次提交。指定的Key分为以下几种：
+
+- `:ip` 客户的RealIP
+- `h:key` 从HTTP请求头中获取key的值
+- `q:key` 从HTTP的query中获取key的值
+- `p:key` 从路由的params中获取key的值
+- 其它的则从HTTP的Post data中获取key的值（只支持json)
+
+**Example**
+```go
+package main
+
+import (
+	"bytes"
+	"sync"
+	"time"
+
+	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/middleware"
+)
+
+func main() {
+
+	e := elton.New()
+	m := new(sync.Map)
+	limit := middleware.NewConcurrentLimiter(middleware.ConcurrentLimiterConfig{
+		Keys: []string{
+			":ip",
+			"h:X-Token",
+			"q:type",
+			"p:id",
+			"account",
+		},
+		Lock: func(key string, c *elton.Context) (success bool, unlock func(), err error) {
+			_, loaded := m.LoadOrStore(key, true)
+			// the key not exists
+			if !loaded {
+				success = true
+				unlock = func() {
+					m.Delete(key)
+				}
+			}
+			return
+		},
+	})
+
+	e.POST("/login", limit, func(c *elton.Context) (err error) {
+		time.Sleep(3 * time.Second)
+		c.BodyBuffer = bytes.NewBufferString("hello world")
 		return
 	})
 
@@ -400,6 +461,46 @@ func main() {
 		return
 	})
 
+	err := e.ListenAndServe(":3000")
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+## router concurrent limiter
+
+路由限制中间件，可以指定路由的并发访问数量，建议使用`NewLocalLimiter`每个实例的限制分开，主要是用于避免某个接口并发过高导致系统不稳定。
+
+**Example**
+```go
+package main
+
+import (
+	"bytes"
+	"time"
+
+	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/middleware"
+)
+
+func main() {
+	e := elton.New()
+
+	e.Use(middleware.NewRCL(middleware.RCLConfig{
+		Limiter: middleware.NewLocalLimiter(map[string]uint32{
+			"GET /users/me": 2,
+		}),
+	}))
+
+	e.GET("/users/me", func(c *elton.Context) (err error) {
+		time.Sleep(time.Second)
+		c.BodyBuffer = bytes.NewBufferString(`{
+			"account": "tree",
+			"name": "tree.xie"
+		}`)
+		return nil
+	})
 	err := e.ListenAndServe(":3000")
 	if err != nil {
 		panic(err)
