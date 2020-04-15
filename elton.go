@@ -51,8 +51,6 @@ const (
 type (
 	// Skipper check for skip middleware
 	Skipper func(c *Context) bool
-	// Validator validate function for param
-	Validator func(value string) error
 	// RouterInfo router's info
 	RouterInfo struct {
 		Method string `json:"method,omitempty"`
@@ -281,6 +279,7 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) {
 		index := -1
 		var traceInfos TraceInfos
 		if e.EnableTrace {
+			// TODO 复用tracInfos
 			traceInfos = make(TraceInfos, 0, maxNext)
 		}
 		c.Next = func() error {
