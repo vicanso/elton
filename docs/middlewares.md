@@ -138,7 +138,59 @@ func main() {
 }
 ```
 
-## Concurrent Limiter
+## compress
+
+响应数据压缩中间件，可对特定数据类型、数据长度的响应数据做压缩处理。默认支持`gzip`压缩，可扩展更多的压缩方式，如：brotli，zstd等。
+
+### Compressor
+
+实现自定义的压缩主要实现三下方法：
+
+- `Accept` 判断该压缩是否支持该压缩，根据请求头以及响应数据大小
+- `Compress` 数据压缩方法
+- `Pipe` 数据Pipe处理
+
+**Example**
+```go
+package main
+
+import (
+	"bytes"
+
+	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/middleware"
+)
+
+func main() {
+
+	e := elton.New()
+
+	e.Use(middleware.NewDefaultCompress())
+
+	e.Use(middleware.NewDefaultResponder())
+
+	e.GET("/", func(c *elton.Context) error {
+		b := new(bytes.Buffer)
+		for i := 0; i < 1000; i++ {
+			b.WriteString("Hello, World!")
+		}
+		c.Body = &struct {
+			Message string
+		}{
+			b.String(),
+		}
+		return nil
+	})
+
+	err := e.ListenAndServe(":3000")
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+
+## concurrent limiter
 
 并发请求限制，可以通过指定请求的参数，如IP、query的字段或者body等获取，限制同时并发性的提交请求，主要用于避免相同的请求多次提交。指定的Key分为以下几种：
 
@@ -199,7 +251,7 @@ func main() {
 }
 ```
 
-## Error Handler
+## error handler
 
 出错转换处理，用于将出错转换为json或text出错响应，建议在controller中对处理出错的自定义出错类型，使用出错中间件将相应的出错信息转换输出。
 
@@ -231,7 +283,7 @@ func main() {
 }
 ```
 
-## ETag
+## etag
 
 根据响应数据生成HTTP响应头的ETag。
 
