@@ -98,6 +98,86 @@ func main() {
 }
 ```
 
+## h2c
+
+golang默认的HTTP2需要在以https的方式提供，对于内部系统间的调用，如果希望以http的方式使用http2，那么可以考虑h2c的处理。下面的代码示例包括了服务端与客户端怎么使用以http的方式使用http2。
+
+```go
+package main
+
+import (
+	"crypto/tls"
+	"fmt"
+	"net"
+	"net/http"
+	"time"
+
+	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/middleware"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+)
+
+var http2Client = &http.Client{
+	// 强制使用http2
+	Transport: &http2.Transport{
+		// 允许使用http的方式
+		AllowHTTP: true,
+		// tls的dial覆盖
+		DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+			return net.Dial(network, addr)
+		},
+	},
+}
+
+func main() {
+	go func() {
+		time.Sleep(time.Second)
+		resp, err := http2Client.Get("http://127.0.0.1:3000/")
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(resp.Proto)
+	}()
+
+	e := elton.New()
+
+	e.Use(middleware.NewDefaultResponder())
+
+	e.GET("/", func(c *elton.Context) error {
+		c.Body = "Hello, World!"
+		return nil
+	})
+	// http1与http2均支持
+	e.Server = &http.Server{
+		Handler: h2c.NewHandler(e, &http2.Server{}),
+	}
+
+	err := e.ListenAndServe(":3000")
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+```
+curl -v --http2-prior-knowledge http://127.0.0.1:3000/
+*   Trying 127.0.0.1...
+* TCP_NODELAY set
+* Connected to 127.0.0.1 (127.0.0.1) port 3000 (#0)
+* Using HTTP2, server supports multi-use
+* Connection state changed (HTTP/2 confirmed)
+* Copying HTTP/2 data in stream buffer to connection buffer after upgrade: len=0
+* Using Stream ID: 1 (easy handle 0x7f8d9a804600)
+> GET / HTTP/2
+> Host: 127.0.0.1:3000
+> User-Agent: curl/7.54.0
+> Accept: */*
+>
+* Connection state changed (MAX_CONCURRENT_STREAMS updated)!
+< HTTP/2 200
+```
+
 ## http3
 
 http3现在支持的浏览器只有chrome canary以及firefox最新版本，golang的http模块也未支持http3，http3的前景虽然并不确定，但是还是可以先尝尝鲜，需要注意http3还是试验性质，不要在正式环境中大规模使用。下面是使用[quic-go](https://github.com/lucas-clemente/quic-go)使用http3的示例：
