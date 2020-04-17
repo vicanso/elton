@@ -63,7 +63,7 @@ type (
 		Target       *url.URL
 		Rewrites     []string
 		Host         string
-		Transport    *http.Transport
+		Transport    http.RoundTripper
 		TargetPicker ProxyTargetPicker
 		Skipper      elton.Skipper
 	}
