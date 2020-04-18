@@ -35,18 +35,18 @@ import (
 
 func checkResponse(t *testing.T, resp *httptest.ResponseRecorder, code int, data string) {
 	assert := assert.New(t)
-	assert.Equal(resp.Body.String(), data)
-	assert.Equal(resp.Code, code)
+	assert.Equal(data, resp.Body.String())
+	assert.Equal(code, resp.Code)
 }
 
 func checkJSON(t *testing.T, resp *httptest.ResponseRecorder) {
 	assert := assert.New(t)
-	assert.Equal(resp.Header().Get(elton.HeaderContentType), elton.MIMEApplicationJSON)
+	assert.Equal(elton.MIMEApplicationJSON, resp.Header().Get(elton.HeaderContentType))
 }
 
 func checkContentType(t *testing.T, resp *httptest.ResponseRecorder, contentType string) {
 	assert := assert.New(t)
-	assert.Equal(resp.Header().Get(elton.HeaderContentType), contentType)
+	assert.Equal(contentType, resp.Header().Get(elton.HeaderContentType))
 }
 
 func TestResponder(t *testing.T) {
@@ -82,7 +82,7 @@ func TestResponder(t *testing.T) {
 		}
 		fn := NewDefaultResponder()
 		err := fn(c)
-		assert.Equal(err, customErr)
+		assert.Equal(customErr, err)
 		assert.True(done)
 	})
 
@@ -195,8 +195,8 @@ func TestResponder(t *testing.T) {
 		})
 		resp := httptest.NewRecorder()
 		e.ServeHTTP(resp, req)
-		assert.Equal(resp.Code, 200)
-		assert.Equal(resp.Body.String(), "abcd")
+		assert.Equal(200, resp.Code)
+		assert.Equal("abcd", resp.Body.String())
 	})
 
 	t.Run("no content", func(t *testing.T) {
@@ -209,7 +209,7 @@ func TestResponder(t *testing.T) {
 		})
 		resp := httptest.NewRecorder()
 		e.ServeHTTP(resp, req)
-		assert.Equal(resp.Code, http.StatusNoContent)
+		assert.Equal(http.StatusNoContent, resp.Code)
 	})
 
 	t.Run("accepted(202)", func(t *testing.T) {
@@ -223,6 +223,6 @@ func TestResponder(t *testing.T) {
 		resp := httptest.NewRecorder()
 		e.ServeHTTP(resp, req)
 		assert.Empty(resp.Body)
-		assert.Equal(resp.Code, http.StatusAccepted)
+		assert.Equal(http.StatusAccepted, resp.Code)
 	})
 }

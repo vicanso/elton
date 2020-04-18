@@ -101,8 +101,8 @@ func (mf *MockFileStat) Sys() interface{} {
 
 func TestGenerateETag(t *testing.T) {
 	assert := assert.New(t)
-	assert.Equal(generateETag([]byte("")), `"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="`)
-	assert.Equal(generateETag([]byte("abc")), `"3-qZk-NkcGgWq6PiVxeFDCbJzQ2J0="`)
+	assert.Equal(`"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="`, generateETag([]byte("")))
+	assert.Equal(`"3-qZk-NkcGgWq6PiVxeFDCbJzQ2J0="`, generateETag([]byte("abc")))
 }
 
 func TestFS(t *testing.T) {
@@ -140,7 +140,7 @@ func TestStaticServe(t *testing.T) {
 		req := httptest.NewRequest("GET", "/index.html?a=1", nil)
 		c := elton.NewContext(nil, req)
 		err := fn(c)
-		assert.Equal(err, ErrStaticServeNotAllowQueryString, "should return not allow query string error")
+		assert.Equal(ErrStaticServeNotAllowQueryString, err, "should return not allow query string error")
 	})
 
 	t.Run("not allow dot file", func(t *testing.T) {
@@ -152,7 +152,7 @@ func TestStaticServe(t *testing.T) {
 		req := httptest.NewRequest("GET", "/.index.html", nil)
 		c := elton.NewContext(nil, req)
 		err := fn(c)
-		assert.Equal(err, ErrStaticServeNotAllowAccessDot, "should return not allow dot error")
+		assert.Equal(ErrStaticServeNotAllowAccessDot, err, "should return not allow dot error")
 	})
 
 	t.Run("not found return error", func(t *testing.T) {
@@ -166,7 +166,7 @@ func TestStaticServe(t *testing.T) {
 			return nil
 		}
 		err := fn(c)
-		assert.Equal(err, ErrStaticServeNotFound, "should return not found error")
+		assert.Equal(ErrStaticServeNotFound, err, "should return not found error")
 	})
 
 	t.Run("not found pass to next", func(t *testing.T) {
@@ -201,8 +201,8 @@ func TestStaticServe(t *testing.T) {
 		}
 		err := fn(c)
 		assert.Nil(err)
-		assert.NotEqual(c.GetHeader(elton.HeaderContentEncoding), "gzip")
-		assert.Equal(c.GetHeader(elton.HeaderETag), `"a-1oFGwuX-Q3qfLHqK_7iCcc_0YYI="`)
+		assert.NotEqual("gzip", c.GetHeader(elton.HeaderContentEncoding))
+		assert.Equal(`"a-1oFGwuX-Q3qfLHqK_7iCcc_0YYI="`, c.GetHeader(elton.HeaderETag))
 	})
 
 	t.Run("get index.html", func(t *testing.T) {
@@ -219,9 +219,9 @@ func TestStaticServe(t *testing.T) {
 		err := fn(c)
 		assert.Nil(err, "serve index.html fail")
 
-		assert.Equal(c.GetHeader(elton.HeaderETag), `W/"400-5cfb1ad2"`, "generate etag fail")
+		assert.Equal(`W/"400-5cfb1ad2"`, c.GetHeader(elton.HeaderETag), "generate etag fail")
 		assert.NotEmpty(c.GetHeader(elton.HeaderLastModified), "last modified shouldn't be empty")
-		assert.Equal(c.GetHeader("Content-Type"), "text/html; charset=utf-8")
+		assert.Equal("text/html; charset=utf-8", c.GetHeader("Content-Type"))
 		assert.True(c.IsReaderBody())
 	})
 
@@ -241,7 +241,7 @@ func TestStaticServe(t *testing.T) {
 		}
 		err := fn(c)
 		assert.Nil(err)
-		assert.Equal(c.GetHeader("X-IDC"), "GZ", "set custom header fail")
+		assert.Equal("GZ", c.GetHeader("X-IDC"), "set custom header fail")
 	})
 
 	t.Run("set (s)max-age", func(t *testing.T) {
@@ -259,7 +259,7 @@ func TestStaticServe(t *testing.T) {
 		}
 		err := fn(c)
 		assert.Nil(err)
-		assert.Equal(c.GetHeader(elton.HeaderCacheControl), "public, max-age=86400, s-maxage=300", "set max age header fail")
+		assert.Equal("public, max-age=86400, s-maxage=300", c.GetHeader(elton.HeaderCacheControl), "set max age header fail")
 	})
 
 	t.Run("out of path", func(t *testing.T) {
@@ -277,7 +277,7 @@ func TestStaticServe(t *testing.T) {
 			return nil
 		}
 		err := fn(c)
-		assert.Equal(err.Error(), "category=elton-static-serve, message=out of path", "out of path should return error")
+		assert.Equal("category=elton-static-serve, message=out of path", err.Error(), "out of path should return error")
 	})
 
 	t.Run("get file error", func(t *testing.T) {
@@ -294,6 +294,6 @@ func TestStaticServe(t *testing.T) {
 			return nil
 		}
 		err := fn(c)
-		assert.Equal(err.Error(), "category=elton-static-serve, message=abcd", "get file fail should return error")
+		assert.Equal("category=elton-static-serve, message=abcd", err.Error(), "get file fail should return error")
 	})
 }

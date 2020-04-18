@@ -189,7 +189,7 @@ func TestBodyParser(t *testing.T) {
 
 		assert.Nil(err)
 		assert.True(done)
-		assert.Equal(c.RequestBody, []byte("a"))
+		assert.Equal([]byte("a"), c.RequestBody)
 	})
 
 	t.Run("pass method", func(t *testing.T) {
@@ -230,7 +230,7 @@ func TestBodyParser(t *testing.T) {
 		c := elton.NewContext(nil, req)
 		err := bodyParser(c)
 		assert.NotNil(err)
-		assert.Equal(err.Error(), "category=elton-body-parser, message=message=abc")
+		assert.Equal("category=elton-body-parser, message=message=abc", err.Error())
 	})
 
 	t.Run("body over limit size", func(t *testing.T) {
@@ -243,7 +243,7 @@ func TestBodyParser(t *testing.T) {
 		c := elton.NewContext(nil, req)
 		err := bodyParser(c)
 		assert.NotNil(err)
-		assert.Equal(err.Error(), "category=elton-body-parser, message=request body is too large, it should be <= 1")
+		assert.Equal("category=elton-body-parser, message=request body is too large, it should be <= 1", err.Error())
 	})
 
 	t.Run("parse json success", func(t *testing.T) {

@@ -116,7 +116,7 @@ func TestCompress(t *testing.T) {
 		}
 		fn := NewDefaultCompress()
 		err := fn(c)
-		assert.Equal(err, customErr)
+		assert.Equal(customErr, err)
 	})
 
 	t.Run("normal", func(t *testing.T) {

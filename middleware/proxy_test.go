@@ -37,7 +37,7 @@ func TestNoTargetPanic(t *testing.T) {
 	assert := assert.New(t)
 	defer func() {
 		r := recover()
-		assert.Equal(r.(error), ErrProxyNoTargetFunction)
+		assert.Equal(ErrProxyNoTargetFunction, r.(error))
 	}()
 	NewProxy(ProxyConfig{})
 }
@@ -63,13 +63,13 @@ func TestGenerateRewrites(t *testing.T) {
 		"a:b:c",
 	})
 	assert.Nil(err)
-	assert.Equal(len(regs), 0, "rewrite regexp map should be 0")
+	assert.Equal(0, len(regs), "rewrite regexp map should be 0")
 
 	regs, err = generateRewrites([]string{
 		"/(d/:a",
 	})
 	assert.NotNil(err)
-	assert.Equal(len(regs), 0, "regexp map should be 0 when error occur")
+	assert.Equal(0, len(regs), "regexp map should be 0 when error occur")
 }
 
 func TestProxy(t *testing.T) {
@@ -98,11 +98,11 @@ func TestProxy(t *testing.T) {
 		}
 		err := fn(c)
 		assert.Nil(err)
-		assert.Equal(c.GetHeader("Content-Encoding"), "gzip")
-		assert.Equal(c.Request.URL.Path, originalPath)
-		assert.Equal(req.Host, originalHost)
+		assert.Equal("gzip", c.GetHeader("Content-Encoding"))
+		assert.Equal(originalPath, c.Request.URL.Path)
+		assert.Equal(originalHost, req.Host)
 		assert.True(done)
-		assert.Equal(c.StatusCode, http.StatusOK)
+		assert.Equal(http.StatusOK, c.StatusCode)
 	})
 
 	t.Run("target picker", func(t *testing.T) {
@@ -131,7 +131,7 @@ func TestProxy(t *testing.T) {
 		assert.Nil(err)
 		assert.True(done)
 		assert.True(callBackDone)
-		assert.Equal(c.StatusCode, http.StatusOK)
+		assert.Equal(http.StatusOK, c.StatusCode)
 	})
 
 	t.Run("target picker error", func(t *testing.T) {
@@ -148,7 +148,7 @@ func TestProxy(t *testing.T) {
 		resp := httptest.NewRecorder()
 		c := elton.NewContext(resp, req)
 		err := fn(c)
-		assert.Equal(err.Error(), "abcd")
+		assert.Equal("abcd", err.Error())
 	})
 
 	t.Run("no target", func(t *testing.T) {
@@ -165,7 +165,7 @@ func TestProxy(t *testing.T) {
 		resp := httptest.NewRecorder()
 		c := elton.NewContext(resp, req)
 		err := fn(c)
-		assert.Equal(err.Error(), "category=elton-proxy, message=target can not be nil")
+		assert.Equal("category=elton-proxy, message=target can not be nil", err.Error())
 	})
 
 	t.Run("proxy error", func(t *testing.T) {

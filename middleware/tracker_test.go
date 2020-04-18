@@ -36,7 +36,7 @@ func TestNoTrackPanic(t *testing.T) {
 	done := false
 	defer func() {
 		r := recover()
-		assert.Equal(r.(error), ErrTrackerNoFunction)
+		assert.Equal(ErrTrackerNoFunction, r.(error))
 		done = true
 	}()
 
@@ -47,13 +47,13 @@ func TestNoTrackPanic(t *testing.T) {
 func TestConverMap(t *testing.T) {
 	assert := assert.New(t)
 	assert.Nil(convertMap(nil, nil))
-	assert.Equal(convertMap(map[string]string{
-		"password": "123",
-		"foo":      "bar",
-	}, defaultTrackerMaskFields), map[string]string{
+	assert.Equal(map[string]string{
 		"foo":      "bar",
 		"password": "***",
-	})
+	}, convertMap(map[string]string{
+		"password": "123",
+		"foo":      "bar",
+	}, defaultTrackerMaskFields))
 }
 
 func TestTracker(t *testing.T) {
@@ -62,11 +62,11 @@ func TestTracker(t *testing.T) {
 	done := false
 	fn := NewTracker(TrackerConfig{
 		OnTrack: func(info *TrackerInfo, _ *elton.Context) {
-			assert.Equal(info.Result, HandleFail)
-			assert.Equal(info.Query["type"], "1")
-			assert.Equal(info.Query["passwordType"], "***")
-			assert.Equal(info.Params["category"], "login")
-			assert.Equal(info.Form["password"], "***")
+			assert.Equal(HandleFail, info.Result)
+			assert.Equal("1", info.Query["type"])
+			assert.Equal("***", info.Query["passwordType"])
+			assert.Equal("login", info.Params["category"])
+			assert.Equal("***", info.Form["password"])
 			done = true
 		},
 	})
@@ -82,6 +82,6 @@ func TestTracker(t *testing.T) {
 		return customErr
 	}
 	err := fn(c)
-	assert.Equal(err, customErr)
+	assert.Equal(customErr, err)
 	assert.True(done, "tracker middleware fail")
 }

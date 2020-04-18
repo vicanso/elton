@@ -117,6 +117,6 @@ func TestConcurrentLimiter(t *testing.T) {
 		assert := assert.New(t)
 		c.Params = new(elton.RouteParams)
 		err := fn(c)
-		assert.Equal(err.Error(), "message=key is invalid")
+		assert.Equal("message=key is invalid", err.Error())
 	})
 }

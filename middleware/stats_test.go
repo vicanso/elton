@@ -75,9 +75,7 @@ func TestStats(t *testing.T) {
 		done := false
 		fn := NewStats(StatsConfig{
 			OnStats: func(info *StatsInfo, _ *elton.Context) {
-				if info.Status != http.StatusOK {
-					t.Fatalf("status code should be 200")
-				}
+				assert.Equal(http.StatusOK, info.Status, "status code should be 200")
 				done = true
 			},
 		})
@@ -97,7 +95,7 @@ func TestStats(t *testing.T) {
 		done := false
 		fn := NewStats(StatsConfig{
 			OnStats: func(info *StatsInfo, _ *elton.Context) {
-				assert.Equal(info.Status, http.StatusBadRequest)
+				assert.Equal(http.StatusBadRequest, info.Status)
 				done = true
 			},
 		})
@@ -117,7 +115,7 @@ func TestStats(t *testing.T) {
 		done := false
 		fn := NewStats(StatsConfig{
 			OnStats: func(info *StatsInfo, _ *elton.Context) {
-				assert.Equal(info.Status, http.StatusInternalServerError)
+				assert.Equal(http.StatusInternalServerError, info.Status)
 				done = true
 			},
 		})

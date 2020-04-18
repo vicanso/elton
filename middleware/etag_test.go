@@ -67,7 +67,7 @@ func TestETag(t *testing.T) {
 			return customErr
 		}
 		err := fn(c)
-		assert.Equal(err, customErr)
+		assert.Equal(customErr, err)
 	})
 
 	t.Run("no body", func(t *testing.T) {
@@ -100,6 +100,7 @@ func TestETag(t *testing.T) {
 	})
 
 	t.Run("gen eTag", func(t *testing.T) {
+		assert := assert.New(t)
 		resp := httptest.NewRecorder()
 		c := elton.NewContext(resp, nil)
 		c.Next = func() error {
@@ -110,12 +111,8 @@ func TestETag(t *testing.T) {
 			return nil
 		}
 		err := fn(c)
-		if err != nil {
-			t.Fatalf("eTag middleware fail, %v", err)
-		}
-		if c.GetHeader(elton.HeaderETag) != `"13-yo9YroUOjW1obRvVoXfrCiL2JGE="` {
-			t.Fatalf("gen eTag fail")
-		}
+		assert.Nil(err)
+		assert.Equal(`"13-yo9YroUOjW1obRvVoXfrCiL2JGE="`, c.GetHeader(elton.HeaderETag))
 	})
 }
 

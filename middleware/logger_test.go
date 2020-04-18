@@ -35,22 +35,12 @@ import (
 )
 
 func TestGetHumanReadableSize(t *testing.T) {
-	if getHumanReadableSize(1024*1024) != "1MB" {
-		t.Fatalf("1024 * 1024 should be 1MB")
-	}
-	if getHumanReadableSize(1024*1024+500*1024) != "1.49MB" {
-		t.Fatalf("1024*1024+500*1024 should be 1.49MB")
-	}
-
-	if getHumanReadableSize(1024) != "1KB" {
-		t.Fatalf("1024 should be 1KB")
-	}
-	if getHumanReadableSize(1024+500) != "1.49KB" {
-		t.Fatalf("1024+500 should be 1.49KB")
-	}
-	if getHumanReadableSize(500) != "500B" {
-		t.Fatalf("500 should be 500B")
-	}
+	assert := assert.New(t)
+	assert.Equal("1MB", getHumanReadableSize(1024*1024))
+	assert.Equal("1.49MB", getHumanReadableSize(1024*1024+500*1024))
+	assert.Equal("1KB", getHumanReadableSize(1024))
+	assert.Equal("1.49KB", getHumanReadableSize(1024+500))
+	assert.Equal("500B", getHumanReadableSize(500))
 }
 
 func TestLogger(t *testing.T) {
@@ -84,9 +74,7 @@ func TestLogger(t *testing.T) {
 		config := LoggerConfig{
 			Format: "{latency} {latency-ms}",
 			OnLog: func(log string, _ *elton.Context) {
-				if len(strings.Split(log, " ")) != 2 {
-					t.Fatalf("get latency fail")
-				}
+				assert.Equal(2, len(strings.Split(log, " ")))
 			},
 		}
 		m := NewLogger(config)
@@ -105,9 +93,7 @@ func TestLogger(t *testing.T) {
 		config := LoggerConfig{
 			Format: "{when}  {when-iso}  {when-utc-iso}  {when-unix}  {when-iso-ms}  {when-utc-iso-ms}",
 			OnLog: func(log string, _ *elton.Context) {
-				if len(strings.Split(log, "  ")) != 6 {
-					t.Fatalf("get when fail")
-				}
+				assert.Equal(6, len(strings.Split(log, "  ")))
 			},
 		}
 		m := NewLogger(config)
@@ -125,9 +111,7 @@ func TestLogger(t *testing.T) {
 		config := LoggerConfig{
 			Format: "{~jt}",
 			OnLog: func(log string, _ *elton.Context) {
-				if log != "abc" {
-					t.Fatalf("get cookie value fail")
-				}
+				assert.Equal("abc", log, "get cookie value fail")
 			},
 		}
 		m := NewLogger(config)
@@ -149,9 +133,7 @@ func TestLogger(t *testing.T) {
 		config := LoggerConfig{
 			Format: "{>X-Token} {<X-Response-Id} place-holder",
 			OnLog: func(log string, _ *elton.Context) {
-				if log != "abc def place-holder" {
-					t.Fatalf("get header value fail")
-				}
+				assert.Equal("abc def place-holder", log, "get header value fail")
 			},
 		}
 		m := NewLogger(config)

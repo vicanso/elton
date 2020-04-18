@@ -63,7 +63,7 @@ func TestFresh(t *testing.T) {
 		}
 		fn := NewFresh(FreshConfig{})
 		err := fn(c)
-		assert.Equal(err, customErr, "custom error should be return")
+		assert.Equal(customErr, err, "custom error should be return")
 	})
 
 	t.Run("not modified", func(t *testing.T) {
@@ -87,7 +87,7 @@ func TestFresh(t *testing.T) {
 		assert.Nil(err)
 		assert.True(done)
 
-		assert.Equal(c.StatusCode, 304, "status code should be 304")
+		assert.Equal(304, c.StatusCode, "status code should be 304")
 		assert.Nil(c.Body, "body should be nil")
 		assert.Nil(c.BodyBuffer, "body buffer should be nil")
 	})
@@ -105,7 +105,7 @@ func TestFresh(t *testing.T) {
 		c.NoContent()
 		err := fn(c)
 		assert.Nil(err)
-		assert.Equal(c.StatusCode, 204, "no body should be passed by fresh")
+		assert.Equal(204, c.StatusCode, "no body should be passed by fresh")
 	})
 
 	t.Run("post method", func(t *testing.T) {
@@ -130,7 +130,7 @@ func TestFresh(t *testing.T) {
 		assert.Nil(err)
 		assert.True(done)
 
-		assert.Equal(c.StatusCode, 200, "post requset should be passed by fresh")
+		assert.Equal(200, c.StatusCode, "post requset should be passed by fresh")
 		assert.NotNil(c.Body, "post requset should be passed by fresh")
 		assert.NotNil(c.BodyBuffer, "post requset should be passed by fresh")
 	})
@@ -157,7 +157,7 @@ func TestFresh(t *testing.T) {
 		assert.Nil(err)
 		assert.True(done)
 
-		assert.Equal(c.StatusCode, http.StatusBadRequest, "error response should be passed by fresh")
+		assert.Equal(http.StatusBadRequest, c.StatusCode, "error response should be passed by fresh")
 		assert.NotNil(c.Body, "error response should be passed by fresh")
 		assert.NotNil(c.BodyBuffer, "error response should be passed by fresh")
 	})

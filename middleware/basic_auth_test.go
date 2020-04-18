@@ -38,7 +38,7 @@ func TestNoVildatePanic(t *testing.T) {
 	defer func() {
 		r := recover()
 		assert.NotNil(r)
-		assert.Equal(r.(error), ErrBasicAuthRequireValidateFunction)
+		assert.Equal(ErrBasicAuthRequireValidateFunction, r.(error))
 	}()
 
 	NewBasicAuth(BasicAuthConfig{})
@@ -89,8 +89,8 @@ func TestBasicAuth(t *testing.T) {
 		})
 		resp := httptest.NewRecorder()
 		e.ServeHTTP(resp, req)
-		assert.Equal(resp.Code, http.StatusUnauthorized)
-		assert.Equal(resp.Header().Get(elton.HeaderWWWAuthenticate), `basic realm="basic auth tips"`)
+		assert.Equal(http.StatusUnauthorized, resp.Code)
+		assert.Equal(`basic realm="basic auth tips"`, resp.Header().Get(elton.HeaderWWWAuthenticate))
 	})
 
 	t.Run("auth validate fail", func(t *testing.T) {
@@ -103,14 +103,14 @@ func TestBasicAuth(t *testing.T) {
 		req.Header.Set(elton.HeaderAuthorization, "basic YTpi")
 		resp := httptest.NewRecorder()
 		e.ServeHTTP(resp, req)
-		assert.Equal(resp.Code, http.StatusUnauthorized)
-		assert.Equal(resp.Body.String(), "category=elton-basic-auth, message=unAuthorized")
+		assert.Equal(http.StatusUnauthorized, resp.Code)
+		assert.Equal("category=elton-basic-auth, message=unAuthorized", resp.Body.String())
 
 		req.Header.Set(elton.HeaderAuthorization, "basic bjph")
 		resp = httptest.NewRecorder()
 		e.ServeHTTP(resp, req)
-		assert.Equal(resp.Code, http.StatusBadRequest)
-		assert.Equal(resp.Body.String(), "message=account is invalid")
+		assert.Equal(http.StatusBadRequest, resp.Code)
+		assert.Equal("message=account is invalid", resp.Body.String())
 	})
 
 	t.Run("validate error", func(t *testing.T) {
@@ -127,8 +127,8 @@ func TestBasicAuth(t *testing.T) {
 		})
 		resp := httptest.NewRecorder()
 		e.ServeHTTP(resp, req)
-		assert.Equal(resp.Code, http.StatusBadRequest)
-		assert.Equal(resp.Body.String(), "category=elton-basic-auth, message=abcd")
+		assert.Equal(http.StatusBadRequest, resp.Code)
+		assert.Equal("category=elton-basic-auth, message=abcd", resp.Body.String())
 	})
 
 	t.Run("auth success", func(t *testing.T) {
