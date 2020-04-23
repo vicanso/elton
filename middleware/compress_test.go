@@ -74,6 +74,17 @@ func TestAcceptEncoding(t *testing.T) {
 	assert.Equal(elton.Gzip, encoding)
 }
 
+func TestNewCompressConfig(t *testing.T) {
+	assert := assert.New(t)
+	conf := NewCompressConfig()
+	assert.Empty(conf.Compressors)
+
+	gzipCompressor := new(GzipCompressor)
+	conf = NewCompressConfig(gzipCompressor)
+	assert.Equal(1, len(conf.Compressors))
+	assert.Equal(gzipCompressor, conf.Compressors[0])
+}
+
 func TestCompress(t *testing.T) {
 	t.Run("skip", func(t *testing.T) {
 		assert := assert.New(t)
@@ -289,6 +300,7 @@ func TestCompress(t *testing.T) {
 			return nil
 		}
 		body := bytes.NewBufferString(randomString(4096))
+		c.SetHeader(elton.HeaderContentLength, "4096")
 		c.Body = body
 		err := fn(c)
 		assert.True(c.Committed)

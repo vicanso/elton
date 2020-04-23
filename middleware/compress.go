@@ -79,7 +79,9 @@ func (conf *CompressConfig) AddCompressor(compressor Compressor) {
 // NewCompressConfig create a new compress config
 func NewCompressConfig(compressors ...Compressor) CompressConfig {
 	cfg := CompressConfig{}
-	cfg.AddCompressor(new(GzipCompressor))
+	for _, compressor := range compressors {
+		cfg.AddCompressor(compressor)
+	}
 	return cfg
 }
 
@@ -151,6 +153,8 @@ func NewCompress(config CompressConfig) elton.Handler {
 				continue
 			}
 			if isReaderBody {
+				// 压缩时清除content length
+				c.Header().Del(elton.HeaderContentLength)
 				fillHeader(encoding)
 				err = compressor.Pipe(c)
 				// 如果出错直接返回
