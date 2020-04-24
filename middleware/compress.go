@@ -157,7 +157,7 @@ func NewCompress(config CompressConfig) elton.Handler {
 				c.Header().Del(elton.HeaderContentLength)
 				fillHeader(encoding)
 				err = compressor.Pipe(c)
-				// 如果出错直接返回
+				// 如果出错直接返回，此时也有可能已经开始写入数据，导致http后续无法再写入status code
 				if err != nil {
 					return
 				}

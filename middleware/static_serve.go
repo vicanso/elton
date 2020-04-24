@@ -260,6 +260,8 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 		}
 		if cacheControl != "" {
 			c.SetHeader(elton.HeaderCacheControl, cacheControl)
+		} else {
+			c.NoCache()
 		}
 		if fileBuf != nil {
 			c.BodyBuffer = bytes.NewBuffer(fileBuf)
