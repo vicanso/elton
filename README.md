@@ -47,6 +47,15 @@ func main() {
 		return nil
 	})
 
+	e.GET("/books/{id}", func(c *elton.Context) error {
+		c.Body = &struct {
+			ID string `json:"id,omitempty"`
+		}{
+			c.Param("id"),
+		}
+		return nil
+	})
+
 	e.POST("/login", func(c *elton.Context) error {
 		c.SetContentTypeByExt(".json")
 		c.Body = c.RequestBody
