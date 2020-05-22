@@ -129,7 +129,7 @@ func NewRCL(config RCLConfig) elton.Handler {
 		key := c.Request.Method + " " + c.Route
 		current, max := limiter.IncConcurrency(key)
 		defer limiter.DecConcurrency(key)
-		if current > max {
+		if max != 0 && current > max {
 			err = createRCLError(current, max)
 			return
 		}
