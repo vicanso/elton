@@ -38,7 +38,7 @@ const (
 )
 
 var (
-	defaultTrackerMaskFields = regexp.MustCompile(`password`)
+	defaultTrackerMaskFields = regexp.MustCompile(`(?i)password`)
 	ErrTrackerNoFunction     = errors.New("require on track function")
 )
 
