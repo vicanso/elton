@@ -119,4 +119,20 @@ func TestConcurrentLimiter(t *testing.T) {
 		err := fn(c)
 		assert.Equal("message=key is invalid", err.Error())
 	})
+
+	t.Run("not allow empty", func(t *testing.T) {
+		assert := assert.New(t)
+		fn := NewConcurrentLimiter(ConcurrentLimiterConfig{
+			NotAllowEmpty: true,
+			Keys: []string{
+				"p:id",
+			},
+			Lock: func(key string, c *elton.Context) (success bool, unlock func(), err error) {
+				return
+			},
+		})
+		c := elton.NewContext(nil, httptest.NewRequest("GET", "/", nil))
+		err := fn(c)
+		assert.Equal(ErrNotAllowEmpty, err)
+	})
 }

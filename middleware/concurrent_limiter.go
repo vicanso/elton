@@ -39,6 +39,11 @@ var (
 		Message:    "submit too frequently",
 		Category:   ErrConcurrentLimiterCategory,
 	}
+	ErrNotAllowEmpty = &hes.Error{
+		StatusCode: http.StatusBadRequest,
+		Message:    "empty value is not allowed",
+		Category:   ErrConcurrentLimiterCategory,
+	}
 	ErrRequireLockFunction = errors.New("require lock function")
 )
 
@@ -61,6 +66,8 @@ type (
 		// Lock lock function
 		Lock    ConcurrentLimiterLock
 		Skipper elton.Skipper
+		// NotAllowEmpty is value is empty, will return error
+		NotAllowEmpty bool
 	}
 	// concurrentLimiterKeyInfo the concurrent key's info
 	concurrentLimiterKeyInfo struct {
@@ -141,6 +148,10 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 				v = c.Param(name)
 			} else {
 				v = gjson.GetBytes(c.RequestBody, name).String()
+			}
+			if config.NotAllowEmpty && len(v) == 0 {
+				err = ErrNotAllowEmpty
+				return
 			}
 			sb.WriteString(v)
 			if i < keyLength-1 {
