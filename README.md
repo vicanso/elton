@@ -100,6 +100,12 @@ e.GET("/users/{type}", func(c *elton.Context) error {
 	return nil
 })
 
+// 复合参数
+e.GET("/books/{category:[a-z-]+}-{type}", func(c *elton.Context) error {
+	c.BodyBuffer = bytes.NewBufferString(c.Param("category") + c.Param("type"))
+	return nil
+})
+
 // 带中间件的路由配置
 e.GET("/users/me", func(c *elton.Context) error {
 	c.Set("account", "tree.xie")
