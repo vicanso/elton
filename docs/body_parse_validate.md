@@ -39,21 +39,7 @@ func init() {
 	rxAlphanumeric := regexp.MustCompile("^[a-zA-Z0-9]+$")
 
 	// 添加自定义参数校验，如果返回false则表示参数不符合
-	_ = validate.RegisterValidation("xAccount", func(fl validator.FieldLevel) bool {
-		value, ok := toString(fl.Field())
-		if !ok {
-			return false
-		}
-		if value == "" {
-			return false
-		}
-		// 如果不是字母与数字
-		if !rxAlphanumeric.MatchString(value) {
-			return false
-		}
-		// 账号长度不能大于20
-		return len(value) <= 20
-	})
+	validate.RegisterAlias("xAccount", "alphanum,max=20")
 
 	_ = validate.RegisterValidation("xPassword", func(fl validator.FieldLevel) bool {
 		value, ok := toString(fl.Field())
@@ -126,6 +112,7 @@ func main() {
 		panic(err)
 	}
 }
+
 ```
 ## govalidator
 
