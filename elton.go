@@ -258,7 +258,7 @@ func (e *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 }
 
 // Handle add http handle function
-func (e *Elton) Handle(method, path string, handlerList ...Handler) {
+func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 	for _, fn := range handlerList {
 		name := e.GetFunctionName(fn)
 		e.SetFunctionName(fn, name)
@@ -362,57 +362,59 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) {
 			}
 		}
 	})
+	return e
 }
 
 // GET add http get method handle
-func (e *Elton) GET(path string, handlerList ...Handler) {
-	e.Handle(http.MethodGet, path, handlerList...)
+func (e *Elton) GET(path string, handlerList ...Handler) *Elton {
+	return e.Handle(http.MethodGet, path, handlerList...)
 }
 
 // POST add http post method handle
-func (e *Elton) POST(path string, handlerList ...Handler) {
-	e.Handle(http.MethodPost, path, handlerList...)
+func (e *Elton) POST(path string, handlerList ...Handler) *Elton {
+	return e.Handle(http.MethodPost, path, handlerList...)
 }
 
 // PUT add http put method handle
-func (e *Elton) PUT(path string, handlerList ...Handler) {
-	e.Handle(http.MethodPut, path, handlerList...)
+func (e *Elton) PUT(path string, handlerList ...Handler) *Elton {
+	return e.Handle(http.MethodPut, path, handlerList...)
 }
 
 // PATCH add http patch method handle
-func (e *Elton) PATCH(path string, handlerList ...Handler) {
-	e.Handle(http.MethodPatch, path, handlerList...)
+func (e *Elton) PATCH(path string, handlerList ...Handler) *Elton {
+	return e.Handle(http.MethodPatch, path, handlerList...)
 }
 
 // DELETE add http delete method handle
-func (e *Elton) DELETE(path string, handlerList ...Handler) {
-	e.Handle(http.MethodDelete, path, handlerList...)
+func (e *Elton) DELETE(path string, handlerList ...Handler) *Elton {
+	return e.Handle(http.MethodDelete, path, handlerList...)
 }
 
 // HEAD add http head method handle
-func (e *Elton) HEAD(path string, handlerList ...Handler) {
-	e.Handle(http.MethodHead, path, handlerList...)
+func (e *Elton) HEAD(path string, handlerList ...Handler) *Elton {
+	return e.Handle(http.MethodHead, path, handlerList...)
 }
 
 // OPTIONS add http options method handle
-func (e *Elton) OPTIONS(path string, handlerList ...Handler) {
-	e.Handle(http.MethodOptions, path, handlerList...)
+func (e *Elton) OPTIONS(path string, handlerList ...Handler) *Elton {
+	return e.Handle(http.MethodOptions, path, handlerList...)
 }
 
 // TRACE add http trace method handle
-func (e *Elton) TRACE(path string, handlerList ...Handler) {
-	e.Handle(http.MethodTrace, path, handlerList...)
+func (e *Elton) TRACE(path string, handlerList ...Handler) *Elton {
+	return e.Handle(http.MethodTrace, path, handlerList...)
 }
 
 // ALL add http all method handle
-func (e *Elton) ALL(path string, handlerList ...Handler) {
+func (e *Elton) ALL(path string, handlerList ...Handler) *Elton {
 	for _, method := range methods {
 		e.Handle(method, path, handlerList...)
 	}
+	return e
 }
 
 // Use add middleware function handle
-func (e *Elton) Use(handlerList ...Handler) {
+func (e *Elton) Use(handlerList ...Handler) *Elton {
 	if e.Middlewares == nil {
 		e.Middlewares = make([]Handler, 0)
 	}
@@ -421,31 +423,40 @@ func (e *Elton) Use(handlerList ...Handler) {
 		e.SetFunctionName(fn, name)
 	}
 	e.Middlewares = append(e.Middlewares, handlerList...)
+	return e
+}
+
+// UseWithName add middleware and set function's name
+func (e *Elton) UseWithName(handler Handler, name string) *Elton {
+	e.SetFunctionName(handler, name)
+	return e.Use(handler)
 }
 
 // Pre add pre middleware function handler
-func (e *Elton) Pre(handlerList ...PreHandler) {
+func (e *Elton) Pre(handlerList ...PreHandler) *Elton {
 	if e.PreMiddlewares == nil {
 		e.PreMiddlewares = make([]PreHandler, 0)
 	}
 	e.PreMiddlewares = append(e.PreMiddlewares, handlerList...)
+	return e
 }
 
 // NotFound not found handle
-func (e *Elton) NotFound(resp http.ResponseWriter, req *http.Request) {
+func (e *Elton) NotFound(resp http.ResponseWriter, req *http.Request) *Elton {
 	if e.NotFoundHandler != nil {
 		e.NotFoundHandler(resp, req)
-		return
+		return e
 	}
 	resp.WriteHeader(http.StatusNotFound)
 	_, err := resp.Write([]byte("Not found"))
 	if err != nil {
 		e.emitError(resp, req, err)
 	}
+	return e
 }
 
 // Error error handle
-func (e *Elton) Error(c *Context, err error) {
+func (e *Elton) Error(c *Context, err error) *Elton {
 	// 出错时清除部分响应头
 	for _, key := range []string{
 		HeaderETag,
@@ -457,7 +468,7 @@ func (e *Elton) Error(c *Context, err error) {
 	}
 	if e.ErrorHandler != nil {
 		e.ErrorHandler(c, err)
-		return
+		return e
 	}
 
 	resp := c.Response
@@ -473,14 +484,16 @@ func (e *Elton) Error(c *Context, err error) {
 	if err != nil {
 		e.EmitError(c, err)
 	}
+	return e
 }
 
 // EmitError emit error function
-func (e *Elton) EmitError(c *Context, err error) {
+func (e *Elton) EmitError(c *Context, err error) *Elton {
 	lns := e.errorListeners
 	for _, ln := range lns {
 		ln(c, err)
 	}
+	return e
 }
 
 func (e *Elton) emitError(resp http.ResponseWriter, req *http.Request, err error) {
@@ -491,34 +504,38 @@ func (e *Elton) emitError(resp http.ResponseWriter, req *http.Request, err error
 }
 
 // OnError on error function
-func (e *Elton) OnError(ln ErrorListener) {
+func (e *Elton) OnError(ln ErrorListener) *Elton {
 	if e.errorListeners == nil {
 		e.errorListeners = make([]ErrorListener, 0)
 	}
 	e.errorListeners = append(e.errorListeners, ln)
+	return e
 }
 
 // EmitTrace emit trace
-func (e *Elton) EmitTrace(c *Context, infos TraceInfos) {
+func (e *Elton) EmitTrace(c *Context, infos TraceInfos) *Elton {
 	lns := e.traceListeners
 	for _, ln := range lns {
 		ln(c, infos)
 	}
+	return e
 }
 
 // OnTrace on trace function
-func (e *Elton) OnTrace(ln TraceListener) {
+func (e *Elton) OnTrace(ln TraceListener) *Elton {
 	if e.traceListeners == nil {
 		e.traceListeners = make([]TraceListener, 0)
 	}
 	e.traceListeners = append(e.traceListeners, ln)
+	return e
 }
 
 // AddGroup add the group to elton
-func (e *Elton) AddGroup(g *Group) {
+func (e *Elton) AddGroup(g *Group) *Elton {
 	for _, r := range g.routers {
 		e.Handle(r.Method, r.Path, r.HandleList...)
 	}
+	return e
 }
 
 func (g *Group) merge(s2 []Handler) []Handler {

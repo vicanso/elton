@@ -169,10 +169,11 @@ func TestHandle(t *testing.T) {
 		assert := assert.New(t)
 		key := "count"
 		countValue := 4
-		e.Use(func(c *Context) error {
+		fn := func(c *Context) error {
 			c.Set(key, 1)
 			return c.Next()
-		})
+		}
+		e.UseWithName(fn, "test")
 		e.Use(func(c *Context) error {
 			v := c.GetInt(key)
 			c.Set(key, v+1)
@@ -201,6 +202,7 @@ func TestHandle(t *testing.T) {
 			resp := httptest.NewRecorder()
 			e.ServeHTTP(resp, req)
 		}
+		assert.Equal("test", e.GetFunctionName(fn))
 		assert.Equal(len(methods), doneCount, "not all method request is done")
 	})
 
