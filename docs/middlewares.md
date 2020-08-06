@@ -190,6 +190,43 @@ func main() {
 ```
 
 
+## global concurrent limiter
+
+全局的并发请求限制，可以用于控制应用的并发请求量。
+
+**Example**
+```go
+package main
+
+import (
+	"bytes"
+	"sync"
+	"time"
+
+	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/middleware"
+)
+
+func main() {
+
+	e := elton.New()
+	e.Use(middleware.NewGlobalConcurrentLimiter(middleware.GlobalConcurrentLimiterConfig{
+		Max: 1000,
+	}))
+
+	e.POST("/login", func(c *elton.Context) (err error) {
+		time.Sleep(3 * time.Second)
+		c.BodyBuffer = bytes.NewBufferString("hello world")
+		return
+	})
+
+	err := e.ListenAndServe(":3000")
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
 ## concurrent limiter
 
 并发请求限制，可以通过指定请求的参数，如IP、query的字段或者body等获取，限制同时并发性的提交请求，主要用于避免相同的请求多次提交。指定的Key分为以下几种：

@@ -136,3 +136,27 @@ func TestConcurrentLimiter(t *testing.T) {
 		assert.Equal(ErrNotAllowEmpty, err)
 	})
 }
+
+func TestGlobalConcurrentLimiter(t *testing.T) {
+	assert := assert.New(t)
+	fn := NewGlobalConcurrentLimiter(GlobalConcurrentLimiterConfig{
+		Max: 1,
+	})
+	req := httptest.NewRequest("POST", "/users/login?type=1", nil)
+	resp := httptest.NewRecorder()
+	c := elton.NewContext(resp, req)
+	err := fn(c)
+	assert.Equal(ErrTooManyRequests, err)
+
+	fn = NewGlobalConcurrentLimiter(GlobalConcurrentLimiterConfig{
+		Max: 2,
+	})
+	done := false
+	c.Next = func() error {
+		done = true
+		return nil
+	}
+	err = fn(c)
+	assert.Nil(err)
+	assert.True(done)
+}

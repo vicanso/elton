@@ -26,6 +26,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"sync/atomic"
 
 	"github.com/tidwall/gjson"
 	"github.com/vicanso/elton"
@@ -37,6 +38,12 @@ var (
 	ErrSubmitTooFrequently = &hes.Error{
 		StatusCode: http.StatusBadRequest,
 		Message:    "submit too frequently",
+		Category:   ErrConcurrentLimiterCategory,
+	}
+	// ErrTooManyRequests too many request
+	ErrTooManyRequests = &hes.Error{
+		StatusCode: http.StatusTooManyRequests,
+		Message:    "Too Many Requests",
 		Category:   ErrConcurrentLimiterCategory,
 	}
 	ErrNotAllowEmpty = &hes.Error{
@@ -78,9 +85,14 @@ type (
 		Body   bool
 		IP     bool
 	}
+	// GlobalConcurrentLimiterConfig
+	GlobalConcurrentLimiterConfig struct {
+		Skipper elton.Skipper
+		Max     uint32
+	}
 )
 
-// New create a concurrent limiter middleware
+// NewConcurrentLimiter create a concurrent limiter middleware
 func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 
 	if config.Lock == nil {
@@ -174,6 +186,20 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 			defer unlock()
 		}
 
+		return c.Next()
+	}
+}
+
+// NewGlobalConcurrentLimiter create a new global concurrent limiter
+func NewGlobalConcurrentLimiter(config GlobalConcurrentLimiterConfig) elton.Handler {
+	var count uint32
+	return func(c *elton.Context) (err error) {
+		value := atomic.AddUint32(&count, 1)
+		defer atomic.AddUint32(&count, ^uint32(0))
+		if value >= config.Max {
+			err = ErrTooManyRequests
+			return
+		}
 		return c.Next()
 	}
 }
