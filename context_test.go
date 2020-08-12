@@ -347,8 +347,7 @@ func TestCookie(t *testing.T) {
 			Path:     "/",
 			HttpOnly: true,
 		}
-		err := c.AddCookie(cookie)
-		assert.Nil(err)
+		c.AddCookie(cookie)
 		assert.Equal("a=b; Path=/; Max-Age=300; HttpOnly; Secure", c.GetHeader(HeaderSetCookie))
 	})
 
@@ -375,8 +374,7 @@ func TestSignedCookie(t *testing.T) {
 			Path:     "/",
 			HttpOnly: true,
 		}
-		err := c.AddSignedCookie(cookie)
-		assert.Nil(err)
+		c.AddSignedCookie(cookie)
 		assert.Equal("a=b; Path=/; Max-Age=300; HttpOnly; Secure,a.sig=9yv2rWFijew8K8a5Uw9jxRJE53s; Path=/; Max-Age=300; HttpOnly; Secure", strings.Join(c.Header()[HeaderSetCookie], ","))
 	})
 

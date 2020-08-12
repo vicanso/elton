@@ -159,6 +159,7 @@ func GetClientIP(req *http.Request) string {
 	ip := h.Get(HeaderXForwardedFor)
 	if ip != "" {
 		arr := sort.StringSlice(strings.Split(ip, ","))
+		// 从后往前找第一个非内网IP的则为客户IP
 		sort.Sort(sort.Reverse(arr))
 		for _, value := range arr {
 			v := strings.TrimSpace(value)
@@ -215,6 +216,7 @@ func (c *Context) QueryParam(name string) string {
 
 // Query get the query map.
 // It will return map[string]string, not the same as url.Values
+// If want to get url.Values, use c.Request.URL.Query()
 func (c *Context) Query() map[string]string {
 	query := c.getCacheQuery()
 	m := make(map[string]string)
@@ -414,9 +416,8 @@ func (c *Context) Cookie(name string) (*http.Cookie, error) {
 }
 
 // AddCookie add the cookie to the response
-func (c *Context) AddCookie(cookie *http.Cookie) error {
-	c.AddHeader(HeaderSetCookie, cookie.String())
-	return nil
+func (c *Context) AddCookie(cookie *http.Cookie) {
+	http.SetCookie(c, cookie)
 }
 
 func (c *Context) getKeys() []string {
@@ -480,7 +481,7 @@ func cloneCookie(cookie *http.Cookie) *http.Cookie {
 	}
 }
 
-func (c *Context) addSigCookie(cookie *http.Cookie) (err error) {
+func (c *Context) addSigCookie(cookie *http.Cookie) {
 	sc := cloneCookie(cookie)
 	sc.Name = sc.Name + SignedCookieSuffix
 	keys := c.getKeys()
@@ -489,18 +490,13 @@ func (c *Context) addSigCookie(cookie *http.Cookie) (err error) {
 	}
 	kg := keygrip.New(keys)
 	sc.Value = string(kg.Sign([]byte(sc.Value)))
-	err = c.AddCookie(sc)
-	return
+	c.AddCookie(sc)
 }
 
 // AddSignedCookie add the signed cookie to the response
-func (c *Context) AddSignedCookie(cookie *http.Cookie) (err error) {
-	err = c.AddCookie(cookie)
-	if err != nil {
-		return
-	}
-	err = c.addSigCookie(cookie)
-	return
+func (c *Context) AddSignedCookie(cookie *http.Cookie) {
+	c.AddCookie(cookie)
+	c.addSigCookie(cookie)
 }
 
 // NoContent no content for response
