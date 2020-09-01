@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	DefaultCompressRegexp = regexp.MustCompile("text|javascript|json")
+	DefaultCompressRegexp = regexp.MustCompile("text|javascript|json|wasm")
 )
 
 const (

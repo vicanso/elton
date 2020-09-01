@@ -119,7 +119,15 @@ func TestPreHandle(t *testing.T) {
 		resp := httptest.NewRecorder()
 		e.ServeHTTP(resp, req)
 		assert.Equal(404, resp.Code)
-		assert.Equal("Not found", resp.Body.String())
+		assert.Equal("Not Found", resp.Body.String())
+	})
+	t.Run("method not allow", func(t *testing.T) {
+		assert := assert.New(t)
+		req := httptest.NewRequest("POST", "/ping", nil)
+		resp := httptest.NewRecorder()
+		e.ServeHTTP(resp, req)
+		assert.Equal(405, resp.Code)
+		assert.Equal("Method Not Allowed", resp.Body.String())
 	})
 
 	t.Run("pong", func(t *testing.T) {
@@ -275,7 +283,7 @@ func TestHandle(t *testing.T) {
 		resp := httptest.NewRecorder()
 		e.ServeHTTP(resp, req)
 		assert.Equal(http.StatusNotFound, resp.Code)
-		assert.Equal("Not found", resp.Body.String())
+		assert.Equal("Not Found", resp.Body.String())
 	})
 
 	t.Run("error", func(t *testing.T) {

@@ -75,6 +75,8 @@ type (
 		ErrorHandler ErrorHandler
 		// NotFoundHandler set the function for not found handler
 		NotFoundHandler http.HandlerFunc
+		// MethodNotAllowedHandler set the function for method not allowed handler
+		MethodNotAllowedHandler http.HandlerFunc
 		// GenerateID generate id function, will use it for create id for context
 		GenerateID GenerateID
 		// EnableTrace enable trace
@@ -238,9 +240,13 @@ func (e *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	method := methodMap[req.Method]
 	rn := e.tree.findRoute(method, req.URL.Path, c.Params)
 	if rn == nil {
-		// 404处理
-		e.NotFound(resp, req)
-		// 404的所有context都可复用
+		if c.Params.methodNotAllowed {
+			e.MethodNotAllowed(resp, req)
+		} else {
+			// 404处理
+			e.NotFound(resp, req)
+		}
+		// not found 与method not allowed所有context都可复用
 		e.ctxPool.Put(c)
 		return
 	}
@@ -448,7 +454,21 @@ func (e *Elton) NotFound(resp http.ResponseWriter, req *http.Request) *Elton {
 		return e
 	}
 	resp.WriteHeader(http.StatusNotFound)
-	_, err := resp.Write([]byte("Not found"))
+	_, err := resp.Write([]byte("Not Found"))
+	if err != nil {
+		e.emitError(resp, req, err)
+	}
+	return e
+}
+
+// MethodNotAllowed method not allowed handle
+func (e *Elton) MethodNotAllowed(resp http.ResponseWriter, req *http.Request) *Elton {
+	if e.MethodNotAllowedHandler != nil {
+		e.MethodNotAllowedHandler(resp, req)
+		return e
+	}
+	resp.WriteHeader(http.StatusMethodNotAllowed)
+	_, err := resp.Write([]byte("Method Not Allowed"))
 	if err != nil {
 		e.emitError(resp, req, err)
 	}
