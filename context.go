@@ -160,12 +160,15 @@ func GetClientIP(req *http.Request) string {
 	if ip != "" {
 		arr := sort.StringSlice(strings.Split(ip, ","))
 		// 从后往前找第一个非内网IP的则为客户IP
-		sort.Sort(sort.Reverse(arr))
-		for _, value := range arr {
-			v := strings.TrimSpace(value)
+		for i := len(arr) - 1; i >= 0; i-- {
+			v := strings.TrimSpace(arr[i])
 			if !intranetip.Is(net.ParseIP(v)) {
 				return v
 			}
+		}
+		// 如果所有IP都是非内网IP，则直接取第一个
+		if len(arr) != 0 {
+			return strings.TrimSpace(arr[0])
 		}
 	}
 	ip = h.Get(HeaderXRealIP)
