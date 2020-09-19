@@ -79,6 +79,7 @@ func TestContext(t *testing.T) {
 	data := "abcd"
 	assert := assert.New(t)
 	c := NewContext(nil, nil)
+	assert.NotNil(c.Params)
 	c.WriteHeader(http.StatusBadRequest)
 	assert.Equal(c.StatusCode, http.StatusBadRequest)
 	_, err := c.Write([]byte(data))

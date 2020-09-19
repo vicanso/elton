@@ -624,5 +624,6 @@ func NewContext(resp http.ResponseWriter, req *http.Request) *Context {
 	c := &Context{}
 	c.Request = req
 	c.Response = resp
+	c.Params = new(RouteParams)
 	return c
 }
