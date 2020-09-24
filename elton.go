@@ -58,19 +58,8 @@ type (
 	}
 	// Elton web framework instance
 	Elton struct {
-		// status of elton
-		status int32
-		tree   *node
 		// Server http server
 		Server *http.Server
-		// Routers all router infos
-		Routers []*RouterInfo
-		// Middlewares middleware function
-		Middlewares []Handler
-		// PreMiddlewares pre middleware function
-		PreMiddlewares []PreHandler
-		errorListeners []ErrorListener
-		traceListeners []TraceListener
 		// ErrorHandler set the function for error handler
 		ErrorHandler ErrorHandler
 		// NotFoundHandler set the function for not found handler
@@ -83,6 +72,19 @@ type (
 		EnableTrace bool
 		// SignedKeys signed keys
 		SignedKeys SignedKeysGenerator
+
+		// status of elton
+		status int32
+		// route tree
+		tree *node
+		// routers all router infos
+		routers []*RouterInfo
+		// middlewares middleware function
+		middlewares []Handler
+		// preMiddlewares pre middleware function
+		preMiddlewares []PreHandler
+		errorListeners []ErrorListener
+		traceListeners []TraceListener
 		// functionInfos the function address:name map
 		functionInfos map[uintptr]string
 		ctxPool       sync.Pool
@@ -231,7 +233,7 @@ func (e *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
-	for _, preHandler := range e.PreMiddlewares {
+	for _, preHandler := range e.preMiddlewares {
 		preHandler(req)
 	}
 
@@ -263,6 +265,15 @@ func (e *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// GetRouters get routers
+func (e *Elton) GetRouters() []RouterInfo {
+	routers := make([]RouterInfo, len(e.routers))
+	for index, r := range e.routers {
+		routers[index] = *r
+	}
+	return routers
+}
+
 // Handle add http handle function
 func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 	for _, fn := range handlerList {
@@ -270,16 +281,16 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 		e.SetFunctionName(fn, name)
 	}
 
-	if e.Routers == nil {
-		e.Routers = make([]*RouterInfo, 0)
+	if e.routers == nil {
+		e.routers = make([]*RouterInfo, 0)
 	}
-	e.Routers = append(e.Routers, &RouterInfo{
+	e.routers = append(e.routers, &RouterInfo{
 		Method: method,
 		Path:   path,
 	})
 	e.tree.InsertRoute(methodMap[method], path, func(c *Context) {
 		c.Route = path
-		mids := e.Middlewares
+		mids := e.middlewares
 		maxMid := len(mids)
 		maxNext := maxMid + len(handlerList)
 		index := -1
@@ -421,14 +432,14 @@ func (e *Elton) ALL(path string, handlerList ...Handler) *Elton {
 
 // Use add middleware function handle
 func (e *Elton) Use(handlerList ...Handler) *Elton {
-	if e.Middlewares == nil {
-		e.Middlewares = make([]Handler, 0)
+	if e.middlewares == nil {
+		e.middlewares = make([]Handler, 0)
 	}
 	for _, fn := range handlerList {
 		name := e.GetFunctionName(fn)
 		e.SetFunctionName(fn, name)
 	}
-	e.Middlewares = append(e.Middlewares, handlerList...)
+	e.middlewares = append(e.middlewares, handlerList...)
 	return e
 }
 
@@ -440,10 +451,10 @@ func (e *Elton) UseWithName(handler Handler, name string) *Elton {
 
 // Pre add pre middleware function handler
 func (e *Elton) Pre(handlerList ...PreHandler) *Elton {
-	if e.PreMiddlewares == nil {
-		e.PreMiddlewares = make([]PreHandler, 0)
+	if e.preMiddlewares == nil {
+		e.preMiddlewares = make([]PreHandler, 0)
 	}
-	e.PreMiddlewares = append(e.PreMiddlewares, handlerList...)
+	e.preMiddlewares = append(e.preMiddlewares, handlerList...)
 	return e
 }
 

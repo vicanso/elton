@@ -164,14 +164,14 @@ func TestHandle(t *testing.T) {
 		e.TRACE(path)
 		allMethods := "/all-methods"
 		e.ALL(allMethods)
-		for index, r := range e.Routers {
+		for index, r := range e.GetRouters() {
 			p := path
 			if index >= len(methods) {
 				p = allMethods
 			}
 			assert.Equal(p, r.Path)
 		}
-		assert.Equal(2*len(methods), len(e.Routers), "method handle add fail")
+		assert.Equal(2*len(methods), len(e.GetRouters()), "method handle add fail")
 	})
 	t.Run("group", func(t *testing.T) {
 		assert := assert.New(t)
@@ -301,7 +301,7 @@ func TestHandle(t *testing.T) {
 
 	t.Run("get routers", func(t *testing.T) {
 		assert := assert.New(t)
-		assert.Equal(34, len(e.Routers), "router count fail")
+		assert.Equal(34, len(e.GetRouters()), "router count fail")
 	})
 
 	t.Run("response body reader", func(t *testing.T) {
