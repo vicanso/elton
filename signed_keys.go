@@ -25,7 +25,6 @@ package elton
 import (
 	"sync"
 	"sync/atomic"
-	"unsafe"
 )
 
 type (
@@ -45,7 +44,7 @@ type (
 	}
 	// AtomicSignedKeys atomic toggle signed keys
 	AtomicSignedKeys struct {
-		keys *[]string
+		value atomic.Value
 	}
 )
 
@@ -55,7 +54,9 @@ func (sk *SimpleSignedKeys) GetKeys() []string {
 }
 
 // SetKeys set keys
-func (sk *SimpleSignedKeys) SetKeys(keys []string) {
+func (sk *SimpleSignedKeys) SetKeys(values []string) {
+	keys := make([]string, len(values))
+	copy(keys, values)
 	sk.keys = keys
 }
 
@@ -67,7 +68,9 @@ func (rwSk *RWMutexSignedKeys) GetKeys() []string {
 }
 
 // SetKeys set keys
-func (rwSk *RWMutexSignedKeys) SetKeys(keys []string) {
+func (rwSk *RWMutexSignedKeys) SetKeys(values []string) {
+	keys := make([]string, len(values))
+	copy(keys, values)
 	rwSk.Lock()
 	defer rwSk.Unlock()
 	rwSk.keys = keys
@@ -75,12 +78,16 @@ func (rwSk *RWMutexSignedKeys) SetKeys(keys []string) {
 
 // GetKeys get keys
 func (atSk *AtomicSignedKeys) GetKeys() []string {
-	keysPoint := (*[]string)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&atSk.keys))))
-	return *keysPoint
+	if value := atSk.value.Load(); value != nil {
+		// atomic value只能相同的类型，因此只要值存在，转换时直接转换
+		return *value.(*[]string)
+	}
+	return nil
 }
 
 // SetKeys set keys
-func (atSk *AtomicSignedKeys) SetKeys(keys []string) {
-	s := keys[0:]
-	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&atSk.keys)), unsafe.Pointer(&s))
+func (atSk *AtomicSignedKeys) SetKeys(values []string) {
+	keys := make([]string, len(values))
+	copy(keys, values)
+	atSk.value.Store(&keys)
 }
