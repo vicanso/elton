@@ -65,7 +65,7 @@ type (
 
 // NewLocalLimiter create a new limiter
 func NewLocalLimiter(data map[string]uint32) *RCLLocalLimiter {
-	m := make(map[string]*rclConcurrency)
+	m := make(map[string]*rclConcurrency, len(data))
 	for route, max := range data {
 		m[route] = &rclConcurrency{
 			max:     max,

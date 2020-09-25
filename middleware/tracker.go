@@ -63,10 +63,11 @@ type (
 )
 
 func convertMap(data map[string]string, mask *regexp.Regexp) map[string]string {
-	if len(data) == 0 {
+	size := len(data)
+	if size == 0 {
 		return nil
 	}
-	m := make(map[string]string)
+	m := make(map[string]string, size)
 	for k, v := range data {
 		if mask.MatchString(k) {
 			m[k] = "***"

@@ -58,7 +58,7 @@ func (s *RouteParams) Get(key string) (value string) {
 
 // ToMap convert route params to map[string]string
 func (s *RouteParams) ToMap() map[string]string {
-	m := make(map[string]string)
+	m := make(map[string]string, len(s.Keys))
 	for index, key := range s.Keys {
 		m[key] = s.Values[index]
 	}

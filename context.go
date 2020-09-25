@@ -222,7 +222,7 @@ func (c *Context) QueryParam(name string) string {
 // If want to get url.Values, use c.Request.URL.Query()
 func (c *Context) Query() map[string]string {
 	query := c.getCacheQuery()
-	m := make(map[string]string)
+	m := make(map[string]string, len(query))
 	for key, values := range query {
 		m[key] = values[0]
 	}

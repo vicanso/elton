@@ -95,10 +95,11 @@ func urlRewrite(rewriteRegexp map[*regexp.Regexp]string, req *http.Request) {
 
 // generateRewrites generate rewrites
 func generateRewrites(rewrites []string) (m map[*regexp.Regexp]string, err error) {
-	if len(rewrites) == 0 {
+	size := len(rewrites)
+	if size == 0 {
 		return
 	}
-	m = make(map[*regexp.Regexp]string)
+	m = make(map[*regexp.Regexp]string, size)
 
 	for _, value := range rewrites {
 		arr := strings.Split(value, ":")
