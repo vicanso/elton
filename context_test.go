@@ -462,6 +462,17 @@ func TestNoContent(t *testing.T) {
 	assert.Empty(c.GetHeader(HeaderTransferEncoding))
 }
 
+func TestMergeHeader(t *testing.T) {
+	assert := assert.New(t)
+	resp := httptest.NewRecorder()
+	c := NewContext(resp, nil)
+	h := make(http.Header)
+	h.Add("a", "1")
+	h.Add("a", "2")
+	c.MergeHeader(h)
+	assert.Equal(h, c.Header())
+}
+
 func TestNotModified(t *testing.T) {
 	assert := assert.New(t)
 	resp := httptest.NewRecorder()

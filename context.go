@@ -405,6 +405,15 @@ func (c *Context) AddHeader(key, value string) {
 	c.Header().Add(key, value)
 }
 
+// MergeHeader merge http header to response
+func (c *Context) MergeHeader(h http.Header) {
+	for key, values := range h {
+		for _, value := range values {
+			c.AddHeader(key, value)
+		}
+	}
+}
+
 // ResetHeader reset response header
 func (c *Context) ResetHeader() {
 	h := c.Header()
