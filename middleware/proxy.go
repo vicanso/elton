@@ -112,7 +112,7 @@ func generateRewrites(rewrites []string) (m map[*regexp.Regexp]string, err error
 		reg, e := regexp.Compile(k)
 		if e != nil {
 			err = e
-			break
+			return
 		}
 		m[reg] = v
 	}

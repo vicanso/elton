@@ -46,24 +46,31 @@ const (
 )
 
 type (
-	// BodyDecode body decode function
-	BodyDecode func(c *elton.Context, originalData []byte) (data []byte, err error)
 	// BodyContentTypeValidate body content type check validate function
 	BodyContentTypeValidate func(c *elton.Context) bool
 	// BodyDecoder body decoder
-	BodyDecoder struct {
-		Decode   BodyDecode
-		Validate BodyContentTypeValidate
+	BodyDecoder interface {
+		// body decode function
+		Decode(c *elton.Context, originalData []byte) (data []byte, err error)
+		// validate function
+		Validate(c *elton.Context) bool
 	}
 	// BodyParserConfig body parser config
 	BodyParserConfig struct {
 		// Limit the limit size of body
 		Limit int
 		// Decoders decode list
-		Decoders            []*BodyDecoder
+		Decoders            []BodyDecoder
 		Skipper             elton.Skipper
 		ContentTypeValidate BodyContentTypeValidate
 	}
+
+	// gzip decoder
+	gzipDecoder struct{}
+	// json decoder
+	jsonDecoder struct{}
+	// form url encoded decoder
+	formURLEncodedDecoder struct{}
 )
 
 var (
@@ -80,93 +87,95 @@ var (
 	jsonBytes = []byte("{}[]")
 )
 
+func (gd *gzipDecoder) Validate(c *elton.Context) bool {
+	encoding := c.GetRequestHeader(elton.HeaderContentEncoding)
+	return encoding == elton.Gzip
+}
+
+func (gd *gzipDecoder) Decode(c *elton.Context, originalData []byte) (data []byte, err error) {
+	c.SetRequestHeader(elton.HeaderContentEncoding, "")
+	return doGunzip(originalData)
+}
+
+func (jd *jsonDecoder) Validate(c *elton.Context) bool {
+	ct := c.GetRequestHeader(elton.HeaderContentType)
+	ctFields := strings.Split(ct, ";")
+	return ctFields[0] == jsonContentType
+}
+func (jd *jsonDecoder) Decode(c *elton.Context, originalData []byte) (data []byte, err error) {
+	originalData = bytes.TrimSpace(originalData)
+	if len(originalData) == 0 {
+		return nil, nil
+	}
+	firstByte := originalData[0]
+	lastByte := originalData[len(originalData)-1]
+
+	if firstByte != jsonBytes[0] && firstByte != jsonBytes[2] {
+		err = ErrInvalidJSON
+		return
+	}
+	if firstByte == jsonBytes[0] && lastByte != jsonBytes[1] {
+		err = ErrInvalidJSON
+		return
+	}
+	if firstByte == jsonBytes[2] && lastByte != jsonBytes[3] {
+		err = ErrInvalidJSON
+		return
+	}
+	return originalData, nil
+}
+
+func (fd *formURLEncodedDecoder) Validate(c *elton.Context) bool {
+	ct := c.GetRequestHeader(elton.HeaderContentType)
+	ctFields := strings.Split(ct, ";")
+	return ctFields[0] == formURLEncodedContentType
+}
+
+func (fd *formURLEncodedDecoder) Decode(c *elton.Context, originalData []byte) (data []byte, err error) {
+	urlValues, err := url.ParseQuery(string(originalData))
+	if err != nil {
+		he := hes.Wrap(err)
+		he.Exception = true
+		return nil, he
+	}
+
+	arr := make([]string, 0, len(urlValues))
+	for key, values := range urlValues {
+		if len(values) < 2 {
+			arr = append(arr, fmt.Sprintf(`"%s":"%s"`, key, values[0]))
+			continue
+		}
+		tmpArr := []string{}
+		for _, v := range values {
+			tmpArr = append(tmpArr, `"`+v+`"`)
+		}
+		arr = append(arr, fmt.Sprintf(`"%s":[%s]`, key, strings.Join(tmpArr, ",")))
+	}
+	data = []byte("{" + strings.Join(arr, ",") + "}")
+	return data, nil
+}
+
 // AddDecoder add decoder
-func (conf *BodyParserConfig) AddDecoder(decoder *BodyDecoder) {
+func (conf *BodyParserConfig) AddDecoder(decoder BodyDecoder) {
 	if len(conf.Decoders) == 0 {
-		conf.Decoders = make([]*BodyDecoder, 0)
+		conf.Decoders = make([]BodyDecoder, 0)
 	}
 	conf.Decoders = append(conf.Decoders, decoder)
 }
 
 // NewGzipDecoder new gzip decoder
-func NewGzipDecoder() *BodyDecoder {
-	return &BodyDecoder{
-		Validate: func(c *elton.Context) bool {
-			encoding := c.GetRequestHeader(elton.HeaderContentEncoding)
-			return encoding == elton.Gzip
-		},
-		Decode: func(c *elton.Context, originalData []byte) (data []byte, err error) {
-			c.SetRequestHeader(elton.HeaderContentEncoding, "")
-			return doGunzip(originalData)
-		},
-	}
+func NewGzipDecoder() BodyDecoder {
+	return &gzipDecoder{}
 }
 
 // NewJSONDecoder new json decoder
-func NewJSONDecoder() *BodyDecoder {
-	return &BodyDecoder{
-		Validate: func(c *elton.Context) bool {
-			ct := c.GetRequestHeader(elton.HeaderContentType)
-			ctFields := strings.Split(ct, ";")
-			return ctFields[0] == jsonContentType
-		},
-		Decode: func(c *elton.Context, originalData []byte) (data []byte, err error) {
-			originalData = bytes.TrimSpace(originalData)
-			if len(originalData) == 0 {
-				return nil, nil
-			}
-			firstByte := originalData[0]
-			lastByte := originalData[len(originalData)-1]
-
-			if firstByte != jsonBytes[0] && firstByte != jsonBytes[2] {
-				err = ErrInvalidJSON
-				return
-			}
-			if firstByte == jsonBytes[0] && lastByte != jsonBytes[1] {
-				err = ErrInvalidJSON
-				return
-			}
-			if firstByte == jsonBytes[2] && lastByte != jsonBytes[3] {
-				err = ErrInvalidJSON
-				return
-			}
-			return originalData, nil
-		},
-	}
+func NewJSONDecoder() BodyDecoder {
+	return &jsonDecoder{}
 }
 
 // NewFormURLEncodedDecoder new form url encode decoder
-func NewFormURLEncodedDecoder() *BodyDecoder {
-	return &BodyDecoder{
-		Validate: func(c *elton.Context) bool {
-			ct := c.GetRequestHeader(elton.HeaderContentType)
-			ctFields := strings.Split(ct, ";")
-			return ctFields[0] == formURLEncodedContentType
-		},
-		Decode: func(c *elton.Context, originalData []byte) (data []byte, err error) {
-			urlValues, err := url.ParseQuery(string(originalData))
-			if err != nil {
-				he := hes.Wrap(err)
-				he.Exception = true
-				return nil, he
-			}
-
-			arr := make([]string, 0, len(urlValues))
-			for key, values := range urlValues {
-				if len(values) < 2 {
-					arr = append(arr, fmt.Sprintf(`"%s":"%s"`, key, values[0]))
-					continue
-				}
-				tmpArr := []string{}
-				for _, v := range values {
-					tmpArr = append(tmpArr, `"`+v+`"`)
-				}
-				arr = append(arr, fmt.Sprintf(`"%s":[%s]`, key, strings.Join(tmpArr, ",")))
-			}
-			data = []byte("{" + strings.Join(arr, ",") + "}")
-			return data, nil
-		},
-	}
+func NewFormURLEncodedDecoder() BodyDecoder {
+	return &formURLEncodedDecoder{}
 }
 
 // DefaultJSONContentTypeValidate default json content type validate
@@ -303,20 +312,20 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 		}
 		body := c.RequestBody
 
-		decodeList := make([]BodyDecode, 0)
+		matchDecoder := make([]BodyDecoder, 0)
 		for _, decoder := range config.Decoders {
 			if decoder.Validate(c) {
-				decodeList = append(decodeList, decoder.Decode)
+				matchDecoder = append(matchDecoder, decoder)
 				break
 			}
 		}
 		// 没有符合条件的解码
-		if len(decodeList) == 0 {
+		if len(matchDecoder) == 0 {
 			return c.Next()
 		}
 
-		for _, decode := range decodeList {
-			body, err = decode(c, body)
+		for _, decoder := range matchDecoder {
+			body, err = decoder.Decode(c, body)
 			if err != nil {
 				return
 			}

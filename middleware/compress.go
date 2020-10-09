@@ -31,10 +31,12 @@ import (
 )
 
 var (
+	// DefaultCompressRegexp compress text, javascript, json and wasm
 	DefaultCompressRegexp = regexp.MustCompile("text|javascript|json|wasm")
 )
 
 const (
+	// DefaultCompressMinLength min compress lenght(1KB)
 	DefaultCompressMinLength = 1024
 )
 
@@ -155,6 +157,7 @@ func NewCompress(config CompressConfig) elton.Handler {
 			if isReaderBody {
 				// 压缩时清除content length
 				c.Header().Del(elton.HeaderContentLength)
+				// 执行pipe之前先设置http响应头
 				fillHeader(encoding)
 				err = compressor.Pipe(c)
 				// 如果出错直接返回，此时也有可能已经开始写入数据，导致http后续无法再写入status code
@@ -172,10 +175,12 @@ func NewCompress(config CompressConfig) elton.Handler {
 			newBuf, e := compressor.Compress(body)
 			// 如果压缩成功，则使用压缩数据
 			// 失败则忽略
-			if e == nil {
+			if e != nil {
+				c.Elton().EmitError(c, e)
+			} else {
+				// TODO 失败时是否输出日志
 				fillHeader(encoding)
 				c.BodyBuffer = newBuf
-				break
 			}
 		}
 		return

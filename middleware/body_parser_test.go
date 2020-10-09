@@ -127,6 +127,15 @@ func TestFormURLEncodedDecoder(t *testing.T) {
 	assert.Equal(17, len(data))
 }
 
+type testDecoder struct{}
+
+func (td *testDecoder) Validate(c *elton.Context) bool {
+	return c.GetRequestHeader(elton.HeaderContentType) == "application/json;charset=base64"
+}
+func (td *testDecoder) Decode(c *elton.Context, originalData []byte) (data []byte, err error) {
+	return base64.RawStdEncoding.DecodeString(string(originalData))
+}
+
 func TestBodyParser(t *testing.T) {
 	t.Run("skip", func(t *testing.T) {
 		assert := assert.New(t)
@@ -301,14 +310,7 @@ func TestBodyParser(t *testing.T) {
 	t.Run("decode data success", func(t *testing.T) {
 		assert := assert.New(t)
 		conf := BodyParserConfig{}
-		conf.AddDecoder(&BodyDecoder{
-			Validate: func(c *elton.Context) bool {
-				return c.GetRequestHeader(elton.HeaderContentType) == "application/json;charset=base64"
-			},
-			Decode: func(c *elton.Context, originalData []byte) (data []byte, err error) {
-				return base64.RawStdEncoding.DecodeString(string(originalData))
-			},
-		})
+		conf.AddDecoder(&testDecoder{})
 
 		bodyParser := NewBodyParser(conf)
 		body := `{"name": "tree.xie"}`
