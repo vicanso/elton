@@ -67,6 +67,7 @@ func NewError(config ErrorConfig) elton.Handler {
 		he, ok := err.(*hes.Error)
 		if !ok {
 			he = hes.Wrap(err)
+			// 非hes的error，则都认为是500出错异常
 			he.StatusCode = http.StatusInternalServerError
 			he.Exception = true
 			he.Category = ErrErrorCategory

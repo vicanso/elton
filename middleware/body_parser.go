@@ -88,8 +88,7 @@ var (
 )
 
 func (gd *gzipDecoder) Validate(c *elton.Context) bool {
-	encoding := c.GetRequestHeader(elton.HeaderContentEncoding)
-	return encoding == elton.Gzip
+	return c.GetRequestHeader(elton.HeaderContentEncoding) == elton.Gzip
 }
 
 func (gd *gzipDecoder) Decode(c *elton.Context, originalData []byte) (data []byte, err error) {
@@ -195,7 +194,9 @@ func DefaultJSONAndFormContentTypeValidate(c *elton.Context) bool {
 
 // NewDefaultBodyParser create a default body parser, default limit and only json parser
 func NewDefaultBodyParser() elton.Handler {
-	conf := BodyParserConfig{}
+	conf := BodyParserConfig{
+		ContentTypeValidate: DefaultJSONContentTypeValidate,
+	}
 	conf.AddDecoder(NewGzipDecoder())
 	conf.AddDecoder(NewJSONDecoder())
 	return NewBodyParser(conf)
@@ -312,19 +313,19 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 		}
 		body := c.RequestBody
 
-		matchDecoder := make([]BodyDecoder, 0)
+		matchDecoders := make([]BodyDecoder, 0)
 		for _, decoder := range config.Decoders {
 			if decoder.Validate(c) {
-				matchDecoder = append(matchDecoder, decoder)
+				matchDecoders = append(matchDecoders, decoder)
 				break
 			}
 		}
 		// 没有符合条件的解码
-		if len(matchDecoder) == 0 {
+		if len(matchDecoders) == 0 {
 			return c.Next()
 		}
 
-		for _, decoder := range matchDecoder {
+		for _, decoder := range matchDecoders {
 			body, err = decoder.Decode(c, body)
 			if err != nil {
 				return

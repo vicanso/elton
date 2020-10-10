@@ -67,6 +67,11 @@ type (
 		TargetPicker ProxyTargetPicker
 		Skipper      elton.Skipper
 	}
+
+	rewriteRegexp struct {
+		Regexp *regexp.Regexp
+		Value  string
+	}
 )
 
 func captureTokens(pattern *regexp.Regexp, input string) *strings.Replacer {
@@ -84,24 +89,24 @@ func captureTokens(pattern *regexp.Regexp, input string) *strings.Replacer {
 	return strings.NewReplacer(replace...)
 }
 
-func urlRewrite(rewriteRegexp map[*regexp.Regexp]string, req *http.Request) {
-	for k, v := range rewriteRegexp {
-		replacer := captureTokens(k, req.URL.Path)
+func urlRewrite(rewrites []*rewriteRegexp, req *http.Request) {
+	for _, rewrite := range rewrites {
+		replacer := captureTokens(rewrite.Regexp, req.URL.Path)
 		if replacer != nil {
-			req.URL.Path = replacer.Replace(v)
+			req.URL.Path = replacer.Replace(rewrite.Value)
 		}
 	}
 }
 
 // generateRewrites generate rewrites
-func generateRewrites(rewrites []string) (m map[*regexp.Regexp]string, err error) {
-	size := len(rewrites)
+func generateRewrites(arr []string) (rewrites []*rewriteRegexp, err error) {
+	size := len(arr)
 	if size == 0 {
 		return
 	}
-	m = make(map[*regexp.Regexp]string, size)
+	rewrites = make([]*rewriteRegexp, 0, size)
 
-	for _, value := range rewrites {
+	for _, value := range arr {
 		arr := strings.Split(value, ":")
 		if len(arr) != 2 {
 			continue
@@ -114,7 +119,11 @@ func generateRewrites(rewrites []string) (m map[*regexp.Regexp]string, err error
 			err = e
 			return
 		}
-		m[reg] = v
+		rewrites = append(rewrites, &rewriteRegexp{
+			Regexp: reg,
+			Value:  v,
+		})
+		// m[reg] = v
 	}
 	return
 }
@@ -124,7 +133,7 @@ func NewProxy(config ProxyConfig) elton.Handler {
 	if config.Target == nil && config.TargetPicker == nil {
 		panic(ErrProxyNoTargetFunction)
 	}
-	regs, err := generateRewrites(config.Rewrites)
+	rewrites, err := generateRewrites(config.Rewrites)
 	if err != nil {
 		panic(err)
 	}
@@ -161,9 +170,9 @@ func NewProxy(config ProxyConfig) elton.Handler {
 		}
 		req := c.Request
 		var originalPath, originalHost string
-		if regs != nil {
+		if len(rewrites) != 0 {
 			originalPath = req.URL.Path
-			urlRewrite(regs, req)
+			urlRewrite(rewrites, req)
 		}
 		if config.Host != "" {
 			originalHost = req.Host

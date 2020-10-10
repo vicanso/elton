@@ -43,9 +43,10 @@ var (
 	// ErrTooManyRequests too many request
 	ErrTooManyRequests = &hes.Error{
 		StatusCode: http.StatusTooManyRequests,
-		Message:    "Too Many Requests",
+		Message:    "too many Requests",
 		Category:   ErrConcurrentLimiterCategory,
 	}
+	// ErrNotAllowEmpty not allow empty
 	ErrNotAllowEmpty = &hes.Error{
 		StatusCode: http.StatusBadRequest,
 		Message:    "empty value is not allowed",

@@ -165,7 +165,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 	if skipper == nil {
 		skipper = elton.DefaultSkipper
 	}
-	// convert to the different os file path
+	// convert different os file path
 	basePath := filepath.Join(config.Path, "")
 	return func(c *elton.Context) (err error) {
 		if skipper(c) {

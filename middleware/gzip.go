@@ -57,9 +57,12 @@ func (g *GzipCompressor) Compress(buf []byte) (*bytes.Buffer, error) {
 	level := g.getLevel()
 	buffer := new(bytes.Buffer)
 
-	w, _ := gzip.NewWriterLevel(buffer, level)
+	w, err := gzip.NewWriterLevel(buffer, level)
+	if err != nil {
+		return nil, err
+	}
 	defer w.Close()
-	_, err := w.Write(buf)
+	_, err = w.Write(buf)
 	if err != nil {
 		return nil, err
 	}

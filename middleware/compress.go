@@ -105,7 +105,7 @@ func NewCompress(config CompressConfig) elton.Handler {
 	}
 	compressorList := config.Compressors
 	return func(c *elton.Context) (err error) {
-		if skipper(c) || compressorList == nil {
+		if skipper(c) || len(compressorList) == 0 {
 			return c.Next()
 		}
 		err = c.Next()
@@ -167,7 +167,7 @@ func NewCompress(config CompressConfig) elton.Handler {
 				// 成功跳出循环
 				// pipe 将数据直接转至原有的Response，因此设置committed为true
 				c.Committed = true
-				// 清除 reader body
+				// 清除 response body
 				c.Body = nil
 				break
 			}

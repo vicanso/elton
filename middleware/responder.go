@@ -101,11 +101,9 @@ func NewResponder(config ResponderConfig) elton.Handler {
 			return
 		}
 
-		ct := elton.HeaderContentType
-
 		hadContentType := false
 		// 判断是否已设置响应头的Content-Type
-		if c.GetHeader(ct) != "" {
+		if c.GetHeader(elton.HeaderContentType) != "" {
 			hadContentType = true
 		}
 
@@ -114,16 +112,16 @@ func NewResponder(config ResponderConfig) elton.Handler {
 			switch data := c.Body.(type) {
 			case string:
 				if !hadContentType {
-					c.SetHeader(ct, elton.MIMETextPlain)
+					c.SetHeader(elton.HeaderContentType, elton.MIMETextPlain)
 				}
 				body = []byte(data)
 			case []byte:
 				if !hadContentType {
-					c.SetHeader(ct, elton.MIMEBinary)
+					c.SetHeader(elton.HeaderContentType, elton.MIMEBinary)
 				}
 				body = data
 			default:
-				// 转换为json
+				// 使用marshal转换（默认为转换为json）
 				buf, e := marshal(data)
 				if e != nil {
 					he := hes.NewWithErrorStatusCode(e, http.StatusInternalServerError)
@@ -132,7 +130,7 @@ func NewResponder(config ResponderConfig) elton.Handler {
 					return
 				}
 				if !hadContentType {
-					c.SetHeader(ct, contentType)
+					c.SetHeader(elton.HeaderContentType, contentType)
 				}
 				body = buf
 			}
