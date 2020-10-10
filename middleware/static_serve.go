@@ -34,6 +34,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/vicanso/elton"
 	"github.com/vicanso/hes"
@@ -52,9 +53,9 @@ type (
 		// 静态文件目录
 		Path string
 		// http cache control max age
-		MaxAge int
+		MaxAge time.Duration
 		// http cache control s-maxage
-		SMaxAge int
+		SMaxAge time.Duration
 		// http response header
 		Header map[string]string
 		// 禁止query string（因为有时静态文件为CDN回源，避免生成各种重复的缓存）
@@ -152,10 +153,10 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 		"public",
 	}
 	if config.MaxAge > 0 {
-		cacheArr = append(cacheArr, "max-age="+strconv.Itoa(config.MaxAge))
+		cacheArr = append(cacheArr, "max-age="+strconv.Itoa(int(config.MaxAge.Seconds())))
 	}
 	if config.SMaxAge > 0 {
-		cacheArr = append(cacheArr, "s-maxage="+strconv.Itoa(config.SMaxAge))
+		cacheArr = append(cacheArr, "s-maxage="+strconv.Itoa(int(config.SMaxAge.Seconds())))
 	}
 	cacheControl := ""
 	if len(cacheArr) > 1 {

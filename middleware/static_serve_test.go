@@ -248,8 +248,8 @@ func TestStaticServe(t *testing.T) {
 		assert := assert.New(t)
 		fn := NewStaticServe(staticFile, StaticServeConfig{
 			Path:    staticPath,
-			MaxAge:  24 * 3600,
-			SMaxAge: 300,
+			MaxAge:  24 * time.Hour,
+			SMaxAge: 5 * time.Minute,
 		})
 		req := httptest.NewRequest("GET", "/index.html", nil)
 		res := httptest.NewRecorder()

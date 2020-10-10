@@ -511,9 +511,9 @@ func TestCacheControl(t *testing.T) {
 	t.Run("set cache max age", func(t *testing.T) {
 		resp := httptest.NewRecorder()
 		c := NewContext(resp, nil)
-		c.CacheMaxAge("1m")
+		c.CacheMaxAge(time.Minute)
 		checkCacheControl(resp, "public, max-age=60", t)
-		c.CacheMaxAge("1m", "10s")
+		c.CacheMaxAge(time.Minute, 10*time.Second)
 		checkCacheControl(resp, "public, max-age=60, s-maxage=10", t)
 	})
 }

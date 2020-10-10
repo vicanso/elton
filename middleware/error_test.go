@@ -27,6 +27,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vicanso/elton"
@@ -73,7 +74,7 @@ func TestErrorHandler(t *testing.T) {
 		c.Next = func() error {
 			return errors.New("abcd")
 		}
-		c.CacheMaxAge("5m")
+		c.CacheMaxAge(5 * time.Minute)
 		err := fn(c)
 		assert.Nil(err)
 		assert.Equal("public, max-age=300", c.GetHeader(elton.HeaderCacheControl))
@@ -92,7 +93,7 @@ func TestErrorHandler(t *testing.T) {
 		c.Next = func() error {
 			return errors.New("abcd")
 		}
-		c.CacheMaxAge("5m")
+		c.CacheMaxAge(5 * time.Minute)
 		err := fn(c)
 		assert.Nil(err)
 		assert.Equal("public, max-age=300", c.GetHeader(elton.HeaderCacheControl))
