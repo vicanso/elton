@@ -121,7 +121,10 @@ func TestETag(t *testing.T) {
 func BenchmarkGenETag(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		genETag(testData)
+		_, err := genETag(testData)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
