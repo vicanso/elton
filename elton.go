@@ -54,7 +54,7 @@ type (
 	// RouterInfo router's info
 	RouterInfo struct {
 		Method string `json:"method,omitempty"`
-		Path   string `json:"path,omitempty"`
+		Route  string `json:"route,omitempty"`
 	}
 	// Elton web framework instance
 	Elton struct {
@@ -286,7 +286,7 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 	}
 	e.routers = append(e.routers, &RouterInfo{
 		Method: method,
-		Path:   path,
+		Route:  path,
 	})
 	e.tree.InsertRoute(methodMap[method], path, func(c *Context) {
 		c.Route = path

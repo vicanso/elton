@@ -169,7 +169,7 @@ func TestHandle(t *testing.T) {
 			if index >= len(methods) {
 				p = allMethods
 			}
-			assert.Equal(p, r.Path)
+			assert.Equal(p, r.Route)
 		}
 		assert.Equal(2*len(methods), len(e.GetRouters()), "method handle add fail")
 	})

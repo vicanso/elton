@@ -528,15 +528,15 @@ func loadRoutes(e *Elton, routers []*RouterInfo) {
 	for _, r := range routers {
 		switch r.Method {
 		case "GET":
-			e.GET(r.Path, noopHandler)
+			e.GET(r.Route, noopHandler)
 		case "POST":
-			e.POST(r.Path, noopHandler)
+			e.POST(r.Route, noopHandler)
 		case "PATCH":
-			e.PATCH(r.Path, noopHandler)
+			e.PATCH(r.Route, noopHandler)
 		case "PUT":
-			e.PUT(r.Path, noopHandler)
+			e.PUT(r.Route, noopHandler)
 		case "DELETE":
-			e.DELETE(r.Path, noopHandler)
+			e.DELETE(r.Route, noopHandler)
 		}
 	}
 }
@@ -549,7 +549,7 @@ func benchmarkRoutes(b *testing.B, e *Elton, routers []*RouterInfo) {
 	for i := 0; i < b.N; i++ {
 		for _, router := range routers {
 			r.Method = router.Method
-			u.Path = router.Path
+			u.Path = router.Route
 			// e.tree.FindRoute(methodMap[r.Method], u.Path)
 			e.ServeHTTP(w, r)
 		}
