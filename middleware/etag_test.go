@@ -53,7 +53,9 @@ func init() {
 
 func TestGen(t *testing.T) {
 	assert := assert.New(t)
-	assert.Equal(genETag([]byte("")), `"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="`)
+	value, err := genETag([]byte(""))
+	assert.Nil(err)
+	assert.Equal(value, `"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="`)
 }
 
 func TestETag(t *testing.T) {

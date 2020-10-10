@@ -136,12 +136,18 @@ func NewProxy(config ProxyConfig) elton.Handler {
 		if skipper(c) {
 			return c.Next()
 		}
+		if config.Done != nil {
+			defer config.Done(c)
+		}
 		target := config.Target
 		var done ProxyDone
 		if target == nil {
 			target, done, err = config.TargetPicker(c)
 			if err != nil {
 				return
+			}
+			if done != nil {
+				defer done(c)
 			}
 		}
 		// 如果无target，则抛错
@@ -170,12 +176,7 @@ func NewProxy(config ProxyConfig) elton.Handler {
 			err = he
 		}
 		p.ServeHTTP(c, req)
-		if config.Done != nil {
-			config.Done(c)
-		}
-		if done != nil {
-			done(c)
-		}
+
 		if err != nil {
 			return
 		}

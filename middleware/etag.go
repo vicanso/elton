@@ -39,18 +39,18 @@ type (
 )
 
 // gen generate eTag
-func genETag(buf []byte) string {
+func genETag(buf []byte) (string, error) {
 	size := len(buf)
 	if size == 0 {
-		return `"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="`
+		return `"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="`, nil
 	}
 	h := sha1.New()
 	_, err := h.Write(buf)
 	if err != nil {
-		return ""
+		return "", err
 	}
 	hash := base64.URLEncoding.EncodeToString(h.Sum(nil))
-	return fmt.Sprintf(`"%x-%s"`, size, hash)
+	return fmt.Sprintf(`"%x-%s"`, size, hash), nil
 }
 
 // NewDefault create a default ETag middleware
@@ -87,7 +87,7 @@ func NewETag(config ETagConfig) elton.Handler {
 				statusCode >= http.StatusMultipleChoices) {
 			return
 		}
-		eTag := genETag(bodyBuf.Bytes())
+		eTag, _ := genETag(bodyBuf.Bytes())
 		if eTag != "" {
 			c.SetHeader(elton.HeaderETag, eTag)
 		}
