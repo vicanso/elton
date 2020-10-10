@@ -23,11 +23,14 @@
 package middleware
 
 import (
+	"bytes"
 	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vicanso/elton"
@@ -73,9 +76,26 @@ func TestGenerateRewrites(t *testing.T) {
 }
 
 func TestProxy(t *testing.T) {
+	l, err := net.Listen("tcp", "0.0.0.0:0")
+	if err != nil {
+		panic(err)
+	}
+
+	e := elton.New()
+
+	e.GET("/", func(c *elton.Context) error {
+		c.BodyBuffer = bytes.NewBufferString(c.Request.Host)
+		return nil
+	})
+	go func() {
+		_ = e.Server.Serve(l)
+	}()
+	time.Sleep(10 * time.Millisecond)
+	defer l.Close()
+	target, _ := url.Parse("http://" + l.Addr().String())
+
 	t.Run("normal", func(t *testing.T) {
 		assert := assert.New(t)
-		target, _ := url.Parse("https://github.com")
 		config := ProxyConfig{
 			Target:    target,
 			Host:      "github.com",
@@ -86,7 +106,6 @@ func TestProxy(t *testing.T) {
 		}
 		fn := NewProxy(config)
 		req := httptest.NewRequest("GET", "http://127.0.0.1/api/", nil)
-		req.Header.Set("Accept-Encoding", "gzip")
 		originalPath := req.URL.Path
 		originalHost := req.Host
 		resp := httptest.NewRecorder()
@@ -98,16 +117,15 @@ func TestProxy(t *testing.T) {
 		}
 		err := fn(c)
 		assert.Nil(err)
-		assert.Equal("gzip", c.GetHeader("Content-Encoding"))
 		assert.Equal(originalPath, c.Request.URL.Path)
 		assert.Equal(originalHost, req.Host)
 		assert.True(done)
 		assert.Equal(http.StatusOK, c.StatusCode)
+		assert.Equal("github.com", c.BodyBuffer.String())
 	})
 
 	t.Run("target picker", func(t *testing.T) {
 		assert := assert.New(t)
-		target, _ := url.Parse("https://www.baidu.com")
 		callBackDone := false
 		config := ProxyConfig{
 			TargetPicker: func(c *elton.Context) (*url.URL, ProxyDone, error) {
@@ -132,6 +150,7 @@ func TestProxy(t *testing.T) {
 		assert.True(done)
 		assert.True(callBackDone)
 		assert.Equal(http.StatusOK, c.StatusCode)
+		assert.Equal("www.baidu.com", c.BodyBuffer.String())
 	})
 
 	t.Run("target picker error", func(t *testing.T) {
@@ -170,7 +189,7 @@ func TestProxy(t *testing.T) {
 
 	t.Run("proxy error", func(t *testing.T) {
 		assert := assert.New(t)
-		target, _ := url.Parse("https://a")
+		target, _ := url.Parse("https://127.0.0.1")
 		config := ProxyConfig{
 			TargetPicker: func(c *elton.Context) (*url.URL, ProxyDone, error) {
 				return target, nil, nil
@@ -190,7 +209,6 @@ func TestProxy(t *testing.T) {
 
 	t.Run("proxy done", func(t *testing.T) {
 		assert := assert.New(t)
-		target, _ := url.Parse("https://www.baidu.com")
 		done := false
 		config := ProxyConfig{
 			Target:    target,
