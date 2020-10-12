@@ -62,7 +62,7 @@ type (
 		DenyQueryString bool
 		// 是否禁止文件路径以.开头（因为这些文件有可能包括重要信息）
 		DenyDot bool
-		// 是否使用strong etag
+		// 是否使用strong eTag
 		EnableStrongETag bool
 		// 禁止生成ETag
 		DisableETag bool
@@ -218,7 +218,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 
 		c.SetContentTypeByExt(file)
 		var fileBuf []byte
-		// strong etag需要读取文件内容计算etag
+		// strong eTag需要读取文件内容计算eTag
 		if !config.DisableETag && config.EnableStrongETag {
 			buf, e := staticFile.Get(file)
 			if e != nil {

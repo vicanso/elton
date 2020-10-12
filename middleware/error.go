@@ -40,7 +40,7 @@ type (
 )
 
 const (
-	// ErrErrorCategory error cateogry of error handler
+	// ErrErrorCategory error category of error handler
 	ErrErrorCategory = "elton-error"
 )
 

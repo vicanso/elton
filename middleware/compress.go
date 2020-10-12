@@ -24,6 +24,7 @@ package middleware
 
 import (
 	"bytes"
+	"errors"
 	"regexp"
 	"strings"
 
@@ -36,7 +37,7 @@ var (
 )
 
 const (
-	// DefaultCompressMinLength min compress lenght(1KB)
+	// DefaultCompressMinLength min compress length(1KB)
 	DefaultCompressMinLength = 1024
 )
 
@@ -104,8 +105,11 @@ func NewCompress(config CompressConfig) elton.Handler {
 		checker = DefaultCompressRegexp
 	}
 	compressorList := config.Compressors
+	if len(compressorList) == 0 {
+		panic(errors.New("compressor can't be empty"))
+	}
 	return func(c *elton.Context) (err error) {
-		if skipper(c) || len(compressorList) == 0 {
+		if skipper(c) {
 			return c.Next()
 		}
 		err = c.Next()
@@ -178,7 +182,6 @@ func NewCompress(config CompressConfig) elton.Handler {
 			if e != nil {
 				c.Elton().EmitError(c, e)
 			} else {
-				// TODO 失败时是否输出日志
 				fillHeader(encoding)
 				c.BodyBuffer = newBuf
 			}

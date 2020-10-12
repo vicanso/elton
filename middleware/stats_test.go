@@ -65,65 +65,63 @@ func TestSkip(t *testing.T) {
 	assert.True(done)
 }
 
+func TestStatsResponseHesError(t *testing.T) {
+	assert := assert.New(t)
+	req := httptest.NewRequest("GET", "/", nil)
+	resp := httptest.NewRecorder()
+	c := elton.NewContext(resp, req)
+	done := false
+	fn := NewStats(StatsConfig{
+		OnStats: func(info *StatsInfo, _ *elton.Context) {
+			assert.Equal(http.StatusBadRequest, info.Status)
+			done = true
+		},
+	})
+	c.Next = func() error {
+		return hes.New("abc")
+	}
+	err := fn(c)
+	assert.NotNil(err)
+	assert.True(done, "on stats should be called when return error")
+}
+
+func TestStatsResponseError(t *testing.T) {
+	assert := assert.New(t)
+	req := httptest.NewRequest("GET", "/", nil)
+	resp := httptest.NewRecorder()
+	c := elton.NewContext(resp, req)
+	done := false
+	fn := NewStats(StatsConfig{
+		OnStats: func(info *StatsInfo, _ *elton.Context) {
+			assert.Equal(http.StatusInternalServerError, info.Status)
+			done = true
+		},
+	})
+	c.Next = func() error {
+		return errors.New("abc")
+	}
+	err := fn(c)
+	assert.NotNil(err)
+	assert.True(done, "on stats should be called when return error")
+}
+
 func TestStats(t *testing.T) {
-	t.Run("normal", func(t *testing.T) {
-		assert := assert.New(t)
-		req := httptest.NewRequest("GET", "http://127.0.0.1/users/me", nil)
-		resp := httptest.NewRecorder()
-		c := elton.NewContext(resp, req)
-		c.BodyBuffer = bytes.NewBufferString("abcd")
-		done := false
-		fn := NewStats(StatsConfig{
-			OnStats: func(info *StatsInfo, _ *elton.Context) {
-				assert.Equal(http.StatusOK, info.Status, "status code should be 200")
-				done = true
-			},
-		})
-		c.Next = func() error {
-			return nil
-		}
-		err := fn(c)
-		assert.Nil(err)
-		assert.True(done)
+	assert := assert.New(t)
+	req := httptest.NewRequest("GET", "/", nil)
+	resp := httptest.NewRecorder()
+	c := elton.NewContext(resp, req)
+	c.BodyBuffer = bytes.NewBufferString("abcd")
+	done := false
+	fn := NewStats(StatsConfig{
+		OnStats: func(info *StatsInfo, _ *elton.Context) {
+			assert.Equal(http.StatusOK, info.Status, "status code should be 200")
+			done = true
+		},
 	})
-
-	t.Run("return hes error", func(t *testing.T) {
-		assert := assert.New(t)
-		req := httptest.NewRequest("GET", "http://127.0.0.1/users/me", nil)
-		resp := httptest.NewRecorder()
-		c := elton.NewContext(resp, req)
-		done := false
-		fn := NewStats(StatsConfig{
-			OnStats: func(info *StatsInfo, _ *elton.Context) {
-				assert.Equal(http.StatusBadRequest, info.Status)
-				done = true
-			},
-		})
-		c.Next = func() error {
-			return hes.New("abc")
-		}
-		err := fn(c)
-		assert.NotNil(err)
-		assert.True(done, "on stats shouldn be called when return error")
-	})
-
-	t.Run("return normal error", func(t *testing.T) {
-		assert := assert.New(t)
-		req := httptest.NewRequest("GET", "http://127.0.0.1/users/me", nil)
-		resp := httptest.NewRecorder()
-		c := elton.NewContext(resp, req)
-		done := false
-		fn := NewStats(StatsConfig{
-			OnStats: func(info *StatsInfo, _ *elton.Context) {
-				assert.Equal(http.StatusInternalServerError, info.Status)
-				done = true
-			},
-		})
-		c.Next = func() error {
-			return errors.New("abc")
-		}
-		err := fn(c)
-		assert.NotNil(err)
-		assert.True(done, "on stats shouldn be called when return error")
-	})
+	c.Next = func() error {
+		return nil
+	}
+	err := fn(c)
+	assert.Nil(err)
+	assert.True(done)
 }

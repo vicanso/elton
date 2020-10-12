@@ -45,7 +45,7 @@ type (
 
 // Accept accept gzip encoding
 func (g *GzipCompressor) Accept(c *elton.Context, bodySize int) (acceptable bool, encoding string) {
-	// 如果数据少于最低压缩长度，则不压缩
+	// 如果数据少于最低压缩长度，则不压缩（因为reader中的bodySize会设置为1，因此需要判断>=0）
 	if bodySize >= 0 && bodySize < g.getMinLength() {
 		return
 	}

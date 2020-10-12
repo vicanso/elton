@@ -31,6 +31,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vicanso/elton"
+	"github.com/vicanso/hes"
 )
 
 func TestNoLockFunction(t *testing.T) {
@@ -41,6 +42,41 @@ func TestNoLockFunction(t *testing.T) {
 	}()
 
 	NewConcurrentLimiter(ConcurrentLimiterConfig{})
+}
+
+func TestConcurrentLimiterNotAllowEmpty(t *testing.T) {
+	// 设置不允许值为空的
+	assert := assert.New(t)
+	fn := NewConcurrentLimiter(ConcurrentLimiterConfig{
+		NotAllowEmpty: true,
+		Keys: []string{
+			"p:id",
+		},
+		Lock: func(key string, c *elton.Context) (success bool, unlock func(), err error) {
+			return
+		},
+	})
+	c := elton.NewContext(nil, httptest.NewRequest("GET", "/", nil))
+	err := fn(c)
+	assert.Equal(ErrNotAllowEmpty, err)
+}
+
+func TestConcurrentLimiterLockError(t *testing.T) {
+	// 当lock出错时
+	assert := assert.New(t)
+	fn := NewConcurrentLimiter(ConcurrentLimiterConfig{
+		Keys: []string{
+			"p:id",
+		},
+		Lock: func(key string, c *elton.Context) (success bool, unlock func(), err error) {
+			return false, nil, errors.New("lock error")
+		},
+	})
+	c := elton.NewContext(nil, httptest.NewRequest("GET", "/", nil))
+	err := fn(c)
+	he, ok := err.(*hes.Error)
+	assert.True(ok)
+	assert.Equal("message=lock error", he.Error())
 }
 
 func TestConcurrentLimiter(t *testing.T) {
@@ -59,7 +95,7 @@ func TestConcurrentLimiter(t *testing.T) {
 				return
 			}
 			_, loaded := m.LoadOrStore(key, 1)
-			// 如果已存在，则获取销失败
+			// 如果已存在，则获取锁失败
 			if loaded {
 				return
 			}
@@ -111,29 +147,6 @@ func TestConcurrentLimiter(t *testing.T) {
 		// 登录限制,192.0.2.1,xyz,1,123,tree.xie
 		assert.Nil(err)
 		assert.True(done)
-	})
-
-	t.Run("lock function return error", func(t *testing.T) {
-		assert := assert.New(t)
-		c.Params = new(elton.RouteParams)
-		err := fn(c)
-		assert.Equal("message=key is invalid", err.Error())
-	})
-
-	t.Run("not allow empty", func(t *testing.T) {
-		assert := assert.New(t)
-		fn := NewConcurrentLimiter(ConcurrentLimiterConfig{
-			NotAllowEmpty: true,
-			Keys: []string{
-				"p:id",
-			},
-			Lock: func(key string, c *elton.Context) (success bool, unlock func(), err error) {
-				return
-			},
-		})
-		c := elton.NewContext(nil, httptest.NewRequest("GET", "/", nil))
-		err := fn(c)
-		assert.Equal(ErrNotAllowEmpty, err)
 	})
 }
 

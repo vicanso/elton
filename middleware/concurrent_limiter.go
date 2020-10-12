@@ -74,7 +74,7 @@ type (
 		// Lock lock function
 		Lock    ConcurrentLimiterLock
 		Skipper elton.Skipper
-		// NotAllowEmpty is value is empty, will return error
+		// NotAllowEmpty if value is empty, will return error
 		NotAllowEmpty bool
 	}
 	// concurrentLimiterKeyInfo the concurrent key's info

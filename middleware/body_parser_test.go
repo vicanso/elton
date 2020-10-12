@@ -26,7 +26,9 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
+	"errors"
 	"io"
+	"io/ioutil"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -127,6 +129,41 @@ func TestFormURLEncodedDecoder(t *testing.T) {
 	assert.Equal(17, len(data))
 }
 
+type testReadCloser struct {
+	data *bytes.Buffer
+}
+
+func (trc *testReadCloser) Read(p []byte) (n int, err error) {
+	return trc.data.Read(p)
+}
+
+func (trc *testReadCloser) Close() error {
+	return nil
+}
+
+func TestMaxBytesReader(t *testing.T) {
+	assert := assert.New(t)
+	buf := bytes.NewBufferString("abcd")
+	trc := &testReadCloser{
+		data: buf,
+	}
+	// 限制只能最大只能读取1字节，则出错
+	r := MaxBytesReader(trc, 1)
+	_, err := ioutil.ReadAll(r)
+	assert.Equal("request body is too large, it should be <= 1", err.Error())
+
+	buf = bytes.NewBufferString("abcd")
+	result := buf.String()
+	trc = &testReadCloser{
+		data: buf,
+	}
+	// 限制最大100字节，则成功读取
+	r = MaxBytesReader(trc, 100)
+	data, err := ioutil.ReadAll(r)
+	assert.Nil(err)
+	assert.Equal(result, string(data))
+}
+
 type testDecoder struct{}
 
 func (td *testDecoder) Validate(c *elton.Context) bool {
@@ -136,222 +173,181 @@ func (td *testDecoder) Decode(c *elton.Context, originalData []byte) (data []byt
 	return base64.RawStdEncoding.DecodeString(string(originalData))
 }
 
-func TestBodyParser(t *testing.T) {
-	t.Run("skip", func(t *testing.T) {
-		assert := assert.New(t)
-		bodyParser := NewBodyParser(BodyParserConfig{
-			Skipper: func(c *elton.Context) bool {
-				return true
+func TestBodyParserSkip(t *testing.T) {
+	assert := assert.New(t)
+	skipErr := errors.New("skip error")
+	// next直接返回skip error，用于判断是否执行了next
+	next := func() error {
+		return skipErr
+	}
+	tests := []struct {
+		newContext func() *elton.Context
+	}{
+		// commited: true
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(nil, nil)
+				c.Committed = true
+				c.Next = next
+				return c
 			},
-		})
+		},
+		// request body is not nil
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(nil, nil)
+				c.RequestBody = []byte("abc")
+				c.Next = next
+				return c
+			},
+		},
+		// content type is not json
+		{
+			newContext: func() *elton.Context {
+				// 未设置content type
+				c := elton.NewContext(nil, httptest.NewRequest("POST", "/", nil))
+				c.Next = next
+				return c
+			},
+		},
+		// method is get(pass)
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(nil, httptest.NewRequest("GET", "/", nil))
+				c.Request.Header.Set(elton.HeaderContentType, "application/json")
+				c.Next = next
+				return c
+			},
+		},
+	}
+	bodyPraser := NewDefaultBodyParser()
+	for _, tt := range tests {
+		err := bodyPraser(tt.newContext())
+		assert.Equal(skipErr, err)
+	}
+}
 
-		body := `{"name": "tree.xie"}`
-		req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(body))
-		req.Header.Set(elton.HeaderContentType, "application/json")
-		c := elton.NewContext(nil, req)
-		done := false
-		c.Next = func() error {
-			done = true
-			return nil
+func TestBodyParserReadFail(t *testing.T) {
+	// 读取数据失败
+	assert := assert.New(t)
+	bodyParser := NewBodyParser(BodyParserConfig{})
+	req := httptest.NewRequest("POST", "/", NewErrorReadCloser(hes.New("abc")))
+	req.Header.Set(elton.HeaderContentType, "application/json")
+	c := elton.NewContext(nil, req)
+	err := bodyParser(c)
+	assert.NotNil(err)
+	assert.Equal("category=elton-body-parser, message=message=abc", err.Error())
+}
+
+func TestBodyParserOverLimit(t *testing.T) {
+	assert := assert.New(t)
+	bodyParser := NewBodyParser(BodyParserConfig{
+		Limit: 1,
+	})
+	req := httptest.NewRequest("POST", "/", strings.NewReader("abc"))
+	req.Header.Set(elton.HeaderContentType, "application/json")
+	c := elton.NewContext(nil, req)
+	err := bodyParser(c)
+	assert.NotNil(err)
+	assert.Equal("category=elton-body-parser, message=request body is too large, it should be <= 1", err.Error())
+}
+
+func TestBodyParserJSON(t *testing.T) {
+	assert := assert.New(t)
+	conf := BodyParserConfig{}
+	conf.AddDecoder(NewJSONDecoder())
+	bodyParser := NewBodyParser(conf)
+	body := `{"name": "tree.xie"}`
+	req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(body))
+	req.Header.Set(elton.HeaderContentType, "application/json")
+	c := elton.NewContext(nil, req)
+	done := false
+	c.Next = func() error {
+		done = true
+		if string(c.RequestBody) != body {
+			return hes.New("request body is invalid")
 		}
-		err := bodyParser(c)
-		assert.Nil(err)
-		assert.True(done)
-		assert.Equal(len(c.RequestBody), 0)
-	})
+		return nil
+	}
+	err := bodyParser(c)
+	assert.Nil(err)
+	assert.True(done)
+}
 
-	t.Run("request body content type is not json", func(t *testing.T) {
-		assert := assert.New(t)
-		bodyParser := NewDefaultBodyParser()
+func TestBodyParserJSONGzip(t *testing.T) {
+	assert := assert.New(t)
+	conf := BodyParserConfig{}
+	conf.AddDecoder(NewGzipDecoder())
+	conf.AddDecoder(NewJSONDecoder())
+	bodyParser := NewBodyParser(conf)
+	originalBuf := []byte(`{"name": "tree.xie"}`)
+	var b bytes.Buffer
+	w, _ := gzip.NewWriterLevel(&b, 9)
+	_, err := w.Write(originalBuf)
+	assert.Nil(err)
+	w.Close()
 
-		body := `<xml>xxx</xml>`
-		req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(body))
-		req.Header.Set(elton.HeaderContentType, "application/xml")
-		c := elton.NewContext(nil, req)
-		done := false
-		c.Next = func() error {
-			done = true
-			return nil
+	req := httptest.NewRequest("POST", "https://aslant.site/", bytes.NewReader(b.Bytes()))
+	req.Header.Set(elton.HeaderContentType, "application/json")
+	req.Header.Set(elton.HeaderContentEncoding, "gzip")
+	c := elton.NewContext(nil, req)
+	done := false
+	c.Next = func() error {
+		done = true
+		if !bytes.Equal(c.RequestBody, originalBuf) {
+			return hes.New("request body is invalid")
 		}
-		err := bodyParser(c)
+		return nil
+	}
+	err = bodyParser(c)
+	assert.Nil(err)
+	assert.True(done)
+}
 
-		assert.Nil(err)
-		assert.True(done)
-		assert.Nil(c.RequestBody)
-	})
-
-	t.Run("request body is not nil", func(t *testing.T) {
-		assert := assert.New(t)
-		bodyParser := NewDefaultBodyParser()
-
-		body := `{"name": "tree.xie"}`
-		req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(body))
-		req.Header.Set(elton.HeaderContentType, "application/json")
-		c := elton.NewContext(nil, req)
-		done := false
-		c.Next = func() error {
-			done = true
-			return nil
+func TestBodyParserFormURLEncoded(t *testing.T) {
+	assert := assert.New(t)
+	conf := BodyParserConfig{
+		ContentTypeValidate: DefaultJSONAndFormContentTypeValidate,
+	}
+	conf.AddDecoder(NewFormURLEncodedDecoder())
+	bodyParser := NewBodyParser(conf)
+	body := `name=tree.xie&type=1&type=2`
+	req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(body))
+	req.Header.Set(elton.HeaderContentType, "application/x-www-form-urlencoded")
+	c := elton.NewContext(nil, req)
+	done := false
+	c.Next = func() error {
+		done = true
+		if len(c.RequestBody) != 36 {
+			return hes.New("request body is invalid")
 		}
-		c.RequestBody = []byte("a")
-		err := bodyParser(c)
+		return nil
+	}
+	err := bodyParser(c)
+	assert.Nil(err)
+	assert.True(done)
+}
 
-		assert.Nil(err)
-		assert.True(done)
-		assert.Equal([]byte("a"), c.RequestBody)
-	})
+func TestBodyParserTestDecoder(t *testing.T) {
+	assert := assert.New(t)
+	conf := BodyParserConfig{}
+	conf.AddDecoder(&testDecoder{})
 
-	t.Run("pass method", func(t *testing.T) {
-		assert := assert.New(t)
-		bodyParser := NewBodyParser(BodyParserConfig{})
-		req := httptest.NewRequest("GET", "https://aslant.site/", nil)
-		c := elton.NewContext(nil, req)
-		done := false
-		c.Next = func() error {
-			done = true
-			return nil
+	bodyParser := NewBodyParser(conf)
+	body := `{"name": "tree.xie"}`
+	b64 := base64.RawStdEncoding.EncodeToString([]byte(body))
+	req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(b64))
+	req.Header.Set(elton.HeaderContentType, "application/json;charset=base64")
+	c := elton.NewContext(nil, req)
+	done := false
+	c.Next = func() error {
+		done = true
+		if string(c.RequestBody) != body {
+			return hes.New("request body is invalid")
 		}
-		err := bodyParser(c)
-		assert.Nil(err)
-		assert.True(done)
-	})
-
-	t.Run("pass content type not json", func(t *testing.T) {
-		assert := assert.New(t)
-		bodyParser := NewBodyParser(BodyParserConfig{})
-		req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader("abc"))
-		c := elton.NewContext(nil, req)
-		done := false
-		c.Next = func() error {
-			done = true
-			return nil
-		}
-		err := bodyParser(c)
-		assert.Nil(err)
-		assert.True(done)
-	})
-
-	t.Run("read body fail", func(t *testing.T) {
-		assert := assert.New(t)
-		bodyParser := NewBodyParser(BodyParserConfig{})
-		req := httptest.NewRequest("POST", "https://aslant.site/", NewErrorReadCloser(hes.New("abc")))
-		req.Header.Set(elton.HeaderContentType, "application/json")
-		c := elton.NewContext(nil, req)
-		err := bodyParser(c)
-		assert.NotNil(err)
-		assert.Equal("category=elton-body-parser, message=message=abc", err.Error())
-	})
-
-	t.Run("body over limit size", func(t *testing.T) {
-		assert := assert.New(t)
-		bodyParser := NewBodyParser(BodyParserConfig{
-			Limit: 1,
-		})
-		req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader("abc"))
-		req.Header.Set(elton.HeaderContentType, "application/json")
-		c := elton.NewContext(nil, req)
-		err := bodyParser(c)
-		assert.NotNil(err)
-		assert.Equal("category=elton-body-parser, message=request body is too large, it should be <= 1", err.Error())
-	})
-
-	t.Run("parse json success", func(t *testing.T) {
-		assert := assert.New(t)
-		conf := BodyParserConfig{}
-		conf.AddDecoder(NewJSONDecoder())
-		bodyParser := NewBodyParser(conf)
-		body := `{"name": "tree.xie"}`
-		req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(body))
-		req.Header.Set(elton.HeaderContentType, "application/json")
-		c := elton.NewContext(nil, req)
-		done := false
-		c.Next = func() error {
-			done = true
-			if string(c.RequestBody) != body {
-				return hes.New("request body is invalid")
-			}
-			return nil
-		}
-		err := bodyParser(c)
-		assert.Nil(err)
-		assert.True(done)
-	})
-
-	t.Run("parse json(gzip) success", func(t *testing.T) {
-		assert := assert.New(t)
-		conf := BodyParserConfig{}
-		conf.AddDecoder(NewGzipDecoder())
-		conf.AddDecoder(NewJSONDecoder())
-		bodyParser := NewBodyParser(conf)
-		originalBuf := []byte(`{"name": "tree.xie"}`)
-		var b bytes.Buffer
-		w, _ := gzip.NewWriterLevel(&b, 9)
-		_, err := w.Write(originalBuf)
-		assert.Nil(err)
-		w.Close()
-
-		req := httptest.NewRequest("POST", "https://aslant.site/", bytes.NewReader(b.Bytes()))
-		req.Header.Set(elton.HeaderContentType, "application/json")
-		req.Header.Set(elton.HeaderContentEncoding, "gzip")
-		c := elton.NewContext(nil, req)
-		done := false
-		c.Next = func() error {
-			done = true
-			if !bytes.Equal(c.RequestBody, originalBuf) {
-				return hes.New("request body is invalid")
-			}
-			return nil
-		}
-		err = bodyParser(c)
-		assert.Nil(err)
-		assert.True(done)
-	})
-
-	t.Run("decode data success", func(t *testing.T) {
-		assert := assert.New(t)
-		conf := BodyParserConfig{}
-		conf.AddDecoder(&testDecoder{})
-
-		bodyParser := NewBodyParser(conf)
-		body := `{"name": "tree.xie"}`
-		b64 := base64.RawStdEncoding.EncodeToString([]byte(body))
-		req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(b64))
-		req.Header.Set(elton.HeaderContentType, "application/json;charset=base64")
-		c := elton.NewContext(nil, req)
-		done := false
-		c.Next = func() error {
-			done = true
-			if string(c.RequestBody) != body {
-				return hes.New("request body is invalid")
-			}
-			return nil
-		}
-		err := bodyParser(c)
-		assert.Nil(err)
-		assert.True(done)
-	})
-
-	t.Run("parse form url encoded success", func(t *testing.T) {
-		assert := assert.New(t)
-		conf := BodyParserConfig{
-			ContentTypeValidate: DefaultJSONAndFormContentTypeValidate,
-		}
-		conf.AddDecoder(NewFormURLEncodedDecoder())
-		bodyParser := NewBodyParser(conf)
-		body := `name=tree.xie&type=1&type=2`
-		req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(body))
-		req.Header.Set(elton.HeaderContentType, "application/x-www-form-urlencoded")
-		c := elton.NewContext(nil, req)
-		done := false
-		c.Next = func() error {
-			done = true
-			if len(c.RequestBody) != 36 {
-				return hes.New("request body is invalid")
-			}
-			return nil
-		}
-		err := bodyParser(c)
-		assert.Nil(err)
-		assert.True(done)
-	})
+		return nil
+	}
+	err := bodyParser(c)
+	assert.Nil(err)
+	assert.True(done)
 }

@@ -51,8 +51,8 @@ func TestGzipCompress(t *testing.T) {
 	r, err := gzip.NewReader(bytes.NewReader(buf.Bytes()))
 	assert.Nil(err)
 	defer r.Close()
-	originlBuf, _ := ioutil.ReadAll(r)
-	assert.Equal(originalData, string(originlBuf))
+	originalBuf, _ := ioutil.ReadAll(r)
+	assert.Equal(originalData, string(originalBuf))
 }
 
 func TestGzipPipe(t *testing.T) {

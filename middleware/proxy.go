@@ -123,7 +123,6 @@ func generateRewrites(arr []string) (rewrites []*rewriteRegexp, err error) {
 			Regexp: reg,
 			Value:  v,
 		})
-		// m[reg] = v
 	}
 	return
 }

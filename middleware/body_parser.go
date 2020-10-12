@@ -197,6 +197,7 @@ func NewDefaultBodyParser() elton.Handler {
 	conf := BodyParserConfig{
 		ContentTypeValidate: DefaultJSONContentTypeValidate,
 	}
+	// 如果是压缩的，先解压
 	conf.AddDecoder(NewGzipDecoder())
 	conf.AddDecoder(NewJSONDecoder())
 	return NewBodyParser(conf)

@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	defaultBasicAuthRealm = "basic auth tips"
+	defaultBasicAuthRealm = "basic auth"
 	// ErrBasicAuthCategory basic auth error category
 	ErrBasicAuthCategory = "elton-basic-auth"
 )
@@ -59,6 +59,18 @@ func getBasicAuthError(err error, statusCode int) *hes.Error {
 	he.StatusCode = statusCode
 	he.Category = ErrBasicAuthCategory
 	return he
+}
+
+// NewDefaultBasicAuth new default basic auth
+func NewDefaultBasicAuth(account, password string) elton.Handler {
+	return NewBasicAuth(BasicAuthConfig{
+		Validate: func(acc, pwd string, c *elton.Context) (bool, error) {
+			if acc == account && pwd == password {
+				return true, nil
+			}
+			return false, nil
+		},
+	})
 }
 
 // New new basic auth

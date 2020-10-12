@@ -75,7 +75,7 @@ func TestGenerateRewrites(t *testing.T) {
 	assert.Equal(0, len(regs), "regexp map should be 0 when error occur")
 }
 
-func TestProxy(t *testing.T) {
+func newServer() (net.Listener, *url.URL) {
 	l, err := net.Listen("tcp", "0.0.0.0:0")
 	if err != nil {
 		panic(err)
@@ -91,142 +91,154 @@ func TestProxy(t *testing.T) {
 		_ = e.Server.Serve(l)
 	}()
 	time.Sleep(10 * time.Millisecond)
-	defer l.Close()
 	target, _ := url.Parse("http://" + l.Addr().String())
+	return l, target
+}
 
-	t.Run("normal", func(t *testing.T) {
-		assert := assert.New(t)
-		config := ProxyConfig{
-			Target:    target,
-			Host:      "github.com",
-			Transport: &http.Transport{},
-			Rewrites: []string{
-				"/api/*:/$1",
-			},
-		}
-		fn := NewProxy(config)
-		req := httptest.NewRequest("GET", "http://127.0.0.1/api/", nil)
-		originalPath := req.URL.Path
-		originalHost := req.Host
-		resp := httptest.NewRecorder()
-		c := elton.NewContext(resp, req)
-		done := false
-		c.Next = func() error {
+func TestProxyTargetPicker(t *testing.T) {
+	// 使用target picker方法来获取target
+	l, target := newServer()
+	defer l.Close()
+	assert := assert.New(t)
+	callBackDone := false
+	config := ProxyConfig{
+		TargetPicker: func(c *elton.Context) (*url.URL, ProxyDone, error) {
+			return target, func(_ *elton.Context) {
+				callBackDone = true
+			}, nil
+		},
+		Host:      "www.baidu.com",
+		Transport: &http.Transport{},
+	}
+	fn := NewProxy(config)
+	req := httptest.NewRequest("GET", "http://127.0.0.1/", nil)
+	resp := httptest.NewRecorder()
+	c := elton.NewContext(resp, req)
+	done := false
+	c.Next = func() error {
+		done = true
+		return nil
+	}
+	err := fn(c)
+	assert.Nil(err)
+	assert.True(done)
+	assert.True(callBackDone)
+	assert.Equal(http.StatusOK, c.StatusCode)
+	assert.Equal("www.baidu.com", c.BodyBuffer.String())
+}
+
+func TestProxyTargetPickerError(t *testing.T) {
+	// 获取target时出错
+	assert := assert.New(t)
+	config := ProxyConfig{
+		TargetPicker: func(c *elton.Context) (*url.URL, ProxyDone, error) {
+			return nil, nil, errors.New("abcd")
+		},
+		Host:      "www.baidu.com",
+		Transport: &http.Transport{},
+	}
+	fn := NewProxy(config)
+	req := httptest.NewRequest("GET", "http://127.0.0.1/", nil)
+	resp := httptest.NewRecorder()
+	c := elton.NewContext(resp, req)
+	err := fn(c)
+	assert.Equal("abcd", err.Error())
+}
+
+func TestProxyTargetPickerNoMatch(t *testing.T) {
+	// 获取不到匹配的target
+	assert := assert.New(t)
+	config := ProxyConfig{
+		TargetPicker: func(c *elton.Context) (*url.URL, ProxyDone, error) {
+			return nil, nil, nil
+		},
+		Host:      "www.baidu.com",
+		Transport: &http.Transport{},
+	}
+	fn := NewProxy(config)
+	req := httptest.NewRequest("GET", "http://127.0.0.1/", nil)
+	resp := httptest.NewRecorder()
+	c := elton.NewContext(resp, req)
+	err := fn(c)
+	assert.Equal("category=elton-proxy, message=target can not be nil", err.Error())
+}
+
+func TestProxyRequestError(t *testing.T) {
+	// proxy转发请求出错
+	assert := assert.New(t)
+	target, _ := url.Parse("https://127.0.0.1")
+	config := ProxyConfig{
+		TargetPicker: func(c *elton.Context) (*url.URL, ProxyDone, error) {
+			return target, nil, nil
+		},
+		Transport: &http.Transport{},
+	}
+	fn := NewProxy(config)
+	req := httptest.NewRequest("GET", "http://127.0.0.1/", nil)
+	resp := httptest.NewRecorder()
+	c := elton.NewContext(resp, req)
+	c.Next = func() error {
+		return nil
+	}
+	err := fn(c)
+	assert.NotNil(err)
+}
+
+func TestProxyTargetWithDone(t *testing.T) {
+	// proxy中有done的处理，主要用于选择target时使用最少连接数的处理
+	assert := assert.New(t)
+	l, target := newServer()
+	defer l.Close()
+	done := false
+	config := ProxyConfig{
+		Target:    target,
+		Host:      "www.baidu.com",
+		Transport: &http.Transport{},
+		Done: func(_ *elton.Context) {
 			done = true
-			return nil
-		}
-		err := fn(c)
-		assert.Nil(err)
-		assert.Equal(originalPath, c.Request.URL.Path)
-		assert.Equal(originalHost, req.Host)
-		assert.True(done)
-		assert.Equal(http.StatusOK, c.StatusCode)
-		assert.Equal("github.com", c.BodyBuffer.String())
-	})
+		},
+	}
+	fn := NewProxy(config)
+	req := httptest.NewRequest("GET", "http://127.0.0.1/", nil)
+	resp := httptest.NewRecorder()
+	c := elton.NewContext(resp, req)
+	c.Next = func() error {
+		return nil
+	}
+	err := fn(c)
+	assert.Nil(err)
+	assert.True(done)
+}
 
-	t.Run("target picker", func(t *testing.T) {
-		assert := assert.New(t)
-		callBackDone := false
-		config := ProxyConfig{
-			TargetPicker: func(c *elton.Context) (*url.URL, ProxyDone, error) {
-				return target, func(_ *elton.Context) {
-					callBackDone = true
-				}, nil
-			},
-			Host:      "www.baidu.com",
-			Transport: &http.Transport{},
-		}
-		fn := NewProxy(config)
-		req := httptest.NewRequest("GET", "http://127.0.0.1/", nil)
-		resp := httptest.NewRecorder()
-		c := elton.NewContext(resp, req)
-		done := false
-		c.Next = func() error {
-			done = true
-			return nil
-		}
-		err := fn(c)
-		assert.Nil(err)
-		assert.True(done)
-		assert.True(callBackDone)
-		assert.Equal(http.StatusOK, c.StatusCode)
-		assert.Equal("www.baidu.com", c.BodyBuffer.String())
-	})
+func TestProxy(t *testing.T) {
+	assert := assert.New(t)
+	l, target := newServer()
+	defer l.Close()
 
-	t.Run("target picker error", func(t *testing.T) {
-		assert := assert.New(t)
-		config := ProxyConfig{
-			TargetPicker: func(c *elton.Context) (*url.URL, ProxyDone, error) {
-				return nil, nil, errors.New("abcd")
-			},
-			Host:      "www.baidu.com",
-			Transport: &http.Transport{},
-		}
-		fn := NewProxy(config)
-		req := httptest.NewRequest("GET", "http://127.0.0.1/", nil)
-		resp := httptest.NewRecorder()
-		c := elton.NewContext(resp, req)
-		err := fn(c)
-		assert.Equal("abcd", err.Error())
-	})
-
-	t.Run("no target", func(t *testing.T) {
-		assert := assert.New(t)
-		config := ProxyConfig{
-			TargetPicker: func(c *elton.Context) (*url.URL, ProxyDone, error) {
-				return nil, nil, nil
-			},
-			Host:      "www.baidu.com",
-			Transport: &http.Transport{},
-		}
-		fn := NewProxy(config)
-		req := httptest.NewRequest("GET", "http://127.0.0.1/", nil)
-		resp := httptest.NewRecorder()
-		c := elton.NewContext(resp, req)
-		err := fn(c)
-		assert.Equal("category=elton-proxy, message=target can not be nil", err.Error())
-	})
-
-	t.Run("proxy error", func(t *testing.T) {
-		assert := assert.New(t)
-		target, _ := url.Parse("https://127.0.0.1")
-		config := ProxyConfig{
-			TargetPicker: func(c *elton.Context) (*url.URL, ProxyDone, error) {
-				return target, nil, nil
-			},
-			Transport: &http.Transport{},
-		}
-		fn := NewProxy(config)
-		req := httptest.NewRequest("GET", "http://127.0.0.1/", nil)
-		resp := httptest.NewRecorder()
-		c := elton.NewContext(resp, req)
-		c.Next = func() error {
-			return nil
-		}
-		err := fn(c)
-		assert.NotNil(err)
-	})
-
-	t.Run("proxy done", func(t *testing.T) {
-		assert := assert.New(t)
-		done := false
-		config := ProxyConfig{
-			Target:    target,
-			Host:      "www.baidu.com",
-			Transport: &http.Transport{},
-			Done: func(_ *elton.Context) {
-				done = true
-			},
-		}
-		fn := NewProxy(config)
-		req := httptest.NewRequest("GET", "http://127.0.0.1/", nil)
-		resp := httptest.NewRecorder()
-		c := elton.NewContext(resp, req)
-		c.Next = func() error {
-			return nil
-		}
-		err := fn(c)
-		assert.Nil(err)
-		assert.True(done)
-	})
+	config := ProxyConfig{
+		Target:    target,
+		Host:      "github.com",
+		Transport: &http.Transport{},
+		Rewrites: []string{
+			"/api/*:/$1",
+		},
+	}
+	fn := NewProxy(config)
+	req := httptest.NewRequest("GET", "http://127.0.0.1/api/", nil)
+	originalPath := req.URL.Path
+	originalHost := req.Host
+	resp := httptest.NewRecorder()
+	c := elton.NewContext(resp, req)
+	done := false
+	c.Next = func() error {
+		done = true
+		return nil
+	}
+	err := fn(c)
+	assert.Nil(err)
+	assert.Equal(originalPath, c.Request.URL.Path)
+	assert.Equal(originalHost, req.Host)
+	assert.True(done)
+	assert.Equal(http.StatusOK, c.StatusCode)
+	assert.Equal("github.com", c.BodyBuffer.String())
 }

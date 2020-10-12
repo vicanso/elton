@@ -106,7 +106,7 @@ func (l *RCLLocalLimiter) GetConcurrency(key string) uint32 {
 }
 
 func createRCLError(current, max uint32) error {
-	he := hes.New(fmt.Sprintf("too many requset, current:%d, max:%d", current, max))
+	he := hes.New(fmt.Sprintf("too many request, current:%d, max:%d", current, max))
 	he.Category = ErrRCLCategory
 	he.StatusCode = http.StatusTooManyRequests
 	return he

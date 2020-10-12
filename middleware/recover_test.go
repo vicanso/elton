@@ -31,56 +31,55 @@ import (
 	"github.com/vicanso/elton"
 )
 
-func TestRecover(t *testing.T) {
-	t.Run("response text", func(t *testing.T) {
-		assert := assert.New(t)
-		var ctx *elton.Context
-		e := elton.New()
-		e.Use(NewRecover())
-		e.GET("/", func(c *elton.Context) error {
-			ctx = c
-			panic("abc")
-		})
-		req := httptest.NewRequest("GET", "https://aslant.site/", nil)
-		resp := httptest.NewRecorder()
-		keys := []string{
-			elton.HeaderETag,
-			elton.HeaderLastModified,
-			elton.HeaderContentEncoding,
-			elton.HeaderContentLength,
-		}
-		for _, key := range keys {
-			resp.Header().Set(key, "a")
-		}
+func TestRecoverResponseText(t *testing.T) {
+	// panic响应返回text
+	assert := assert.New(t)
+	var ctx *elton.Context
+	e := elton.New()
+	e.Use(NewRecover())
+	e.GET("/", func(c *elton.Context) error {
+		ctx = c
+		panic("abc")
+	})
+	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
+	resp := httptest.NewRecorder()
+	keys := []string{
+		elton.HeaderETag,
+		elton.HeaderLastModified,
+		elton.HeaderContentEncoding,
+		elton.HeaderContentLength,
+	}
+	for _, key := range keys {
+		resp.Header().Set(key, "a")
+	}
 
-		catchError := false
-		e.OnError(func(_ *elton.Context, _ error) {
-			catchError = true
-		})
-
-		e.ServeHTTP(resp, req)
-		assert.Equal(http.StatusInternalServerError, resp.Code)
-		assert.Equal("category=elton-recover, message=abc", resp.Body.String())
-		assert.True(ctx.Committed)
-		assert.True(catchError)
-		for _, key := range keys {
-			assert.Empty(ctx.GetHeader(key), "header should be reseted")
-		}
+	catchError := false
+	e.OnError(func(_ *elton.Context, _ error) {
+		catchError = true
 	})
 
-	t.Run("response json", func(t *testing.T) {
-		assert := assert.New(t)
-		e := elton.New()
-		e.Use(NewRecover())
-		e.GET("/", func(c *elton.Context) error {
-			panic("abc")
-		})
-		req := httptest.NewRequest("GET", "https://aslant.site/", nil)
-		req.Header.Set("Accept", "application/json, text/plain, */*")
-		resp := httptest.NewRecorder()
-		e.ServeHTTP(resp, req)
-		assert.Equal(500, resp.Code)
-		assert.Equal(elton.MIMEApplicationJSON, resp.Header().Get(elton.HeaderContentType))
-		assert.NotEmpty(resp.Body.Bytes())
+	e.ServeHTTP(resp, req)
+	assert.Equal(http.StatusInternalServerError, resp.Code)
+	assert.Equal("category=elton-recover, message=abc", resp.Body.String())
+	assert.True(ctx.Committed)
+	assert.True(catchError)
+	for _, key := range keys {
+		assert.Empty(ctx.GetHeader(key), "header should be resetted")
+	}
+}
+func TestRecoverResponseJSON(t *testing.T) {
+	// 响应返回json
+	assert := assert.New(t)
+	e := elton.New()
+	e.Use(NewRecover())
+	e.GET("/", func(c *elton.Context) error {
+		panic("abc")
 	})
+	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
+	req.Header.Set("Accept", "application/json, text/plain, */*")
+	resp := httptest.NewRecorder()
+	e.ServeHTTP(resp, req)
+	assert.Equal(500, resp.Code)
+	assert.Equal(elton.MIMEApplicationJSON, resp.Header().Get(elton.HeaderContentType))
+	assert.NotEmpty(resp.Body.Bytes())
 }

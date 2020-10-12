@@ -40,7 +40,7 @@ func TestRCLLimiter(t *testing.T) {
 		"/books/:id":   100,
 	})
 
-	cur, max := limiter.IncConcurrency("/not-macth-route")
+	cur, max := limiter.IncConcurrency("/not-match-route")
 	assert.Equal(uint32(0), max)
 	assert.Equal(uint32(0), cur)
 
@@ -48,8 +48,8 @@ func TestRCLLimiter(t *testing.T) {
 	assert.Equal(uint32(10), max)
 	assert.Equal(uint32(1), cur)
 
-	limiter.DecConcurrency("/not-macth-route")
-	assert.Equal(uint32(0), limiter.GetConcurrency("/not-macth-route"))
+	limiter.DecConcurrency("/not-match-route")
+	assert.Equal(uint32(0), limiter.GetConcurrency("/not-match-route"))
 
 	limiter.DecConcurrency("/users/login")
 	assert.Equal(uint32(0), limiter.GetConcurrency("/users/login"))
@@ -66,68 +66,72 @@ func TestRCLNoLimiterPanic(t *testing.T) {
 	NewRCL(RCLConfig{})
 }
 
-func TestRouterConcurrentLimiter(t *testing.T) {
+func newLimiterMiddleware() elton.Handler {
 	limiter := NewLocalLimiter(map[string]uint32{
 		"POST /users/login": 1,
 		"GET /books/:id":    100,
 	})
-	fn := NewRCL(RCLConfig{
+	return NewRCL(RCLConfig{
 		Limiter: limiter,
 	})
-	t.Run("skip", func(t *testing.T) {
-		assert := assert.New(t)
-		req := httptest.NewRequest("GET", "/", nil)
-		c := elton.NewContext(nil, req)
-		c.Committed = true
-		done := false
-		c.Next = func() error {
-			done = true
-			return nil
-		}
+}
+
+func TestRouterConcurrentLimiterSkip(t *testing.T) {
+	assert := assert.New(t)
+	req := httptest.NewRequest("GET", "/", nil)
+	c := elton.NewContext(nil, req)
+	c.Committed = true
+	done := false
+	c.Next = func() error {
+		done = true
+		return nil
+	}
+	err := newLimiterMiddleware()(c)
+	assert.Nil(err)
+	assert.True(done)
+}
+
+func TestRouterConcurrentLimiter(t *testing.T) {
+	assert := assert.New(t)
+	req := httptest.NewRequest("GET", "/books/1", nil)
+	c := elton.NewContext(nil, req)
+	c.Route = "/books/:id"
+	var count int32
+	max := 10
+	c.Next = func() error {
+		atomic.AddInt32(&count, 1)
+		return nil
+	}
+
+	fn := newLimiterMiddleware()
+	for index := 0; index < max; index++ {
 		err := fn(c)
 		assert.Nil(err)
-		assert.True(done)
-	})
+	}
+	assert.Equal(int32(max), count)
+}
 
-	t.Run("below limit", func(t *testing.T) {
-		assert := assert.New(t)
-		req := httptest.NewRequest("GET", "/books/1", nil)
-		c := elton.NewContext(nil, req)
-		c.Route = "/books/:id"
-		var count int32
-		max := 10
-		c.Next = func() error {
-			atomic.AddInt32(&count, 1)
-			return nil
-		}
+func TestRouterConcurrentLimiterOverLimit(t *testing.T) {
+	assert := assert.New(t)
+	fn := newLimiterMiddleware()
 
-		for index := 0; index < max; index++ {
-			err := fn(c)
-			assert.Nil(err)
-		}
-		assert.Equal(int32(max), count)
-	})
+	req := httptest.NewRequest("POST", "/users/login", nil)
+	c := elton.NewContext(nil, req)
+	c.Route = "/users/login"
+	c.Next = func() error {
+		time.Sleep(10 * time.Millisecond)
+		return nil
+	}
 
-	t.Run("higher than limit", func(t *testing.T) {
-		assert := assert.New(t)
-		req := httptest.NewRequest("POST", "/users/login", nil)
-		c := elton.NewContext(nil, req)
-		c.Route = "/users/login"
-		c.Next = func() error {
-			time.Sleep(10 * time.Millisecond)
-			return nil
-		}
-
-		done := make(chan bool)
-		go func() {
-			time.Sleep(2 * time.Millisecond)
-			err := fn(c)
-			assert.NotNil(err)
-			assert.Equal("category=elton-router-concurrent-limiter, message=too many requset, current:2, max:1", err.Error())
-			done <- true
-		}()
+	done := make(chan bool)
+	go func() {
+		time.Sleep(2 * time.Millisecond)
 		err := fn(c)
-		assert.Nil(err)
-		<-done
-	})
+		assert.NotNil(err)
+		assert.Equal("category=elton-router-concurrent-limiter, message=too many request, current:2, max:1", err.Error())
+		done <- true
+	}()
+	err := fn(c)
+	assert.Nil(err)
+	<-done
 }

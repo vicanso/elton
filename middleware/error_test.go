@@ -33,72 +33,72 @@ import (
 	"github.com/vicanso/elton"
 )
 
-func TestSkipAndNoError(t *testing.T) {
+func TestErrorHandlerSkip(t *testing.T) {
+	assert := assert.New(t)
 	fn := NewDefaultError()
-	t.Run("skip", func(t *testing.T) {
-		assert := assert.New(t)
-		req := httptest.NewRequest("GET", "/users/me", nil)
-		resp := httptest.NewRecorder()
-		c := elton.NewContext(resp, req)
-		c.Committed = true
-		c.Next = func() error {
-			return nil
-		}
-		err := fn(c)
-		assert.Nil(err)
-		assert.Nil(c.BodyBuffer)
-	})
-
-	t.Run("no error", func(t *testing.T) {
-		assert := assert.New(t)
-		req := httptest.NewRequest("GET", "/users/me", nil)
-		resp := httptest.NewRecorder()
-		c := elton.NewContext(resp, req)
-		c.Next = func() error {
-			return nil
-		}
-		err := fn(c)
-		assert.Nil(err)
-		assert.Nil(c.BodyBuffer)
-	})
+	req := httptest.NewRequest("GET", "/users/me", nil)
+	resp := httptest.NewRecorder()
+	c := elton.NewContext(resp, req)
+	c.Committed = true
+	c.Next = func() error {
+		return nil
+	}
+	err := fn(c)
+	assert.Nil(err)
+	assert.Nil(c.BodyBuffer)
 }
 
-func TestErrorHandler(t *testing.T) {
-	t.Run("json type", func(t *testing.T) {
-		assert := assert.New(t)
-		fn := NewDefaultError()
-		req := httptest.NewRequest("GET", "/users/me", nil)
-		req.Header.Set("Accept", "application/json, text/plain, */*")
-		resp := httptest.NewRecorder()
-		c := elton.NewContext(resp, req)
-		c.Next = func() error {
-			return errors.New("abcd")
-		}
-		c.CacheMaxAge(5 * time.Minute)
-		err := fn(c)
-		assert.Nil(err)
-		assert.Equal("public, max-age=300", c.GetHeader(elton.HeaderCacheControl))
-		assert.True(strings.HasSuffix(c.BodyBuffer.String(), `"statusCode":500,"category":"elton-error","message":"abcd","exception":true}`))
-		assert.Equal("application/json; charset=UTF-8", c.GetHeader(elton.HeaderContentType))
-	})
+func TestErrorHandlerNoError(t *testing.T) {
+	// 如果无出错，则直接跳过
+	assert := assert.New(t)
+	fn := NewDefaultError()
+	req := httptest.NewRequest("GET", "/users/me", nil)
+	resp := httptest.NewRecorder()
+	c := elton.NewContext(resp, req)
+	c.Next = func() error {
+		return nil
+	}
+	err := fn(c)
+	assert.Nil(err)
+	assert.Nil(c.BodyBuffer)
+}
 
-	t.Run("text type", func(t *testing.T) {
-		assert := assert.New(t)
-		fn := NewError(ErrorConfig{
-			ResponseType: "text",
-		})
-		req := httptest.NewRequest("GET", "/users/me", nil)
-		resp := httptest.NewRecorder()
-		c := elton.NewContext(resp, req)
-		c.Next = func() error {
-			return errors.New("abcd")
-		}
-		c.CacheMaxAge(5 * time.Minute)
-		err := fn(c)
-		assert.Nil(err)
-		assert.Equal("public, max-age=300", c.GetHeader(elton.HeaderCacheControl))
-		ct := c.GetHeader(elton.HeaderContentType)
-		assert.Equal("category=elton-error, message=abcd", c.BodyBuffer.String())
-		assert.Equal("text/plain; charset=UTF-8", ct)
+func TestErrorHandlerResponseJSON(t *testing.T) {
+	// 出错的响应以json返回
+	assert := assert.New(t)
+	fn := NewDefaultError()
+	req := httptest.NewRequest("GET", "/users/me", nil)
+	req.Header.Set("Accept", "application/json, text/plain, */*")
+	resp := httptest.NewRecorder()
+	c := elton.NewContext(resp, req)
+	c.Next = func() error {
+		return errors.New("abcd")
+	}
+	c.CacheMaxAge(5 * time.Minute)
+	err := fn(c)
+	assert.Nil(err)
+	assert.Equal("public, max-age=300", c.GetHeader(elton.HeaderCacheControl))
+	assert.True(strings.HasSuffix(c.BodyBuffer.String(), `"statusCode":500,"category":"elton-error","message":"abcd","exception":true}`))
+	assert.Equal("application/json; charset=UTF-8", c.GetHeader(elton.HeaderContentType))
+}
+
+func TestErrorHandlerResponseText(t *testing.T) {
+	// 出错的响应以text返回
+	assert := assert.New(t)
+	fn := NewError(ErrorConfig{
+		ResponseType: "text",
 	})
+	req := httptest.NewRequest("GET", "/users/me", nil)
+	resp := httptest.NewRecorder()
+	c := elton.NewContext(resp, req)
+	c.Next = func() error {
+		return errors.New("abcd")
+	}
+	c.CacheMaxAge(5 * time.Minute)
+	err := fn(c)
+	assert.Nil(err)
+	assert.Equal("public, max-age=300", c.GetHeader(elton.HeaderCacheControl))
+	ct := c.GetHeader(elton.HeaderContentType)
+	assert.Equal("category=elton-error, message=abcd", c.BodyBuffer.String())
+	assert.Equal("text/plain; charset=UTF-8", ct)
 }

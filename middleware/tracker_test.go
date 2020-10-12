@@ -44,7 +44,7 @@ func TestNoTrackPanic(t *testing.T) {
 	assert.True(done)
 }
 
-func TestConverMap(t *testing.T) {
+func TestConvertMap(t *testing.T) {
 	assert := assert.New(t)
 	assert.Nil(convertMap(nil, nil))
 	assert.Equal(map[string]string{
