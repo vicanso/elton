@@ -296,7 +296,7 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 		index := -1
 		var traceInfos TraceInfos
 		if e.EnableTrace {
-			// TODO 复用tracInfos
+			// TODO 复用traceInfos
 			traceInfos = make(TraceInfos, 0, maxNext)
 		}
 		c.Next = func() error {
