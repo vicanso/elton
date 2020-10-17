@@ -8,5 +8,5 @@ require (
 	github.com/vicanso/fresh v1.0.0
 	github.com/vicanso/hes v0.2.3
 	github.com/vicanso/intranet-ip v0.0.1
-	github.com/vicanso/keygrip v1.0.1
+	github.com/vicanso/keygrip v1.1.0
 )

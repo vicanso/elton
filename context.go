@@ -593,7 +593,7 @@ func (c *Context) Elton() *Elton {
 	return c.elton
 }
 
-// Pass pass requst to another elton
+// Pass pass request to another elton
 func (c *Context) Pass(another *Elton) {
 	// 设置为已commit，避免当前cod继续处理
 	c.Committed = true
