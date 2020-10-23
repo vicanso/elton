@@ -10,4 +10,4 @@ go:
 
 script:
   - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin latest
-  - env GO111MODULE=on make lint && make test && make bench
+  - make lint && make test && make bench

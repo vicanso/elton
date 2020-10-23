@@ -68,8 +68,8 @@ type (
 		Params *RouteParams
 		// StatusCode http response's status code, default is 0 which will be handle as 200
 		StatusCode int
-		// Body http response's body, which should be converted to bytes by response middlware.
-		// JSON response middlware,  xml response middleware and so on.
+		// Body http response's body, which should be converted to bytes by response middleware.
+		// JSON response middleware,  xml response middleware and so on.
 		Body interface{}
 		// BodyBuffer http response's body buffer, it should be set by response middleware.
 		BodyBuffer *bytes.Buffer
