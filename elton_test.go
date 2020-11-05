@@ -554,6 +554,8 @@ func TestGracefulClose(t *testing.T) {
 		}()
 		time.Sleep(10 * time.Millisecond)
 		assert.Equal(e.GetStatus(), int32(StatusClosing), "server status should be closing")
+		assert.True(e.Closing())
+		assert.False(e.Running())
 		resp := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/users/me", nil)
 		e.ServeHTTP(resp, req)

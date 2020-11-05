@@ -221,6 +221,16 @@ func (e *Elton) GetStatus() int32 {
 	return atomic.LoadInt32(&e.status)
 }
 
+// Closing check status of elton is closing
+func (e *Elton) Closing() bool {
+	return e.GetStatus() == StatusClosing
+}
+
+// Running check status of elton is running
+func (e *Elton) Running() bool {
+	return e.GetStatus() == StatusRunning
+}
+
 // ServeHTTP http handler
 func (e *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	status := e.GetStatus()
