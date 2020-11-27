@@ -149,6 +149,23 @@ func TestLogger(t *testing.T) {
 		assert.Nil(err)
 	})
 
+	t.Run("context", func(t *testing.T) {
+		config := LoggerConfig{
+			Format: "{:id}",
+			OnLog: func(log string, _ *elton.Context) {
+				assert.Equal("1", log, "get context value fail")
+			},
+		}
+		m := NewLogger(config)
+		c := elton.NewContext(nil, nil)
+		c.Set("id", "1")
+		c.Next = func() error {
+			return nil
+		}
+		err := m(c)
+		assert.Nil(err)
+	})
+
 	t.Run("get log function", func(t *testing.T) {
 		layout := "{host} {remote} {real-ip} {method} {path} {proto} {query} {scheme} {uri} {referer} {userAgent} {size} {size-human} {status} {payload-size} {payload-size-human}"
 		fn := GenerateLog(layout)

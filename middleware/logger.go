@@ -61,6 +61,7 @@ const (
 	payloadSizeHuman = "payload-size-human"
 	requestHeader    = "requestHeader"
 	responseHeader   = "responseHeader"
+	context          = "context"
 	httpProto        = "HTTP"
 	httpsProto       = "HTTPS"
 
@@ -167,6 +168,11 @@ func parseLoggerTags(desc []byte) []*LoggerTag {
 				category: responseHeader,
 				data:     byteSliceToString(k[1:]),
 			})
+		case byte(':'):
+			arr = append(arr, &LoggerTag{
+				category: context,
+				data:     byteSliceToString(k[1:]),
+			})
 		default:
 			arr = append(arr, &LoggerTag{
 				category: byteSliceToString(k),
@@ -223,6 +229,8 @@ func formatLog(c *elton.Context, tags []*LoggerTag, startedAt time.Time) string 
 			return c.Request.Header.Get(tag.data)
 		case responseHeader:
 			return c.GetHeader(tag.data)
+		case context:
+			return c.GetString(tag.data)
 		case referer:
 			return c.Request.Referer()
 		case userAgent:
