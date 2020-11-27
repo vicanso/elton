@@ -155,8 +155,7 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 			} else if key.Header {
 				v = c.GetRequestHeader(name)
 			} else if key.Query {
-				query := c.Query()
-				v = query[name]
+				v = c.QueryParam(name)
 			} else if key.Params {
 				v = c.Param(name)
 			} else {

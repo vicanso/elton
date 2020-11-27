@@ -290,29 +290,24 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 		if !valid {
 			return c.Next()
 		}
-		// 如果request body为空，则表示未读取数据
-		if c.RequestBody == nil {
-			r := c.Request.Body
-			if limit > 0 {
-				r = MaxBytesReader(r, int64(limit))
-			}
-			defer r.Close()
-			body, e := ioutil.ReadAll(r)
-			if e != nil {
-				// IO 读取失败的认为是 exception
-				err = &hes.Error{
-					Exception:  true,
-					StatusCode: http.StatusInternalServerError,
-					Message:    e.Error(),
-					Category:   ErrBodyParserCategory,
-					Err:        e,
-				}
-				return
-			}
-			c.Request.Body.Close()
-			c.RequestBody = body
+		r := c.Request.Body
+		if limit > 0 {
+			r = MaxBytesReader(r, int64(limit))
 		}
-		body := c.RequestBody
+		defer r.Close()
+		body, e := ioutil.ReadAll(r)
+		if e != nil {
+			// IO 读取失败的认为是 exception
+			err = &hes.Error{
+				Exception:  true,
+				StatusCode: http.StatusInternalServerError,
+				Message:    e.Error(),
+				Category:   ErrBodyParserCategory,
+				Err:        e,
+			}
+			return
+		}
+		c.RequestBody = body
 
 		matchDecoders := make([]BodyDecoder, 0)
 		for _, decoder := range config.Decoders {

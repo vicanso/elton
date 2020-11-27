@@ -166,7 +166,7 @@ func GetClientIP(req *http.Request) string {
 				return v
 			}
 		}
-		// 如果所有IP都是非内网IP，则直接取第一个
+		// 如果所有IP都是内网IP，则直接取第一个
 		if len(arr) != 0 {
 			return strings.TrimSpace(arr[0])
 		}
