@@ -38,6 +38,7 @@ import (
 const (
 	// ErrProxyCategory proxy error category
 	ErrProxyCategory = "elton-proxy"
+	ProxyTargetKey   = "proxyTarget"
 )
 
 var (
@@ -163,6 +164,7 @@ func NewProxy(config ProxyConfig) elton.Handler {
 			err = ErrProxyTargetIsNil
 			return
 		}
+		c.Set(ProxyTargetKey, target.String())
 		p := httputil.NewSingleHostReverseProxy(target)
 		if config.Transport != nil {
 			p.Transport = config.Transport

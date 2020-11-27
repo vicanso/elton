@@ -125,6 +125,7 @@ func TestProxyTargetPicker(t *testing.T) {
 	assert.True(callBackDone)
 	assert.Equal(http.StatusOK, c.StatusCode)
 	assert.Equal("www.baidu.com", c.BodyBuffer.String())
+	assert.Equal(target.String(), c.GetString(ProxyTargetKey))
 }
 
 func TestProxyTargetPickerError(t *testing.T) {
