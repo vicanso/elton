@@ -33,7 +33,7 @@ import (
 
 var (
 	// DefaultCompressRegexp compress text, javascript, json and wasm
-	DefaultCompressRegexp = regexp.MustCompile("text|javascript|json|wasm")
+	DefaultCompressRegexp = regexp.MustCompile("text|javascript|json|wasm|font")
 )
 
 const (
