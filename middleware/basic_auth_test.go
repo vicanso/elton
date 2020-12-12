@@ -24,12 +24,12 @@ package middleware
 
 import (
 	"errors"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vicanso/elton"
-	"github.com/vicanso/hes"
 )
 
 func TestNoVildatePanic(t *testing.T) {
@@ -50,96 +50,96 @@ func TestBasicAuthSkip(t *testing.T) {
 	next := func() error {
 		return skipErr
 	}
+	defaultAuth := NewBasicAuth(BasicAuthConfig{
+		Validate: func(acccount, pwd string, c *elton.Context) (bool, error) {
+			return true, nil
+		},
+	})
 	tests := []struct {
 		newContext func() *elton.Context
+		err        error
+		fn         elton.Handler
+		headerAuth string
 	}{
-		// commited: true
+		// committed: true
 		{
 			newContext: func() *elton.Context {
-				c := elton.NewContext(nil, nil)
+				c := elton.NewContext(httptest.NewRecorder(), nil)
 				c.Committed = true
 				c.Next = next
 				return c
 			},
+			err: skipErr,
+			fn:  defaultAuth,
 		},
 		// options method
 		{
 			newContext: func() *elton.Context {
 				req := httptest.NewRequest("OPTIONS", "/", nil)
-				c := elton.NewContext(nil, req)
+				c := elton.NewContext(httptest.NewRecorder(), req)
 				c.Next = next
 				return c
 			},
+			err: skipErr,
+			fn:  defaultAuth,
+		},
+		// not set auth header
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+				return c
+			},
+			err:        ErrBasicAuthUnauthorized,
+			fn:         defaultAuth,
+			headerAuth: `basic realm="basic auth"`,
+		},
+		// validate return error
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+				c.Request.SetBasicAuth("account", "password")
+				return c
+			},
+			err: getBasicAuthError(errors.New("custom error"), http.StatusBadRequest),
+			fn: NewBasicAuth(BasicAuthConfig{
+				Validate: func(account, password string, _ *elton.Context) (bool, error) {
+					return false, errors.New("custom error")
+				},
+			}),
+		},
+		// validate fail
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+				c.Request.SetBasicAuth("account", "pass")
+				return c
+			},
+			err:        ErrBasicAuthUnauthorized,
+			headerAuth: `basic realm="custom realm"`,
+			fn: NewBasicAuth(BasicAuthConfig{
+				Validate: func(account, password string, _ *elton.Context) (bool, error) {
+					return false, nil
+				},
+				Realm: "custom realm",
+			}),
+		},
+		// success
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+				c.Request.SetBasicAuth("account", "password")
+				c.Next = next
+				return c
+			},
+			fn:  NewDefaultBasicAuth("account", "password"),
+			err: skipErr,
 		},
 	}
-	fn := NewBasicAuth(BasicAuthConfig{
-		Validate: func(acccount, pwd string, c *elton.Context) (bool, error) {
-			return true, nil
-		},
-	})
+
 	for _, tt := range tests {
-		err := fn(tt.newContext())
-		assert.Equal(skipErr, err)
+		c := tt.newContext()
+		err := tt.fn(c)
+		assert.Equal(tt.err, err)
+		assert.Equal(tt.headerAuth, c.GetHeader(elton.HeaderWWWAuthenticate))
 	}
-}
-
-func TestBasicAuthNotSetAuthHeader(t *testing.T) {
-	assert := assert.New(t)
-	fn := NewDefaultBasicAuth("account", "password")
-	c := elton.NewContext(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
-	err := fn(c)
-	assert.Equal(`basic realm="basic auth"`, c.GetHeader(elton.HeaderWWWAuthenticate))
-	assert.Equal(ErrBasicAuthUnauthorized, err)
-}
-
-func TestBasicAuthValidateError(t *testing.T) {
-	assert := assert.New(t)
-	// 校验出错
-	fn := NewBasicAuth(BasicAuthConfig{
-		Validate: func(account, password string, _ *elton.Context) (bool, error) {
-			return false, errors.New("custom error")
-		},
-	})
-	c := elton.NewContext(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
-	c.Request.SetBasicAuth("account", "password")
-	err := fn(c)
-	assert.NotNil(err)
-	he, ok := err.(*hes.Error)
-	assert.True(ok)
-	assert.Equal(400, he.StatusCode)
-	assert.Equal("category=elton-basic-auth, message=custom error", he.Error())
-}
-
-func TestBasicAuthValidateFail(t *testing.T) {
-	assert := assert.New(t)
-	// 校验失败（账号或密码错误)
-	fn := NewBasicAuth(BasicAuthConfig{
-		Validate: func(account, password string, _ *elton.Context) (bool, error) {
-			return false, nil
-		},
-		Realm: "custom realm",
-	})
-
-	c := elton.NewContext(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
-	c.Request.SetBasicAuth("account", "pass")
-	err := fn(c)
-	assert.Equal(`basic realm="custom realm"`, c.GetHeader(elton.HeaderWWWAuthenticate))
-	assert.Equal(ErrBasicAuthUnauthorized, err)
-}
-
-func TestBasicAuth(t *testing.T) {
-	assert := assert.New(t)
-	// 校验失败（账号或密码错误)
-	fn := NewDefaultBasicAuth("account", "password")
-
-	c := elton.NewContext(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
-	c.Request.SetBasicAuth("account", "password")
-	done := false
-	c.Next = func() error {
-		done = true
-		return nil
-	}
-	err := fn(c)
-	assert.Nil(err)
-	assert.True(done)
 }

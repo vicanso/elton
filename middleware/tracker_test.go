@@ -58,30 +58,64 @@ func TestConvertMap(t *testing.T) {
 
 func TestTracker(t *testing.T) {
 	assert := assert.New(t)
-	customErr := errors.New("abcd")
-	done := false
-	fn := NewTracker(TrackerConfig{
-		OnTrack: func(info *TrackerInfo, _ *elton.Context) {
-			assert.Equal(HandleFail, info.Result)
-			assert.Equal("1", info.Query["type"])
-			assert.Equal("***", info.Query["passwordType"])
-			assert.Equal("login", info.Params["category"])
-			assert.Equal("***", info.Form["password"])
-			done = true
+
+	skipErr := errors.New("skip error")
+	// next直接返回skip error，用于判断是否执行了next
+	next := func() error {
+		return skipErr
+	}
+
+	trackerInfoKey := "_trackerInfo"
+	defaultTracker := NewTracker(TrackerConfig{
+		OnTrack: func(info *TrackerInfo, c *elton.Context) {
+			c.Set(trackerInfoKey, info)
 		},
 	})
-	req := httptest.NewRequest("POST", "/users/login?type=1&passwordType=2", nil)
-	c := elton.NewContext(nil, req)
-	c.RequestBody = []byte(`{
+	tests := []struct {
+		newContext func() *elton.Context
+		err        error
+		info       *TrackerInfo
+	}{
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("POST", "/users/login?type=1&passwordType=2", nil)
+				c := elton.NewContext(nil, req)
+				c.RequestBody = []byte(`{
 		"account": "tree.xie",
 		"password": "password"
 	}`)
-	c.Params = new(elton.RouteParams)
-	c.Params.Add("category", "login")
-	c.Next = func() error {
-		return customErr
+				c.Params = new(elton.RouteParams)
+				c.Params.Add("category", "login")
+				c.Next = next
+				return c
+			},
+			err: skipErr,
+			info: &TrackerInfo{
+				Result: HandleFail,
+				Query: map[string]string{
+					"type":         "1",
+					"passwordType": "***",
+				},
+				Params: map[string]string{
+					"category": "login",
+				},
+				Form: map[string]interface{}{
+					"account":  "tree.xie",
+					"password": "***",
+				},
+				Err: skipErr,
+			},
+		},
 	}
-	err := fn(c)
-	assert.Equal(customErr, err)
-	assert.True(done, "tracker middleware fail")
+
+	for _, tt := range tests {
+		c := tt.newContext()
+		err := defaultTracker(c)
+		assert.Equal(tt.err, err)
+		v, ok := c.Get(trackerInfoKey)
+		assert.True(ok)
+		info, ok := v.(*TrackerInfo)
+		assert.True(ok)
+		assert.Equal(tt.info, info)
+	}
 }

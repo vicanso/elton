@@ -40,14 +40,18 @@ func TestGzipCompress(t *testing.T) {
 	req := httptest.NewRequest("GET", "/users/me", nil)
 	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 	c := elton.NewContext(nil, req)
+
 	acceptable, encoding := g.Accept(c, 0)
 	assert.False(acceptable)
 	assert.Empty(encoding)
+
 	acceptable, encoding = g.Accept(c, len(originalData))
 	assert.True(acceptable)
 	assert.Equal(GzipEncoding, encoding)
+
 	buf, err := g.Compress([]byte(originalData))
 	assert.Nil(err)
+
 	r, err := gzip.NewReader(bytes.NewReader(buf.Bytes()))
 	assert.Nil(err)
 	defer r.Close()

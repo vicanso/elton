@@ -297,6 +297,10 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 		defer r.Close()
 		body, e := ioutil.ReadAll(r)
 		if e != nil {
+			if hes.IsError(e) {
+				err = e
+				return
+			}
 			// IO 读取失败的认为是 exception
 			err = &hes.Error{
 				Exception:  true,

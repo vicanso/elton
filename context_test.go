@@ -99,77 +99,115 @@ func TestRemoteAddr(t *testing.T) {
 }
 
 func TestRealIP(t *testing.T) {
-	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
-	req.RemoteAddr = "192.168.1.1:7000"
+	assert := assert.New(t)
 
-	c := Context{
-		Request: req,
+	tests := []struct {
+		newContext func() *Context
+		ip         string
+	}{
+		// get from cache
+		{
+			newContext: func() *Context {
+				req := httptest.NewRequest("GET", "/", nil)
+				c := NewContext(nil, req)
+				c.realIP = "abc"
+				return c
+
+			},
+			ip: "abc",
+		},
+		// get from x-forwarded-for
+		{
+			newContext: func() *Context {
+				req := httptest.NewRequest("GET", "/", nil)
+				req.Header.Set(HeaderXForwardedFor, "192.0.0.1, 192.168.1.1")
+				c := NewContext(nil, req)
+				return c
+
+			},
+			ip: "192.0.0.1",
+		},
+		// get from x-real-ip
+		{
+			newContext: func() *Context {
+				req := httptest.NewRequest("GET", "/", nil)
+				req.Header.Set(HeaderXRealIP, "192.168.0.1")
+				c := NewContext(nil, req)
+				return c
+			},
+			ip: "192.168.0.1",
+		},
+		// get real ip from remote addr
+		{
+			newContext: func() *Context {
+				req := httptest.NewRequest("GET", "/", nil)
+				req.RemoteAddr = "192.168.1.1:7000"
+				c := NewContext(nil, req)
+				return c
+			},
+			ip: "192.168.1.1",
+		},
 	}
-	t.Run("get real ip from cache", func(t *testing.T) {
-		assert := assert.New(t)
-		ip := "abc"
-		c.realIP = ip
-		assert.Equal(ip, c.RealIP())
-		c.realIP = ""
-	})
-
-	t.Run("get from x-forwarded-for", func(t *testing.T) {
-		assert := assert.New(t)
-		defer req.Header.Del(HeaderXForwardedFor)
-		req.Header.Set(HeaderXForwardedFor, "192.0.0.1, 192.168.1.1")
-		assert.Equal("192.0.0.1", c.RealIP(), "real ip should get from x-forwarded-for")
-		c.realIP = ""
-	})
-
-	t.Run("get from x-real-ip", func(t *testing.T) {
-		defer req.Header.Del(HeaderXRealIP)
-		req.Header.Set(HeaderXRealIP, "192.168.0.1")
-		assert := assert.New(t)
-		assert.Equal("192.168.0.1", c.RealIP(), "real ip should get from x-real-ip")
-		c.realIP = ""
-	})
-
-	t.Run("get real ip from remote addr", func(t *testing.T) {
-		assert := assert.New(t)
-		assert.Equal("192.168.1.1", c.RealIP())
-		c.realIP = ""
-	})
+	for _, tt := range tests {
+		c := tt.newContext()
+		assert.Equal(tt.ip, c.RealIP())
+	}
 }
 
 func TestGetClientIP(t *testing.T) {
-	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
-	req.RemoteAddr = "192.168.1.1:7000"
+	assert := assert.New(t)
+	tests := []struct {
+		newContext func() *Context
+		ip         string
+	}{
+		// get from cache
+		{
+			newContext: func() *Context {
+				req := httptest.NewRequest("GET", "/", nil)
+				c := NewContext(nil, req)
+				c.clientIP = "abc"
+				return c
 
-	c := Context{
-		Request: req,
+			},
+			ip: "abc",
+		},
+		// get from x-forwarded-for
+		{
+			newContext: func() *Context {
+				req := httptest.NewRequest("GET", "/", nil)
+				req.Header.Set(HeaderXForwardedFor, "192.168.1.1, 1.1.1.1, 2.2.2.2")
+				c := NewContext(nil, req)
+				return c
+
+			},
+			ip: "2.2.2.2",
+		},
+		// get from x-real-ip
+		{
+			newContext: func() *Context {
+				req := httptest.NewRequest("GET", "/", nil)
+				req.Header.Set(HeaderXRealIP, "1.1.1.1")
+				c := NewContext(nil, req)
+				return c
+			},
+			ip: "1.1.1.1",
+		},
+		// x-real-ip is local ip, so get by remote addr
+		{
+			newContext: func() *Context {
+				req := httptest.NewRequest("GET", "/", nil)
+				req.RemoteAddr = "192.168.1.1:7000"
+				req.Header.Set(HeaderXRealIP, "192.168.0.1")
+				c := NewContext(nil, req)
+				return c
+			},
+			ip: "192.168.1.1",
+		},
 	}
-	t.Run("get client ip from cache", func(t *testing.T) {
-		assert := assert.New(t)
-		ip := "abc"
-		c.clientIP = ip
-		assert.Equal(ip, c.ClientIP())
-		c.clientIP = ""
-	})
-
-	t.Run("get from x-forwarded-for", func(t *testing.T) {
-		assert := assert.New(t)
-		defer req.Header.Del(HeaderXForwardedFor)
-		req.Header.Set(HeaderXForwardedFor, "192.168.1.1, 1.1.1.1, 2.2.2.2")
-		assert.Equal("2.2.2.2", c.ClientIP(), "client ip shold get the first public ip from x-forwarded-for")
-		c.clientIP = ""
-	})
-
-	t.Run("get from x-real-ip", func(t *testing.T) {
-		assert := assert.New(t)
-		defer req.Header.Del(HeaderXRealIP)
-		req.Header.Set(HeaderXRealIP, "192.168.1.2")
-		// real ip的是内网IP，因此取remote addr
-		assert.Equal("192.168.1.1", c.ClientIP())
-
-		c.clientIP = ""
-		req.Header.Set(HeaderXRealIP, "1.1.1.1")
-		assert.Equal("1.1.1.1", c.ClientIP())
-	})
+	for _, tt := range tests {
+		c := tt.newContext()
+		assert.Equal(tt.ip, c.ClientIP())
+	}
 }
 
 func TestParam(t *testing.T) {
@@ -249,17 +287,22 @@ func TestSetGet(t *testing.T) {
 }
 
 func TestGetSetHeader(t *testing.T) {
-	req := httptest.NewRequest("GET", "https://aslant.site/?name=tree.xie&type=1", nil)
-	req.Header.Set("X-Token", "abc")
-	resp := httptest.NewRecorder()
-	c := NewContext(resp, req)
+	newContext := func() *Context {
+		req := httptest.NewRequest("GET", "/", nil)
+		req.Header.Set("X-Token", "abc")
+		resp := httptest.NewRecorder()
+		c := NewContext(resp, req)
+		return c
+	}
 
 	t.Run("get header from request", func(t *testing.T) {
+		c := newContext()
 		assert := assert.New(t)
 		assert.Equal("abc", c.GetRequestHeader("X-Token"))
 	})
 
 	t.Run("set header to request", func(t *testing.T) {
+		c := newContext()
 		key := "X-Request-ID"
 		value := "1"
 		assert := assert.New(t)
@@ -271,6 +314,7 @@ func TestGetSetHeader(t *testing.T) {
 	})
 
 	t.Run("add header to request", func(t *testing.T) {
+		c := newContext()
 		assert := assert.New(t)
 		key := "X-Request-Type"
 		c.AddRequestHeader(key, "1")
@@ -280,12 +324,14 @@ func TestGetSetHeader(t *testing.T) {
 	})
 
 	t.Run("set header to the response", func(t *testing.T) {
+		c := newContext()
 		assert := assert.New(t)
 		c.SetHeader("X-Response-Id", "1")
 		assert.Equal("1", c.GetHeader("X-Response-Id"))
 	})
 
 	t.Run("get header from response", func(t *testing.T) {
+		c := newContext()
 		assert := assert.New(t)
 		idc := "GZ"
 		key := "X-IDC"
@@ -294,11 +340,14 @@ func TestGetSetHeader(t *testing.T) {
 	})
 
 	t.Run("get header of response", func(t *testing.T) {
+		c := newContext()
 		assert := assert.New(t)
 		assert.NotNil(c.Header(), "response header should not be nil")
 	})
 
 	t.Run("reset header", func(t *testing.T) {
+		c := newContext()
+		c.SetHeader("a", "1")
 		assert := assert.New(t)
 		c.ResetHeader()
 		assert.Equal(0, len(c.Header()))
@@ -323,15 +372,20 @@ func TestGetKeys(t *testing.T) {
 }
 
 func TestCookie(t *testing.T) {
-	req := httptest.NewRequest("GET", "https://aslant.site/?name=tree.xie&type=1", nil)
-	req.AddCookie(&http.Cookie{
-		Name:  "a",
-		Value: "b",
-	})
-	resp := httptest.NewRecorder()
-	c := NewContext(resp, req)
+	newContext := func() *Context {
+		req := httptest.NewRequest("GET", "/", nil)
+		req.AddCookie(&http.Cookie{
+			Name:  "a",
+			Value: "b",
+		})
+		resp := httptest.NewRecorder()
+		c := NewContext(resp, req)
+		return c
+	}
+
 	t.Run("get cookie", func(t *testing.T) {
 		assert := assert.New(t)
+		c := newContext()
 		cookie, err := c.Cookie("a")
 		assert.Nil(err, "get cookie should be successful")
 		assert.Equal("a", cookie.Name)
@@ -340,6 +394,7 @@ func TestCookie(t *testing.T) {
 
 	t.Run("set cookie", func(t *testing.T) {
 		assert := assert.New(t)
+		c := newContext()
 		cookie := &http.Cookie{
 			Name:     "a",
 			Value:    "b",
@@ -490,59 +545,103 @@ func TestNotModified(t *testing.T) {
 }
 
 func TestCacheControl(t *testing.T) {
-	checkCacheControl := func(resp *httptest.ResponseRecorder, value string, t *testing.T) {
-		assert := assert.New(t)
-		assert.Equal(value, resp.Header().Get("Cache-Control"))
+	assert := assert.New(t)
+
+	tests := []struct {
+		newContext   func() *Context
+		cacheControl string
+	}{
+		// no cache
+		{
+			newContext: func() *Context {
+				resp := httptest.NewRecorder()
+				c := NewContext(resp, nil)
+				c.NoCache()
+				return c
+			},
+			cacheControl: "no-cache",
+		},
+		// no store
+		{
+			newContext: func() *Context {
+				resp := httptest.NewRecorder()
+				c := NewContext(resp, nil)
+				c.NoStore()
+				return c
+			},
+			cacheControl: "no-store",
+		},
+		// max-age
+		{
+			newContext: func() *Context {
+				resp := httptest.NewRecorder()
+				c := NewContext(resp, nil)
+				c.CacheMaxAge(time.Minute)
+				return c
+			},
+			cacheControl: "public, max-age=60",
+		},
+		// s-maxage
+		{
+			newContext: func() *Context {
+				resp := httptest.NewRecorder()
+				c := NewContext(resp, nil)
+				c.CacheMaxAge(time.Minute, 10*time.Second)
+				return c
+			},
+			cacheControl: "public, max-age=60, s-maxage=10",
+		},
 	}
-	t.Run("no cache", func(t *testing.T) {
-		resp := httptest.NewRecorder()
-		c := NewContext(resp, nil)
-		c.NoCache()
-		checkCacheControl(resp, "no-cache", t)
-	})
 
-	t.Run("no store", func(t *testing.T) {
-		resp := httptest.NewRecorder()
-		c := NewContext(resp, nil)
-		c.NoStore()
-		checkCacheControl(resp, "no-store", t)
-	})
-
-	t.Run("set cache max age", func(t *testing.T) {
-		resp := httptest.NewRecorder()
-		c := NewContext(resp, nil)
-		c.CacheMaxAge(time.Minute)
-		checkCacheControl(resp, "public, max-age=60", t)
-		c.CacheMaxAge(time.Minute, 10*time.Second)
-		checkCacheControl(resp, "public, max-age=60, s-maxage=10", t)
-	})
+	for _, tt := range tests {
+		c := tt.newContext()
+		assert.Equal(tt.cacheControl, c.GetHeader("Cache-Control"))
+	}
 }
 
 func TestSetContentTypeByExt(t *testing.T) {
 	assert := assert.New(t)
-	resp := httptest.NewRecorder()
-	c := NewContext(resp, nil)
-	headers := c.Header()
 
-	check := func(contentType string) {
-		v := headers.Get(HeaderContentType)
-		assert.Equal(contentType, v)
+	tests := []struct {
+		newContext  func() *Context
+		contentType string
+	}{
+		{
+			newContext: func() *Context {
+				resp := httptest.NewRecorder()
+				c := NewContext(resp, nil)
+				c.SetContentTypeByExt(".html")
+				return c
+
+			},
+			contentType: "text/html; charset=utf-8",
+		},
+		{
+			newContext: func() *Context {
+				resp := httptest.NewRecorder()
+				c := NewContext(resp, nil)
+				c.SetContentTypeByExt("index.html")
+				return c
+
+			},
+			contentType: "text/html; charset=utf-8",
+		},
+		{
+			newContext: func() *Context {
+				resp := httptest.NewRecorder()
+				c := NewContext(resp, nil)
+				c.SetContentTypeByExt("../abcd/index.html")
+				return c
+
+			},
+			contentType: "text/html; charset=utf-8",
+		},
 	}
-	c.SetContentTypeByExt(".html")
-	check("text/html; charset=utf-8")
-	c.SetHeader(HeaderContentType, "")
 
-	c.SetContentTypeByExt("index.html")
-	check("text/html; charset=utf-8")
-	c.SetHeader(HeaderContentType, "")
-
-	c.SetContentTypeByExt("")
-	check("")
-	c.SetHeader(HeaderContentType, "")
-
-	c.SetContentTypeByExt("../abcd/index.html")
-	check("text/html; charset=utf-8")
-	c.SetHeader(HeaderContentType, "")
+	for _, tt := range tests {
+		c := tt.newContext()
+		assert.Equal(tt.contentType, c.GetHeader(HeaderContentType))
+	}
 }
 
 func TestDisableReuse(t *testing.T) {
@@ -611,7 +710,7 @@ func TestContextServerTiming(t *testing.T) {
 	resp := httptest.NewRecorder()
 	c := NewContext(resp, nil)
 	c.ServerTiming(traceInfos, "elton-")
-	assert.Equal("elton-0;dur=0.01;desc=\"a\",elton-1;dur=1;desc=\"b\"", c.GetHeader(HeaderServerTiming))
+	assert.Equal(`elton-0;dur=0.01;desc="a",elton-1;dur=1;desc="b"`, c.GetHeader(HeaderServerTiming))
 }
 
 func TestPipe(t *testing.T) {

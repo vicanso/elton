@@ -27,7 +27,6 @@ import (
 	"net/http/httptest"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vicanso/elton"
@@ -44,44 +43,10 @@ func TestNoLockFunction(t *testing.T) {
 	NewConcurrentLimiter(ConcurrentLimiterConfig{})
 }
 
-func TestConcurrentLimiterNotAllowEmpty(t *testing.T) {
-	// 设置不允许值为空的
-	assert := assert.New(t)
-	fn := NewConcurrentLimiter(ConcurrentLimiterConfig{
-		NotAllowEmpty: true,
-		Keys: []string{
-			"p:id",
-		},
-		Lock: func(key string, c *elton.Context) (success bool, unlock func(), err error) {
-			return
-		},
-	})
-	c := elton.NewContext(nil, httptest.NewRequest("GET", "/", nil))
-	err := fn(c)
-	assert.Equal(ErrNotAllowEmpty, err)
-}
-
-func TestConcurrentLimiterLockError(t *testing.T) {
-	// 当lock出错时
-	assert := assert.New(t)
-	fn := NewConcurrentLimiter(ConcurrentLimiterConfig{
-		Keys: []string{
-			"p:id",
-		},
-		Lock: func(key string, c *elton.Context) (success bool, unlock func(), err error) {
-			return false, nil, errors.New("lock error")
-		},
-	})
-	c := elton.NewContext(nil, httptest.NewRequest("GET", "/", nil))
-	err := fn(c)
-	he, ok := err.(*hes.Error)
-	assert.True(ok)
-	assert.Equal("message=lock error", he.Error())
-}
-
 func TestConcurrentLimiter(t *testing.T) {
+	assert := assert.New(t)
 	m := new(sync.Map)
-	fn := NewConcurrentLimiter(ConcurrentLimiterConfig{
+	concurrentLimiter := NewConcurrentLimiter(ConcurrentLimiterConfig{
 		Keys: []string{
 			":ip",
 			"h:X-Token",
@@ -108,68 +73,96 @@ func TestConcurrentLimiter(t *testing.T) {
 		},
 	})
 
-	req := httptest.NewRequest("POST", "/users/login?type=1", nil)
-	resp := httptest.NewRecorder()
-	c := elton.NewContext(resp, req)
-	req.Header.Set("X-Token", "xyz")
-	c.RequestBody = []byte(`{
-		"account": "tree.xie"
-	}`)
-	c.Params = new(elton.RouteParams)
-	c.Params.Add("id", "123")
-
-	t.Run("first", func(t *testing.T) {
-		assert := assert.New(t)
-		done := false
-		c.Next = func() error {
-			done = true
-			return nil
-		}
-		err := fn(c)
-		assert.Nil(err)
-		assert.True(done)
-	})
-
-	t.Run("too frequently", func(t *testing.T) {
-		assert := assert.New(t)
-		done := false
-		c.Next = func() error {
-			time.Sleep(100 * time.Millisecond)
-			done = true
-			return nil
-		}
-		go func() {
-			time.Sleep(10 * time.Millisecond)
-			e := fn(c)
-			assert.Equal(e.Error(), "category=elton-concurrent-limiter, message=submit too frequently")
-		}()
-		err := fn(c)
-		// 登录限制,192.0.2.1,xyz,1,123,tree.xie
-		assert.Nil(err)
-		assert.True(done)
-	})
-}
-
-func TestGlobalConcurrentLimiter(t *testing.T) {
-	assert := assert.New(t)
-	fn := NewGlobalConcurrentLimiter(GlobalConcurrentLimiterConfig{
-		Max: 1,
-	})
-	req := httptest.NewRequest("POST", "/users/login?type=1", nil)
-	resp := httptest.NewRecorder()
-	c := elton.NewContext(resp, req)
-	err := fn(c)
-	assert.Equal(ErrTooManyRequests, err)
-
-	fn = NewGlobalConcurrentLimiter(GlobalConcurrentLimiterConfig{
-		Max: 2,
-	})
-	done := false
-	c.Next = func() error {
-		done = true
-		return nil
+	skipErr := errors.New("skip error")
+	// next直接返回skip error，用于判断是否执行了next
+	next := func() error {
+		return skipErr
 	}
-	err = fn(c)
-	assert.Nil(err)
-	assert.True(done)
+	tests := []struct {
+		newContext func() *elton.Context
+		fn         elton.Handler
+		err        error
+	}{
+		// not allow empty
+		{
+			newContext: func() *elton.Context {
+				return elton.NewContext(nil, httptest.NewRequest("GET", "/", nil))
+			},
+			fn: NewConcurrentLimiter(ConcurrentLimiterConfig{
+				NotAllowEmpty: true,
+				Keys: []string{
+					"p:id",
+				},
+				Lock: func(key string, c *elton.Context) (success bool, unlock func(), err error) {
+					return
+				},
+			}),
+			err: ErrNotAllowEmpty,
+		},
+		// lock fail
+		{
+			newContext: func() *elton.Context {
+				return elton.NewContext(nil, httptest.NewRequest("GET", "/", nil))
+			},
+			fn: NewConcurrentLimiter(ConcurrentLimiterConfig{
+				Keys: []string{
+					"p:id",
+				},
+				Lock: func(key string, c *elton.Context) (success bool, unlock func(), err error) {
+					return false, nil, errors.New("lock error")
+				},
+			}),
+			err: hes.NewWithError(errors.New("lock error")),
+		},
+		// global concurrency limit 1(fail)
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("POST", "/users/login?type=1", nil)
+				resp := httptest.NewRecorder()
+				c := elton.NewContext(resp, req)
+				return c
+			},
+			fn: NewGlobalConcurrentLimiter(GlobalConcurrentLimiterConfig{
+				Max: 1,
+			}),
+			err: ErrTooManyRequests,
+		},
+		// global concurrency limit 2(success)
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("POST", "/users/login?type=1", nil)
+				resp := httptest.NewRecorder()
+				c := elton.NewContext(resp, req)
+				c.Next = next
+				return c
+			},
+			fn: NewGlobalConcurrentLimiter(GlobalConcurrentLimiterConfig{
+				Max: 2,
+			}),
+			err: skipErr,
+		},
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("POST", "/users/login?type=1", nil)
+				resp := httptest.NewRecorder()
+				c := elton.NewContext(resp, req)
+				req.Header.Set("X-Token", "xyz")
+				c.RequestBody = []byte(`{
+					"account": "tree.xie"
+				}`)
+				c.Params = new(elton.RouteParams)
+				c.Params.Add("id", "123")
+				c.Next = next
+				return c
+			},
+			fn:  concurrentLimiter,
+			err: skipErr,
+		},
+	}
+
+	for _, tt := range tests {
+		c := tt.newContext()
+		err := tt.fn(c)
+		assert.Equal(tt.err, err)
+	}
 }

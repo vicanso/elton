@@ -29,6 +29,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -77,12 +78,28 @@ func TestGzipDecoder(t *testing.T) {
 
 	c.SetRequestHeader(elton.HeaderContentEncoding, elton.Gzip)
 	assert.True(gzipDecoder.Validate(c))
-	buf, err := gzipDecoder.Decode(c, b.Bytes())
-	assert.Nil(err)
-	assert.Equal(originalBuf, buf)
 
-	_, err = gzipDecoder.Decode(c, []byte("ab"))
-	assert.NotNil(err)
+	tests := []struct {
+		data   []byte
+		err    error
+		result []byte
+	}{
+		{
+			data:   b.Bytes(),
+			result: originalBuf,
+		},
+		// invalid gzip data
+		{
+			data: []byte("ab"),
+			err:  errors.New("unexpected EOF"),
+		},
+	}
+
+	for _, tt := range tests {
+		result, err := gzipDecoder.Decode(c, tt.data)
+		assert.Equal(tt.err, err)
+		assert.Equal(tt.result, result)
+	}
 }
 
 func TestJSONDecoder(t *testing.T) {
@@ -93,27 +110,46 @@ func TestJSONDecoder(t *testing.T) {
 	c.SetRequestHeader(elton.HeaderContentType, elton.MIMEApplicationJSON)
 	assert.True(jsonDecoder.Validate(c))
 
-	buf := []byte(`{"a": 1}`)
-	data, err := jsonDecoder.Decode(c, buf)
-	assert.Nil(err)
-	assert.Equal(buf, data)
+	tests := []struct {
+		data   []byte
+		err    error
+		result []byte
+	}{
+		{
+			data:   []byte(`{"a": 1}`),
+			result: []byte(`{"a": 1}`),
+		},
+		// empty data
+		{
+			data: []byte(""),
+		},
+		// invalid json
+		{
+			data: []byte("{"),
+			err:  ErrInvalidJSON,
+		},
+		// invalid json
+		{
+			data: []byte("abcd"),
+			err:  ErrInvalidJSON,
+		},
+		// invalid json
+		{
+			data: []byte("{abcd"),
+			err:  ErrInvalidJSON,
+		},
+		// invalid json
+		{
+			data: []byte("[abcd"),
+			err:  ErrInvalidJSON,
+		},
+	}
 
-	buf = []byte(``)
-	data, err = jsonDecoder.Decode(c, buf)
-	assert.Nil(err)
-	assert.Nil(data)
-
-	_, err = jsonDecoder.Decode(c, []byte("{"))
-	assert.Equal(ErrInvalidJSON, err)
-
-	_, err = jsonDecoder.Decode(c, []byte("abcd"))
-	assert.Equal(ErrInvalidJSON, err)
-
-	_, err = jsonDecoder.Decode(c, []byte("{abcd"))
-	assert.Equal(ErrInvalidJSON, err)
-
-	_, err = jsonDecoder.Decode(c, []byte("[abcd"))
-	assert.Equal(ErrInvalidJSON, err)
+	for _, tt := range tests {
+		result, err := jsonDecoder.Decode(c, tt.data)
+		assert.Equal(tt.err, err)
+		assert.Equal(tt.result, result)
+	}
 }
 
 func TestFormURLEncodedDecoder(t *testing.T) {
@@ -124,9 +160,33 @@ func TestFormURLEncodedDecoder(t *testing.T) {
 	c.SetRequestHeader(elton.HeaderContentType, "application/x-www-form-urlencoded; charset=UTF-8")
 	assert.True(formURLEncodedDecoder.Validate(c))
 
-	data, err := formURLEncodedDecoder.Decode(c, []byte("a=1&b=2"))
-	assert.Nil(err)
-	assert.Equal(17, len(data))
+	tests := []struct {
+		data   []byte
+		err    error
+		result []byte
+		size   int
+	}{
+		{
+			data: []byte("a=1&b=2"),
+			// 格式化后的顺序有可能不一致，因此直接校验长度
+			// result: []byte(`{"a":"1","b":"2"}`),
+			size: 17,
+		},
+		{
+			data:   []byte("a=1&a=2"),
+			result: []byte(`{"a":["1","2"]}`),
+		},
+	}
+
+	for _, tt := range tests {
+		result, err := formURLEncodedDecoder.Decode(c, tt.data)
+		assert.Equal(tt.err, err)
+		if tt.result != nil {
+			assert.Equal(tt.result, result)
+		} else {
+			assert.Equal(tt.size, len(result))
+		}
+	}
 }
 
 type testReadCloser struct {
@@ -143,25 +203,34 @@ func (trc *testReadCloser) Close() error {
 
 func TestMaxBytesReader(t *testing.T) {
 	assert := assert.New(t)
-	buf := bytes.NewBufferString("abcd")
-	trc := &testReadCloser{
-		data: buf,
+	tests := []struct {
+		reader *testReadCloser
+		max    int64
+		err    error
+		result []byte
+	}{
+		{
+			reader: &testReadCloser{
+				data: bytes.NewBufferString("abcd"),
+			},
+			max:    1,
+			err:    errors.New("request body is too large, it should be <= 1"),
+			result: []byte("a"),
+		},
+		{
+			reader: &testReadCloser{
+				data: bytes.NewBufferString("abcd"),
+			},
+			max:    100,
+			result: []byte("abcd"),
+		},
 	}
-	// 限制只能最大只能读取1字节，则出错
-	r := MaxBytesReader(trc, 1)
-	_, err := ioutil.ReadAll(r)
-	assert.Equal("request body is too large, it should be <= 1", err.Error())
-
-	buf = bytes.NewBufferString("abcd")
-	result := buf.String()
-	trc = &testReadCloser{
-		data: buf,
+	for _, tt := range tests {
+		r := MaxBytesReader(tt.reader, tt.max)
+		result, err := ioutil.ReadAll(r)
+		assert.Equal(tt.err, err)
+		assert.Equal(tt.result, result)
 	}
-	// 限制最大100字节，则成功读取
-	r = MaxBytesReader(trc, 100)
-	data, err := ioutil.ReadAll(r)
-	assert.Nil(err)
-	assert.Equal(result, string(data))
 }
 
 type testDecoder struct{}
@@ -173,17 +242,69 @@ func (td *testDecoder) Decode(c *elton.Context, originalData []byte) (data []byt
 	return base64.RawStdEncoding.DecodeString(string(originalData))
 }
 
-func TestBodyParserSkip(t *testing.T) {
+func TestBodyParserMiddleware(t *testing.T) {
 	assert := assert.New(t)
 	skipErr := errors.New("skip error")
 	// next直接返回skip error，用于判断是否执行了next
 	next := func() error {
 		return skipErr
 	}
+	defaultBodyParser := NewDefaultBodyParser()
+
+	formConf := BodyParserConfig{
+		ContentTypeValidate: DefaultJSONAndFormContentTypeValidate,
+	}
+	formConf.AddDecoder(NewFormURLEncodedDecoder())
+	formParser := NewBodyParser(formConf)
+
+	customConf := BodyParserConfig{}
+	customConf.AddDecoder(&testDecoder{})
+	customParser := NewBodyParser(customConf)
+
+	readErr := errors.New("abc")
 	tests := []struct {
-		newContext func() *elton.Context
+		newContext  func() *elton.Context
+		fn          elton.Handler
+		err         error
+		requestBody []byte
 	}{
-		// commited: true
+		// read error
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("POST", "/", NewErrorReadCloser(readErr))
+				req.Header.Set(elton.HeaderContentType, "application/json")
+				c := elton.NewContext(nil, req)
+				return c
+			},
+			fn: defaultBodyParser,
+			err: &hes.Error{
+				Exception:  true,
+				StatusCode: http.StatusInternalServerError,
+				Message:    readErr.Error(),
+				Category:   ErrBodyParserCategory,
+				Err:        readErr,
+			},
+		},
+		// over limit
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("POST", "/", strings.NewReader("abc"))
+				req.Header.Set(elton.HeaderContentType, "application/json")
+				c := elton.NewContext(nil, req)
+				return c
+			},
+			fn: NewBodyParser(BodyParserConfig{
+				Limit: 1,
+			}),
+			err: &hes.Error{
+				Exception:  true,
+				StatusCode: http.StatusInternalServerError,
+				Message:    "request body is too large, it should be <= 1",
+				Category:   ErrBodyParserCategory,
+				Err:        errors.New("request body is too large, it should be <= 1"),
+			},
+		},
+		// committed: true
 		{
 			newContext: func() *elton.Context {
 				c := elton.NewContext(nil, nil)
@@ -191,6 +312,8 @@ func TestBodyParserSkip(t *testing.T) {
 				c.Next = next
 				return c
 			},
+			fn:  defaultBodyParser,
+			err: skipErr,
 		},
 		// request body is not nil
 		{
@@ -200,6 +323,9 @@ func TestBodyParserSkip(t *testing.T) {
 				c.Next = next
 				return c
 			},
+			requestBody: []byte("abc"),
+			fn:          defaultBodyParser,
+			err:         skipErr,
 		},
 		// content type is not json
 		{
@@ -209,6 +335,8 @@ func TestBodyParserSkip(t *testing.T) {
 				c.Next = next
 				return c
 			},
+			fn:  defaultBodyParser,
+			err: skipErr,
 		},
 		// method is get(pass)
 		{
@@ -218,136 +346,78 @@ func TestBodyParserSkip(t *testing.T) {
 				c.Next = next
 				return c
 			},
+			fn:  defaultBodyParser,
+			err: skipErr,
+		},
+		// json
+		{
+			newContext: func() *elton.Context {
+				body := `{"name": "tree.xie"}`
+				req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(body))
+				req.Header.Set(elton.HeaderContentType, "application/json")
+				c := elton.NewContext(nil, req)
+				c.Next = next
+				return c
+			},
+			fn:          defaultBodyParser,
+			err:         skipErr,
+			requestBody: []byte(`{"name": "tree.xie"}`),
+		},
+		// json + gzip
+		{
+			newContext: func() *elton.Context {
+				originalBuf := []byte(`{"name": "tree.xie"}`)
+				var b bytes.Buffer
+				w, _ := gzip.NewWriterLevel(&b, 9)
+				_, err := w.Write(originalBuf)
+				assert.Nil(err)
+				w.Close()
+
+				req := httptest.NewRequest("POST", "https://aslant.site/", bytes.NewReader(b.Bytes()))
+				req.Header.Set(elton.HeaderContentType, "application/json")
+				req.Header.Set(elton.HeaderContentEncoding, "gzip")
+				c := elton.NewContext(nil, req)
+				c.Next = next
+				return c
+			},
+			fn:          defaultBodyParser,
+			requestBody: []byte(`{"name": "tree.xie"}`),
+			err:         skipErr,
+		},
+		// form
+		{
+			newContext: func() *elton.Context {
+				body := `type=1&type=2`
+				req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(body))
+				req.Header.Set(elton.HeaderContentType, "application/x-www-form-urlencoded")
+				c := elton.NewContext(nil, req)
+				c.Next = next
+				return c
+			},
+			fn:          formParser,
+			requestBody: []byte(`{"type":["1","2"]}`),
+			err:         skipErr,
+		},
+		// custom decoder
+		{
+			newContext: func() *elton.Context {
+				body := `{"name": "tree.xie"}`
+				b64 := base64.RawStdEncoding.EncodeToString([]byte(body))
+				req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(b64))
+				req.Header.Set(elton.HeaderContentType, "application/json;charset=base64")
+				c := elton.NewContext(nil, req)
+				c.Next = next
+				return c
+			},
+			fn:          customParser,
+			requestBody: []byte(`{"name": "tree.xie"}`),
+			err:         skipErr,
 		},
 	}
-	bodyPraser := NewDefaultBodyParser()
 	for _, tt := range tests {
-		err := bodyPraser(tt.newContext())
-		assert.Equal(skipErr, err)
+		c := tt.newContext()
+		err := tt.fn(c)
+		assert.Equal(tt.err, err)
+		assert.Equal(tt.requestBody, c.RequestBody)
 	}
-}
-
-func TestBodyParserReadFail(t *testing.T) {
-	// 读取数据失败
-	assert := assert.New(t)
-	bodyParser := NewBodyParser(BodyParserConfig{})
-	req := httptest.NewRequest("POST", "/", NewErrorReadCloser(hes.New("abc")))
-	req.Header.Set(elton.HeaderContentType, "application/json")
-	c := elton.NewContext(nil, req)
-	err := bodyParser(c)
-	assert.NotNil(err)
-	assert.Equal("category=elton-body-parser, message=message=abc", err.Error())
-}
-
-func TestBodyParserOverLimit(t *testing.T) {
-	assert := assert.New(t)
-	bodyParser := NewBodyParser(BodyParserConfig{
-		Limit: 1,
-	})
-	req := httptest.NewRequest("POST", "/", strings.NewReader("abc"))
-	req.Header.Set(elton.HeaderContentType, "application/json")
-	c := elton.NewContext(nil, req)
-	err := bodyParser(c)
-	assert.NotNil(err)
-	assert.Equal("category=elton-body-parser, message=request body is too large, it should be <= 1", err.Error())
-}
-
-func TestBodyParserJSON(t *testing.T) {
-	assert := assert.New(t)
-	conf := BodyParserConfig{}
-	conf.AddDecoder(NewJSONDecoder())
-	bodyParser := NewBodyParser(conf)
-	body := `{"name": "tree.xie"}`
-	req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(body))
-	req.Header.Set(elton.HeaderContentType, "application/json")
-	c := elton.NewContext(nil, req)
-	done := false
-	c.Next = func() error {
-		done = true
-		if string(c.RequestBody) != body {
-			return hes.New("request body is invalid")
-		}
-		return nil
-	}
-	err := bodyParser(c)
-	assert.Nil(err)
-	assert.True(done)
-}
-
-func TestBodyParserJSONGzip(t *testing.T) {
-	assert := assert.New(t)
-	conf := BodyParserConfig{}
-	conf.AddDecoder(NewGzipDecoder())
-	conf.AddDecoder(NewJSONDecoder())
-	bodyParser := NewBodyParser(conf)
-	originalBuf := []byte(`{"name": "tree.xie"}`)
-	var b bytes.Buffer
-	w, _ := gzip.NewWriterLevel(&b, 9)
-	_, err := w.Write(originalBuf)
-	assert.Nil(err)
-	w.Close()
-
-	req := httptest.NewRequest("POST", "https://aslant.site/", bytes.NewReader(b.Bytes()))
-	req.Header.Set(elton.HeaderContentType, "application/json")
-	req.Header.Set(elton.HeaderContentEncoding, "gzip")
-	c := elton.NewContext(nil, req)
-	done := false
-	c.Next = func() error {
-		done = true
-		if !bytes.Equal(c.RequestBody, originalBuf) {
-			return hes.New("request body is invalid")
-		}
-		return nil
-	}
-	err = bodyParser(c)
-	assert.Nil(err)
-	assert.True(done)
-}
-
-func TestBodyParserFormURLEncoded(t *testing.T) {
-	assert := assert.New(t)
-	conf := BodyParserConfig{
-		ContentTypeValidate: DefaultJSONAndFormContentTypeValidate,
-	}
-	conf.AddDecoder(NewFormURLEncodedDecoder())
-	bodyParser := NewBodyParser(conf)
-	body := `name=tree.xie&type=1&type=2`
-	req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(body))
-	req.Header.Set(elton.HeaderContentType, "application/x-www-form-urlencoded")
-	c := elton.NewContext(nil, req)
-	done := false
-	c.Next = func() error {
-		done = true
-		if len(c.RequestBody) != 36 {
-			return hes.New("request body is invalid")
-		}
-		return nil
-	}
-	err := bodyParser(c)
-	assert.Nil(err)
-	assert.True(done)
-}
-
-func TestBodyParserTestDecoder(t *testing.T) {
-	assert := assert.New(t)
-	conf := BodyParserConfig{}
-	conf.AddDecoder(&testDecoder{})
-
-	bodyParser := NewBodyParser(conf)
-	body := `{"name": "tree.xie"}`
-	b64 := base64.RawStdEncoding.EncodeToString([]byte(body))
-	req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(b64))
-	req.Header.Set(elton.HeaderContentType, "application/json;charset=base64")
-	c := elton.NewContext(nil, req)
-	done := false
-	c.Next = func() error {
-		done = true
-		if string(c.RequestBody) != body {
-			return hes.New("request body is invalid")
-		}
-		return nil
-	}
-	err := bodyParser(c)
-	assert.Nil(err)
-	assert.True(done)
 }

@@ -125,6 +125,7 @@ func NewResponder(config ResponderConfig) elton.Handler {
 				buf, e := marshal(data)
 				if e != nil {
 					he := hes.NewWithErrorStatusCode(e, http.StatusInternalServerError)
+					he.Category = ErrResponderCategory
 					he.Exception = true
 					err = he
 					return

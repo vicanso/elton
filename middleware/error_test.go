@@ -23,9 +23,9 @@
 package middleware
 
 import (
+	"bytes"
 	"errors"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -33,72 +33,92 @@ import (
 	"github.com/vicanso/elton"
 )
 
-func TestErrorHandlerSkip(t *testing.T) {
+func TestErrorHandler(t *testing.T) {
 	assert := assert.New(t)
-	fn := NewDefaultError()
-	req := httptest.NewRequest("GET", "/users/me", nil)
-	resp := httptest.NewRecorder()
-	c := elton.NewContext(resp, req)
-	c.Committed = true
-	c.Next = func() error {
-		return nil
+	defaultErrorHandler := NewDefaultError()
+	skipErr := errors.New("skip error")
+	// next直接返回skip error，用于判断是否执行了next
+	next := func() error {
+		return skipErr
 	}
-	err := fn(c)
-	assert.Nil(err)
-	assert.Nil(c.BodyBuffer)
-}
 
-func TestErrorHandlerNoError(t *testing.T) {
-	// 如果无出错，则直接跳过
-	assert := assert.New(t)
-	fn := NewDefaultError()
-	req := httptest.NewRequest("GET", "/users/me", nil)
-	resp := httptest.NewRecorder()
-	c := elton.NewContext(resp, req)
-	c.Next = func() error {
-		return nil
+	tests := []struct {
+		newContext   func() *elton.Context
+		fn           elton.Handler
+		result       *bytes.Buffer
+		cacheControl string
+		contentType  string
+		err          error
+	}{
+		// skip
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("GET", "/users/me", nil)
+				resp := httptest.NewRecorder()
+				c := elton.NewContext(resp, req)
+				c.Committed = true
+				c.Next = next
+				return c
+			},
+			fn:  defaultErrorHandler,
+			err: skipErr,
+		},
+		// no error
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("GET", "/users/me", nil)
+				resp := httptest.NewRecorder()
+				c := elton.NewContext(resp, req)
+				c.Next = func() error {
+					return nil
+				}
+				return c
+			},
+			fn: defaultErrorHandler,
+		},
+		// error(json)
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("GET", "/users/me", nil)
+				req.Header.Set("Accept", "application/json, text/plain, */*")
+				resp := httptest.NewRecorder()
+				c := elton.NewContext(resp, req)
+				c.Next = func() error {
+					return errors.New("abcd")
+				}
+				c.CacheMaxAge(5 * time.Minute)
+				return c
+			},
+			fn:           defaultErrorHandler,
+			result:       bytes.NewBufferString(`{"statusCode":500,"category":"elton-error","message":"abcd","exception":true}`),
+			cacheControl: "public, max-age=300",
+			contentType:  "application/json; charset=UTF-8",
+		},
+		// error(text)
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("GET", "/users/me", nil)
+				resp := httptest.NewRecorder()
+				c := elton.NewContext(resp, req)
+				c.Next = func() error {
+					return errors.New("abcd")
+				}
+				c.CacheMaxAge(5 * time.Minute)
+				return c
+			},
+			fn:           defaultErrorHandler,
+			result:       bytes.NewBufferString(`category=elton-error, message=abcd`),
+			cacheControl: "public, max-age=300",
+			contentType:  "text/plain; charset=UTF-8",
+		},
 	}
-	err := fn(c)
-	assert.Nil(err)
-	assert.Nil(c.BodyBuffer)
-}
 
-func TestErrorHandlerResponseJSON(t *testing.T) {
-	// 出错的响应以json返回
-	assert := assert.New(t)
-	fn := NewDefaultError()
-	req := httptest.NewRequest("GET", "/users/me", nil)
-	req.Header.Set("Accept", "application/json, text/plain, */*")
-	resp := httptest.NewRecorder()
-	c := elton.NewContext(resp, req)
-	c.Next = func() error {
-		return errors.New("abcd")
+	for _, tt := range tests {
+		c := tt.newContext()
+		err := tt.fn(c)
+		assert.Equal(tt.err, err)
+		assert.Equal(tt.result, c.BodyBuffer)
+		assert.Equal(tt.cacheControl, c.GetHeader(elton.HeaderCacheControl))
+		assert.Equal(tt.contentType, c.GetHeader(elton.HeaderContentType))
 	}
-	c.CacheMaxAge(5 * time.Minute)
-	err := fn(c)
-	assert.Nil(err)
-	assert.Equal("public, max-age=300", c.GetHeader(elton.HeaderCacheControl))
-	assert.True(strings.HasSuffix(c.BodyBuffer.String(), `"statusCode":500,"category":"elton-error","message":"abcd","exception":true}`))
-	assert.Equal("application/json; charset=UTF-8", c.GetHeader(elton.HeaderContentType))
-}
-
-func TestErrorHandlerResponseText(t *testing.T) {
-	// 出错的响应以text返回
-	assert := assert.New(t)
-	fn := NewError(ErrorConfig{
-		ResponseType: "text",
-	})
-	req := httptest.NewRequest("GET", "/users/me", nil)
-	resp := httptest.NewRecorder()
-	c := elton.NewContext(resp, req)
-	c.Next = func() error {
-		return errors.New("abcd")
-	}
-	c.CacheMaxAge(5 * time.Minute)
-	err := fn(c)
-	assert.Nil(err)
-	assert.Equal("public, max-age=300", c.GetHeader(elton.HeaderCacheControl))
-	ct := c.GetHeader(elton.HeaderContentType)
-	assert.Equal("category=elton-error, message=abcd", c.BodyBuffer.String())
-	assert.Equal("text/plain; charset=UTF-8", ct)
 }

@@ -287,7 +287,7 @@ func (n *node) findRoute(method methodTyp, path string, params *RouteParams) *no
 				}
 
 				if ntyp == ntRegexp && xn.rex != nil {
-					if !xn.rex.Match([]byte(xsearch[:p])) {
+					if !xn.rex.MatchString(xsearch[:p]) {
 						continue
 					}
 				} else if strings.IndexByte(xsearch[:p], '/') != -1 {

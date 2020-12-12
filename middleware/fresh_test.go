@@ -33,138 +33,125 @@ import (
 	"github.com/vicanso/elton"
 )
 
-func TestFreshSkip(t *testing.T) {
+func TestFresh(t *testing.T) {
 	assert := assert.New(t)
-	c := elton.NewContext(nil, nil)
-	c.Committed = true
-	done := false
-	c.Next = func() error {
-		done = true
-		return nil
+	skipErr := errors.New("skip error")
+	// next直接返回skip error，用于判断是否执行了next
+	next := func() error {
+		return skipErr
 	}
-	fn := NewDefaultFresh()
-	err := fn(c)
-	assert.Nil(err)
-	assert.True(done)
-}
+	defaultFresh := NewDefaultFresh()
+	tests := []struct {
+		newContext func() *elton.Context
+		err        error
+		statusCode int
+		body       interface{}
+		result     *bytes.Buffer
+	}{
+		// skip
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(nil, nil)
+				c.Committed = true
+				c.Next = next
+				return c
 
-func TestFreshResponseError(t *testing.T) {
-	// 当出错时不需要做fresh处理
-	assert := assert.New(t)
-	fn := NewDefaultFresh()
-	c := elton.NewContext(nil, nil)
-	customErr := errors.New("abccd")
-	c.Next = func() error {
-		return customErr
+			},
+			err: skipErr,
+		},
+		// error
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(nil, nil)
+				c.Next = next
+				return c
+
+			},
+			err: skipErr,
+		},
+		// pass method
+		{
+			newContext: func() *elton.Context {
+				modifiedAt := "Tue, 25 Dec 2018 00:02:22 GMT"
+
+				req := httptest.NewRequest("POST", "/users/me", nil)
+				req.Header.Set(elton.HeaderIfModifiedSince, modifiedAt)
+				resp := httptest.NewRecorder()
+				resp.Header().Set(elton.HeaderLastModified, modifiedAt)
+
+				c := elton.NewContext(resp, req)
+				c.Next = func() error {
+					c.StatusCode = http.StatusOK
+					c.Body = map[string]string{
+						"name": "tree.xie",
+					}
+					c.BodyBuffer = bytes.NewBufferString(`{"name":"tree.xie"}`)
+					return nil
+				}
+				return c
+			},
+			statusCode: 200,
+			body: map[string]string{
+				"name": "tree.xie",
+			},
+			result: bytes.NewBufferString(`{"name":"tree.xie"}`),
+		},
+		// status code >= 300
+		{
+			newContext: func() *elton.Context {
+				modifiedAt := "Tue, 25 Dec 2018 00:02:22 GMT"
+
+				req := httptest.NewRequest("GET", "/users/me", nil)
+				req.Header.Set(elton.HeaderIfModifiedSince, modifiedAt)
+				resp := httptest.NewRecorder()
+				resp.Header().Set(elton.HeaderLastModified, modifiedAt)
+
+				c := elton.NewContext(resp, req)
+				c.Next = func() error {
+					c.StatusCode = http.StatusBadRequest
+					c.Body = map[string]string{
+						"name": "tree.xie",
+					}
+					c.BodyBuffer = bytes.NewBufferString(`{"name":"tree.xie"}`)
+					return nil
+				}
+				return c
+			},
+			statusCode: http.StatusBadRequest,
+			body: map[string]string{
+				"name": "tree.xie",
+			},
+			result: bytes.NewBufferString(`{"name":"tree.xie"}`),
+		},
+		// 304
+		{
+			newContext: func() *elton.Context {
+				modifiedAt := "Tue, 25 Dec 2018 00:02:22 GMT"
+
+				req := httptest.NewRequest("GET", "/users/me", nil)
+				req.Header.Set(elton.HeaderIfModifiedSince, modifiedAt)
+				resp := httptest.NewRecorder()
+				resp.Header().Set(elton.HeaderLastModified, modifiedAt)
+
+				c := elton.NewContext(resp, req)
+				c.Next = func() error {
+					c.Body = map[string]string{
+						"name": "tree.xie",
+					}
+					c.BodyBuffer = bytes.NewBufferString(`{"name":"tree.xie"}`)
+					return nil
+				}
+				return c
+			},
+			statusCode: 304,
+		},
 	}
-	err := fn(c)
-	assert.Equal(customErr, err, "custom error should be return")
-}
 
-func TestFreshResponse304(t *testing.T) {
-	assert := assert.New(t)
-	fn := NewDefaultFresh()
-	modifiedAt := "Tue, 25 Dec 2018 00:02:22 GMT"
-
-	req := httptest.NewRequest("GET", "/users/me", nil)
-	req.Header.Set(elton.HeaderIfModifiedSince, modifiedAt)
-	resp := httptest.NewRecorder()
-	resp.Header().Set(elton.HeaderLastModified, modifiedAt)
-
-	c := elton.NewContext(resp, req)
-	done := false
-	c.Next = func() error {
-		done = true
-		c.Body = map[string]string{
-			"name": "tree.xie",
-		}
-		c.BodyBuffer = bytes.NewBufferString(`{"name":"tree.xie"}`)
-		return nil
+	for _, tt := range tests {
+		c := tt.newContext()
+		err := defaultFresh(c)
+		assert.Equal(tt.err, err)
+		assert.Equal(tt.result, c.BodyBuffer)
+		assert.Equal(tt.body, c.Body)
 	}
-	err := fn(c)
-	assert.Nil(err)
-	assert.True(done)
-
-	assert.Equal(304, c.StatusCode, "status code should be 304")
-	assert.Nil(c.Body, "body should be nil")
-	assert.Nil(c.BodyBuffer, "body buffer should be nil")
-}
-
-func TestFreshResponseNoBody(t *testing.T) {
-	fn := NewDefaultFresh()
-	modifiedAt := "Tue, 25 Dec 2018 00:02:22 GMT"
-	assert := assert.New(t)
-	req := httptest.NewRequest("GET", "/users/me", nil)
-	req.Header.Set(elton.HeaderIfModifiedSince, modifiedAt)
-	resp := httptest.NewRecorder()
-	resp.Header().Set(elton.HeaderLastModified, modifiedAt)
-	c := elton.NewContext(resp, req)
-	c.Next = func() error {
-		return nil
-	}
-	c.NoContent()
-	err := fn(c)
-	assert.Nil(err)
-	assert.Equal(204, c.StatusCode, "no body should be passed by fresh")
-}
-
-func TestFreshPassMethod(t *testing.T) {
-	assert := assert.New(t)
-
-	fn := NewDefaultFresh()
-	modifiedAt := "Tue, 25 Dec 2018 00:02:22 GMT"
-
-	req := httptest.NewRequest("POST", "/users/me", nil)
-	req.Header.Set(elton.HeaderIfModifiedSince, modifiedAt)
-	resp := httptest.NewRecorder()
-	resp.Header().Set(elton.HeaderLastModified, modifiedAt)
-
-	c := elton.NewContext(resp, req)
-	done := false
-	c.Next = func() error {
-		done = true
-		c.StatusCode = http.StatusOK
-		c.Body = map[string]string{
-			"name": "tree.xie",
-		}
-		c.BodyBuffer = bytes.NewBufferString(`{"name":"tree.xie"}`)
-		return nil
-	}
-	err := fn(c)
-	assert.Nil(err)
-	assert.True(done)
-
-	assert.Equal(200, c.StatusCode, "post request should be passed by fresh")
-	assert.NotNil(c.Body, "post request should be passed by fresh")
-	assert.NotNil(c.BodyBuffer, "post request should be passed by fresh")
-}
-
-func TestFreshResponseNot2XX(t *testing.T) {
-	assert := assert.New(t)
-	fn := NewDefaultFresh()
-	modifiedAt := "Tue, 25 Dec 2018 00:02:22 GMT"
-
-	req := httptest.NewRequest("GET", "/users/me", nil)
-	req.Header.Set(elton.HeaderIfModifiedSince, modifiedAt)
-	resp := httptest.NewRecorder()
-	resp.Header().Set(elton.HeaderLastModified, modifiedAt)
-
-	c := elton.NewContext(resp, req)
-	done := false
-	c.Next = func() error {
-		done = true
-		c.StatusCode = http.StatusBadRequest
-		c.Body = map[string]string{
-			"name": "tree.xie",
-		}
-		c.BodyBuffer = bytes.NewBufferString(`{"name":"tree.xie"}`)
-		return nil
-	}
-	err := fn(c)
-	assert.Nil(err)
-	assert.True(done)
-
-	assert.Equal(http.StatusBadRequest, c.StatusCode, "error response should be passed by fresh")
-	assert.NotNil(c.Body, "error response should be passed by fresh")
-	assert.NotNil(c.BodyBuffer, "error response should be passed by fresh")
 }

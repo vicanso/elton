@@ -58,83 +58,89 @@ func TestGen(t *testing.T) {
 	assert.Equal(value, `"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="`)
 }
 
-func TestETagSkip(t *testing.T) {
-	assert := assert.New(t)
-	fn := NewDefaultETag()
-	c := elton.NewContext(nil, nil)
-	c.Committed = true
-	skipErr := errors.New("skip error")
-	c.Next = func() error {
-		return skipErr
-	}
-	err := fn(c)
-	assert.Equal(skipErr, err)
-}
-
-func TestETagResponseError(t *testing.T) {
-	// 响应出错则不生成etag
-	assert := assert.New(t)
-	fn := NewDefaultETag()
-	resp := httptest.NewRecorder()
-	c := elton.NewContext(resp, nil)
-	customErr := errors.New("abcd")
-	c.Next = func() error {
-		return customErr
-	}
-	err := fn(c)
-	assert.Equal(customErr, err)
-}
-
-func TestETagNoBody(t *testing.T) {
-	// 响应数据为空时，不需要生成etag
-	assert := assert.New(t)
-	fn := NewDefaultETag()
-
-	resp := httptest.NewRecorder()
-	c := elton.NewContext(resp, nil)
-	c.Next = func() error {
-		return nil
-	}
-	err := fn(c)
-	assert.Nil(err)
-	assert.Empty(c.GetHeader(elton.HeaderETag))
-}
-
-func TestETagResponseStatusCodeNot2xx(t *testing.T) {
-	// 响应状态码<200或者>=300，则跳过不生成etag
-	assert := assert.New(t)
-	fn := NewDefaultETag()
-
-	resp := httptest.NewRecorder()
-	c := elton.NewContext(resp, nil)
-	c.Next = func() error {
-		c.Body = map[string]string{
-			"name": "tree.xie",
-		}
-		c.StatusCode = 400
-		c.BodyBuffer = bytes.NewBufferString(`{"name":"tree.xie"}`)
-		return nil
-	}
-	err := fn(c)
-	assert.Nil(err)
-	assert.Empty(c.GetHeader(elton.HeaderETag))
-}
-
 func TestETag(t *testing.T) {
 	assert := assert.New(t)
-	fn := NewDefaultETag()
-	resp := httptest.NewRecorder()
-	c := elton.NewContext(resp, nil)
-	c.Next = func() error {
-		c.Body = map[string]string{
-			"name": "tree.xie",
-		}
-		c.BodyBuffer = bytes.NewBufferString(`{"name":"tree.xie"}`)
-		return nil
+	skipErr := errors.New("skip error")
+	// next直接返回skip error，用于判断是否执行了next
+	next := func() error {
+		return skipErr
 	}
-	err := fn(c)
-	assert.Nil(err)
-	assert.Equal(`"13-yo9YroUOjW1obRvVoXfrCiL2JGE="`, c.GetHeader(elton.HeaderETag))
+	defaultETag := NewDefaultETag()
+
+	tests := []struct {
+		newContext func() *elton.Context
+		eTag       string
+		err        error
+	}{
+		// skip
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), nil)
+				c.Committed = true
+				c.Next = next
+				return c
+			},
+			err: skipErr,
+		},
+		// response error, not generate etag
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), nil)
+				c.Next = next
+				return c
+			},
+			err: skipErr,
+		},
+		// empty response
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), nil)
+				c.Next = func() error {
+					return nil
+				}
+				return c
+			},
+		},
+		// status <200 or >=300, not generate etag
+		{
+			newContext: func() *elton.Context {
+				resp := httptest.NewRecorder()
+				c := elton.NewContext(resp, nil)
+				c.Next = func() error {
+					c.Body = map[string]string{
+						"name": "tree.xie",
+					}
+					c.StatusCode = 400
+					c.BodyBuffer = bytes.NewBufferString(`{"name":"tree.xie"}`)
+					return nil
+				}
+				return c
+			},
+		},
+		// generate etag
+		{
+			newContext: func() *elton.Context {
+				resp := httptest.NewRecorder()
+				c := elton.NewContext(resp, nil)
+				c.Next = func() error {
+					c.Body = map[string]string{
+						"name": "tree.xie",
+					}
+					c.BodyBuffer = bytes.NewBufferString(`{"name":"tree.xie"}`)
+					return nil
+				}
+				return c
+			},
+			eTag: `"13-yo9YroUOjW1obRvVoXfrCiL2JGE="`,
+		},
+	}
+
+	for _, tt := range tests {
+		c := tt.newContext()
+		err := defaultETag(c)
+		assert.Equal(tt.err, err)
+		assert.Equal(tt.eTag, c.GetHeader(elton.HeaderETag))
+	}
 }
 
 func BenchmarkGenETag(b *testing.B) {

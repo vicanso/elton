@@ -127,170 +127,127 @@ func TestFS(t *testing.T) {
 	assert.NotEmpty(buf)
 }
 
-func TestStaticServeNotAllowQuery(t *testing.T) {
+func TestStaticServe(t *testing.T) {
 	assert := assert.New(t)
-	fn := NewStaticServe(&MockStaticFile{}, StaticServeConfig{
-		Path:            staticPath,
-		DenyQueryString: true,
-	})
-	req := httptest.NewRequest("GET", "/index.html?a=1", nil)
-	c := elton.NewContext(nil, req)
-	err := fn(c)
-	assert.Equal(ErrStaticServeNotAllowQueryString, err, "should return not allow query string error")
-}
-
-func TestStaticServeNotAllowDotFile(t *testing.T) {
-	assert := assert.New(t)
-	fn := NewStaticServe(&MockStaticFile{}, StaticServeConfig{
-		Path:    staticPath,
-		DenyDot: true,
-	})
-	req := httptest.NewRequest("GET", "/.index.html", nil)
-	c := elton.NewContext(nil, req)
-	err := fn(c)
-	assert.Equal(ErrStaticServeNotAllowAccessDot, err, "should return not allow dot error")
-}
-
-func TestStaticServeNotFound(t *testing.T) {
-	assert := assert.New(t)
-	fn := NewStaticServe(&MockStaticFile{}, StaticServeConfig{
-		Path: staticPath,
-	})
-	req := httptest.NewRequest("GET", "/notfound.html", nil)
-	c := elton.NewContext(nil, req)
-	c.Next = func() error {
-		return nil
-	}
-	err := fn(c)
-	assert.Equal(ErrStaticServeNotFound, err, "should return not found error")
-}
-
-func TestStaticServeNotFoundPassNext(t *testing.T) {
-	assert := assert.New(t)
-	fn := NewStaticServe(&MockStaticFile{}, StaticServeConfig{
-		Path:         staticPath,
-		NotFoundNext: true,
-	})
-	req := httptest.NewRequest("GET", "/notfound.html", nil)
-	c := elton.NewContext(nil, req)
-	done := false
-	c.Next = func() error {
-		done = true
-		return nil
-	}
-	err := fn(c)
-	assert.Nil(err)
-	assert.True(done)
-}
-
-func TestStaticServeNotCompress(t *testing.T) {
-	assert := assert.New(t)
-	fn := NewStaticServe(&MockStaticFile{}, StaticServeConfig{
+	defaultStatic := NewStaticServe(&MockStaticFile{}, StaticServeConfig{
 		Path:             staticPath,
 		EnableStrongETag: true,
-	})
-	req := httptest.NewRequest("GET", "/banner.jpg", nil)
-	res := httptest.NewRecorder()
-	c := elton.NewContext(res, req)
-	c.Next = func() error {
-		return nil
-	}
-	err := fn(c)
-	assert.Nil(err)
-	assert.NotEqual("gzip", c.GetHeader(elton.HeaderContentEncoding))
-	assert.Equal(`"a-1oFGwuX-Q3qfLHqK_7iCcc_0YYI="`, c.GetHeader(elton.HeaderETag))
-}
-
-func TestStaticServeGetIndex(t *testing.T) {
-	assert := assert.New(t)
-	fn := NewStaticServe(&MockStaticFile{}, StaticServeConfig{
-		Path: staticPath,
-	})
-	req := httptest.NewRequest("GET", "/index.html?a=1", nil)
-	res := httptest.NewRecorder()
-	c := elton.NewContext(res, req)
-	c.Next = func() error {
-		return nil
-	}
-	err := fn(c)
-	assert.Nil(err, "serve index.html fail")
-
-	assert.Equal(`W/"400-5cfb1ad2"`, c.GetHeader(elton.HeaderETag), "generate eTag fail")
-	assert.NotEmpty(c.GetHeader(elton.HeaderLastModified), "last modified shouldn't be empty")
-	assert.Equal("text/html; charset=utf-8", c.GetHeader("Content-Type"))
-	assert.True(c.IsReaderBody())
-}
-
-func TestStaticServeCustomHeader(t *testing.T) {
-	assert := assert.New(t)
-	fn := NewStaticServe(&MockStaticFile{}, StaticServeConfig{
-		Path: staticPath,
+		DenyQueryString:  true,
+		DenyDot:          true,
 		Header: map[string]string{
 			"X-IDC": "GZ",
 		},
-	})
-	req := httptest.NewRequest("GET", "/index.html", nil)
-	res := httptest.NewRecorder()
-	c := elton.NewContext(res, req)
-	c.Next = func() error {
-		return nil
-	}
-	err := fn(c)
-	assert.Nil(err)
-	assert.Equal("GZ", c.GetHeader("X-IDC"), "set custom header fail")
-}
-
-func TestStaticServeSetMaxAge(t *testing.T) {
-	assert := assert.New(t)
-	fn := NewStaticServe(&MockStaticFile{}, StaticServeConfig{
-		Path:    staticPath,
 		MaxAge:  24 * time.Hour,
 		SMaxAge: 5 * time.Minute,
 	})
-	req := httptest.NewRequest("GET", "/index.html", nil)
-	res := httptest.NewRecorder()
-	c := elton.NewContext(res, req)
-	c.Next = func() error {
-		return nil
-	}
-	err := fn(c)
-	assert.Nil(err)
-	assert.Equal("public, max-age=86400, s-maxage=300", c.GetHeader(elton.HeaderCacheControl), "set max age header fail")
-}
 
-func TestStaticServeOutOfPath(t *testing.T) {
-	assert := assert.New(t)
-	fn := NewStaticServe(&MockStaticFile{}, StaticServeConfig{
-		Path:    staticPath,
-		MaxAge:  24 * 3600,
-		SMaxAge: 300,
-	})
-	req := httptest.NewRequest("GET", "/index.html", nil)
-	req.URL.Path = "../../index.html"
-	res := httptest.NewRecorder()
-	c := elton.NewContext(res, req)
-	c.Next = func() error {
-		return nil
+	tests := []struct {
+		newContext   func() *elton.Context
+		err          error
+		eTag         string
+		contentType  string
+		idc          string
+		cacheControl string
+	}{
+		// deny query string
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("GET", "/index.html?a=1", nil)
+				c := elton.NewContext(httptest.NewRecorder(), req)
+				return c
+			},
+			err: ErrStaticServeNotAllowQueryString,
+		},
+		// not allow dot file
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("GET", "/.index.html", nil)
+				c := elton.NewContext(httptest.NewRecorder(), req)
+				return c
+			},
+			err: ErrStaticServeNotAllowAccessDot,
+		},
+		// not found
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("GET", "/notfound.html", nil)
+				c := elton.NewContext(httptest.NewRecorder(), req)
+				c.Next = func() error {
+					return nil
+				}
+				return c
+			},
+			err: ErrStaticServeNotFound,
+		},
+		// out of path
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("GET", "/index.html", nil)
+				req.URL.Path = "../../index.html"
+				res := httptest.NewRecorder()
+				c := elton.NewContext(res, req)
+				c.Next = func() error {
+					return nil
+				}
+				return c
+			},
+			err: ErrStaticServeOutOfPath,
+		},
+		// get file fail
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("GET", "/error", nil)
+				res := httptest.NewRecorder()
+				c := elton.NewContext(res, req)
+				c.Next = func() error {
+					return nil
+				}
+				return c
+			},
+			err: errors.New("category=elton-static-serve, message=abcd"),
+		},
+		// image
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("GET", "/banner.jpg", nil)
+				res := httptest.NewRecorder()
+				c := elton.NewContext(res, req)
+				c.Next = func() error {
+					return nil
+				}
+				return c
+			},
+			eTag:         `"a-1oFGwuX-Q3qfLHqK_7iCcc_0YYI="`,
+			contentType:  "image/jpeg",
+			idc:          "GZ",
+			cacheControl: "public, max-age=86400, s-maxage=300",
+		},
+		// index html
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("GET", "/index.html", nil)
+				res := httptest.NewRecorder()
+				c := elton.NewContext(res, req)
+				c.Next = func() error {
+					return nil
+				}
+				return c
+			},
+			eTag:         `"10-FKjW3bSjaJvr_QYzQcHNFRn-rxc="`,
+			contentType:  "text/html; charset=utf-8",
+			idc:          "GZ",
+			cacheControl: "public, max-age=86400, s-maxage=300",
+		},
 	}
-	err := fn(c)
-	assert.Equal("category=elton-static-serve, message=out of path", err.Error(), "out of path should return error")
-}
-
-func TestStaticServeGetFileError(t *testing.T) {
-	assert := assert.New(t)
-	staticFile := &MockStaticFile{}
-
-	fn := NewStaticServe(staticFile, StaticServeConfig{
-		Path:    staticPath,
-		MaxAge:  24 * 3600,
-		SMaxAge: 300,
-	})
-	req := httptest.NewRequest("GET", "/error", nil)
-	res := httptest.NewRecorder()
-	c := elton.NewContext(res, req)
-	c.Next = func() error {
-		return nil
+	for _, tt := range tests {
+		c := tt.newContext()
+		err := defaultStatic(c)
+		if err != nil || tt.err != nil {
+			assert.Equal(tt.err.Error(), err.Error())
+		}
+		assert.Equal(tt.eTag, c.GetHeader(elton.HeaderETag))
+		assert.Equal(tt.contentType, c.GetHeader(elton.HeaderContentType))
+		assert.Equal(tt.idc, c.GetHeader("X-IDC"))
+		assert.Equal(tt.cacheControl, c.GetHeader(elton.HeaderCacheControl))
 	}
-	err := fn(c)
-	assert.Equal("category=elton-static-serve, message=abcd", err.Error(), "get file fail should return error")
 }

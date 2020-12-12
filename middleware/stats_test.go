@@ -25,7 +25,6 @@ package middleware
 import (
 	"bytes"
 	"errors"
-	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -46,82 +45,73 @@ func TestNoStatsPanic(t *testing.T) {
 	assert.True(done)
 }
 
-func TestSkip(t *testing.T) {
-	assert := assert.New(t)
-	fn := NewStats(StatsConfig{
-		OnStats: func(info *StatsInfo, _ *elton.Context) {
-
-		},
-	})
-	c := elton.NewContext(nil, nil)
-	done := false
-	c.Next = func() error {
-		done = true
-		return nil
-	}
-	c.Committed = true
-	err := fn(c)
-	assert.Nil(err)
-	assert.True(done)
-}
-
-func TestStatsResponseHesError(t *testing.T) {
-	assert := assert.New(t)
-	req := httptest.NewRequest("GET", "/", nil)
-	resp := httptest.NewRecorder()
-	c := elton.NewContext(resp, req)
-	done := false
-	fn := NewStats(StatsConfig{
-		OnStats: func(info *StatsInfo, _ *elton.Context) {
-			assert.Equal(http.StatusBadRequest, info.Status)
-			done = true
-		},
-	})
-	c.Next = func() error {
-		return hes.New("abc")
-	}
-	err := fn(c)
-	assert.NotNil(err)
-	assert.True(done, "on stats should be called when return error")
-}
-
-func TestStatsResponseError(t *testing.T) {
-	assert := assert.New(t)
-	req := httptest.NewRequest("GET", "/", nil)
-	resp := httptest.NewRecorder()
-	c := elton.NewContext(resp, req)
-	done := false
-	fn := NewStats(StatsConfig{
-		OnStats: func(info *StatsInfo, _ *elton.Context) {
-			assert.Equal(http.StatusInternalServerError, info.Status)
-			done = true
-		},
-	})
-	c.Next = func() error {
-		return errors.New("abc")
-	}
-	err := fn(c)
-	assert.NotNil(err)
-	assert.True(done, "on stats should be called when return error")
-}
-
 func TestStats(t *testing.T) {
 	assert := assert.New(t)
-	req := httptest.NewRequest("GET", "/", nil)
-	resp := httptest.NewRecorder()
-	c := elton.NewContext(resp, req)
-	c.BodyBuffer = bytes.NewBufferString("abcd")
-	done := false
-	fn := NewStats(StatsConfig{
-		OnStats: func(info *StatsInfo, _ *elton.Context) {
-			assert.Equal(http.StatusOK, info.Status, "status code should be 200")
-			done = true
+
+	statsKey := "_stats"
+	defaultStats := NewStats(StatsConfig{
+		OnStats: func(info *StatsInfo, c *elton.Context) {
+			c.Set(statsKey, info)
 		},
 	})
-	c.Next = func() error {
-		return nil
+
+	tests := []struct {
+		newContext func() *elton.Context
+		err        error
+		statusCode int
+	}{
+		// http error
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("GET", "/", nil)
+				resp := httptest.NewRecorder()
+				c := elton.NewContext(resp, req)
+				c.Next = func() error {
+					return hes.New("abc")
+				}
+				return c
+			},
+			err:        hes.New("abc"),
+			statusCode: 400,
+		},
+		// error
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("GET", "/", nil)
+				resp := httptest.NewRecorder()
+				c := elton.NewContext(resp, req)
+				c.Next = func() error {
+					return errors.New("abc")
+				}
+				return c
+			},
+			err:        errors.New("abc"),
+			statusCode: 500,
+		},
+		{
+			newContext: func() *elton.Context {
+				req := httptest.NewRequest("GET", "/", nil)
+				resp := httptest.NewRecorder()
+				c := elton.NewContext(resp, req)
+				c.BodyBuffer = bytes.NewBufferString("abcd")
+				c.Next = func() error {
+					return nil
+				}
+				return c
+			},
+			statusCode: 200,
+		},
 	}
-	err := fn(c)
-	assert.Nil(err)
-	assert.True(done)
+
+	for _, tt := range tests {
+		c := tt.newContext()
+		err := defaultStats(c)
+		assert.Equal(tt.err, err)
+		v, ok := c.Get(statsKey)
+		assert.True(ok)
+		info, ok := v.(*StatsInfo)
+		assert.True(ok)
+		assert.Equal(tt.statusCode, info.Status)
+
+	}
 }

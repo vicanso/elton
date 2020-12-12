@@ -184,6 +184,13 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 			file = url.Path
 		}
 
+		file = filepath.Join(config.Path, file)
+		// 避免文件名是有 .. 等导致最终文件路径越过配置的路径
+		if !strings.HasPrefix(file, basePath) {
+			err = ErrStaticServeOutOfPath
+			return
+		}
+
 		// 检查文件（路径）是否包括.
 		if config.DenyDot {
 			arr := strings.SplitN(file, string(filepath.Separator), -1)
@@ -193,13 +200,6 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 					return
 				}
 			}
-		}
-
-		file = filepath.Join(config.Path, file)
-		// 避免文件名是有 .. 等导致最终文件路径越过配置的路径
-		if !strings.HasPrefix(file, basePath) {
-			err = ErrStaticServeOutOfPath
-			return
 		}
 
 		// 禁止 querystring

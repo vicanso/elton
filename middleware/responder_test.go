@@ -31,6 +31,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vicanso/elton"
+	"github.com/vicanso/hes"
 )
 
 func checkResponse(t *testing.T, resp *httptest.ResponseRecorder, code int, data string) {
@@ -49,130 +50,177 @@ func checkContentType(t *testing.T, resp *httptest.ResponseRecorder, contentType
 	assert.Equal(contentType, resp.Header().Get(elton.HeaderContentType))
 }
 
-func TestResponderSkip(t *testing.T) {
-	// skip处理
+func TestResponder(t *testing.T) {
 	assert := assert.New(t)
-	c := elton.NewContext(nil, nil)
-	c.Committed = true
-	done := false
-	c.Next = func() error {
-		done = true
-		return nil
+	skipErr := errors.New("skip error")
+	// next直接返回skip error，用于判断是否执行了next
+	next := func() error {
+		return skipErr
 	}
-	fn := NewResponder(ResponderConfig{
-		Skipper: func(c *elton.Context) bool {
-			return true
+
+	defaultResponder := NewDefaultResponder()
+
+	tests := []struct {
+		newContext  func() *elton.Context
+		fn          elton.Handler
+		err         error
+		result      *bytes.Buffer
+		statusCode  int
+		contentType string
+	}{
+		// skip
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), nil)
+				c.Committed = true
+				c.Next = next
+				return c
+			},
+			err: skipErr,
 		},
-	})
-	err := fn(c)
-	assert.Nil(err)
-	assert.True(done)
-}
-
-func TestResponderResponseErr(t *testing.T) {
-	// 响应出错时
-	assert := assert.New(t)
-	customErr := errors.New("abcd")
-	c := elton.NewContext(nil, nil)
-	done := false
-	c.Next = func() error {
-		done = true
-		return customErr
+		// response error
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), nil)
+				c.Next = next
+				return c
+			},
+			err: skipErr,
+		},
+		// already set response
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), nil)
+				c.Next = func() error {
+					c.BodyBuffer = bytes.NewBuffer([]byte("abc"))
+					return nil
+				}
+				return c
+			},
+			result: bytes.NewBuffer([]byte("abc")),
+		},
+		// response invalid
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), nil)
+				c.Next = func() error {
+					return nil
+				}
+				return c
+			},
+			err: ErrInvalidResponse,
+		},
+		// marshal fail
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), nil)
+				c.Body = func() {}
+				c.Next = func() error {
+					return nil
+				}
+				return c
+			},
+			err: &hes.Error{
+				Message:   "json: unsupported type: func()",
+				Category:  ErrResponderCategory,
+				Exception: true,
+			},
+		},
+		// response string
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), nil)
+				c.Body = "abc"
+				c.Next = func() error {
+					return nil
+				}
+				return c
+			},
+			result:      bytes.NewBufferString("abc"),
+			statusCode:  200,
+			contentType: "text/plain; charset=UTF-8",
+		},
+		// response byte
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), nil)
+				c.Body = []byte("abc")
+				c.Next = func() error {
+					return nil
+				}
+				return c
+			},
+			result:      bytes.NewBufferString("abc"),
+			statusCode:  200,
+			contentType: "application/octet-stream",
+		},
+		// response with custom content type
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), nil)
+				c.Body = []byte("abc")
+				c.SetHeader(elton.HeaderContentType, "t")
+				c.Next = func() error {
+					return nil
+				}
+				return c
+			},
+			result:      bytes.NewBufferString("abc"),
+			statusCode:  200,
+			contentType: "t",
+		},
+		// response struct
+		{
+			newContext: func() *elton.Context {
+				type T struct {
+					Name string `json:"name,omitempty"`
+				}
+				c := elton.NewContext(httptest.NewRecorder(), nil)
+				c.Body = &T{
+					Name: "tree.xie",
+				}
+				c.Next = func() error {
+					return nil
+				}
+				return c
+			},
+			result:      bytes.NewBufferString(`{"name":"tree.xie"}`),
+			statusCode:  200,
+			contentType: "application/json; charset=UTF-8",
+		},
+		// response reader
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), nil)
+				c.Body = bytes.NewReader([]byte("abcd"))
+				c.Next = func() error {
+					return nil
+				}
+				return c
+			},
+		},
+		// no content
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), nil)
+				c.StatusCode = http.StatusNoContent
+				c.Next = func() error {
+					return nil
+				}
+				return c
+			},
+			statusCode: http.StatusNoContent,
+		},
 	}
-	fn := NewDefaultResponder()
-	err := fn(c)
-	assert.Equal(customErr, err)
-	assert.True(done)
-}
 
-func TestResponderResponseBuffer(t *testing.T) {
-	// 响应数据已设置BodyBuffer
-	assert := assert.New(t)
-	c := elton.NewContext(nil, nil)
-	done := false
-	c.Next = func() error {
-		c.BodyBuffer = bytes.NewBuffer([]byte(""))
-		done = true
-		return nil
-	}
-	fn := NewResponder(ResponderConfig{})
-	err := fn(c)
-	assert.Nil(err)
-	assert.True(done)
-}
-
-func newResponseServe(data interface{}, contentType string) *httptest.ResponseRecorder {
-	e := elton.New()
-	e.Use(NewDefaultResponder())
-	e.GET("/", func(c *elton.Context) error {
-		if contentType != "" {
-			c.SetHeader(elton.HeaderContentType, contentType)
+	for _, tt := range tests {
+		c := tt.newContext()
+		err := defaultResponder(c)
+		if err != nil || tt.err != nil {
+			assert.Equal(tt.err.Error(), err.Error())
 		}
-		c.Body = data
-		return nil
-	})
-	resp := httptest.NewRecorder()
-	e.ServeHTTP(resp, httptest.NewRequest("GET", "/", nil))
-	return resp
-}
-
-func TestResponderResponseInvalid(t *testing.T) {
-	resp := newResponseServe(nil, "")
-	checkResponse(t, resp, 500, "category=elton-responder, message=invalid response")
-}
-
-func TestResponderResponseString(t *testing.T) {
-	resp := newResponseServe("abc", "")
-	checkResponse(t, resp, 200, "abc")
-	checkContentType(t, resp, "text/plain; charset=UTF-8")
-}
-
-func TestResponderResponseBytes(t *testing.T) {
-	resp := newResponseServe([]byte("abc"), "")
-	checkResponse(t, resp, 200, "abc")
-	checkContentType(t, resp, elton.MIMEBinary)
-}
-func TestResponderResponseBytesWithContentType(t *testing.T) {
-	conteType := "t"
-	resp := newResponseServe([]byte("abc"), conteType)
-	checkResponse(t, resp, 200, "abc")
-	checkContentType(t, resp, conteType)
-}
-
-func TestResponderResponseStruct(t *testing.T) {
-	type T struct {
-		Name string `json:"name,omitempty"`
+		assert.Equal(tt.result, c.BodyBuffer)
+		assert.Equal(tt.statusCode, c.StatusCode)
+		assert.Equal(tt.contentType, c.GetHeader(elton.HeaderContentType))
 	}
-	resp := newResponseServe(&T{
-		Name: "tree.xie",
-	}, "")
-	checkResponse(t, resp, 200, `{"name":"tree.xie"}`)
-	checkJSON(t, resp)
-}
-
-func TestResponderMarshalFail(t *testing.T) {
-	assert := assert.New(t)
-	resp := newResponseServe(func() {}, "")
-	assert.Equal(500, resp.Code)
-	assert.Equal("message=json: unsupported type: func()", resp.Body.String())
-}
-
-func TestResponderResponseReaderBody(t *testing.T) {
-	assert := assert.New(t)
-	resp := newResponseServe(bytes.NewReader([]byte("abcd")), "")
-	assert.Equal(200, resp.Code)
-	assert.Equal("abcd", resp.Body.String())
-}
-
-func TestResponderNoContent(t *testing.T) {
-	assert := assert.New(t)
-	e := elton.New()
-	e.Use(NewDefaultResponder())
-	e.GET("/", func(c *elton.Context) error {
-		c.StatusCode = http.StatusNoContent
-		return nil
-	})
-	resp := httptest.NewRecorder()
-	e.ServeHTTP(resp, httptest.NewRequest("GET", "/", nil))
-	assert.Equal(http.StatusNoContent, resp.Code)
 }
