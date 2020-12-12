@@ -66,16 +66,6 @@ func TestRCLNoLimiterPanic(t *testing.T) {
 	NewRCL(RCLConfig{})
 }
 
-func newLimiterMiddleware() elton.Handler {
-	limiter := NewLocalLimiter(map[string]uint32{
-		"POST /users/login": 1,
-		"GET /books/:id":    100,
-	})
-	return NewRCL(RCLConfig{
-		Limiter: limiter,
-	})
-}
-
 func TestRouterConcurrentLimiter(t *testing.T) {
 	assert := assert.New(t)
 	skipErr := errors.New("skip error")
