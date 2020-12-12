@@ -1,6 +1,6 @@
 # Elton 
 
-[![Build Status](https://img.shields.io/travis/vicanso/elton.svg?label=linux+build)](https://travis-ci.org/vicanso/elton)
+[![Build Status](https://github.com/vicanso/elton/workflows/Test/badge.svg)](https://github.com/vicanso/elton/actions)
 
 
 Elton的实现参考了[koa](https://github.com/koajs/koa)以及[echo](https://github.com/labstack/echo)，统一中间件的形式，方便定制各类中间件，所有中间件的处理方式都非常简单，如果需要转给下一中间件，则调用`Context.Next()`，如果当前中间件出错，则返回`Error`结束调用，如果无需要转至下一中间件，则无需要调用`Context.Next()`。
