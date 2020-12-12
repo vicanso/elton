@@ -34,22 +34,6 @@ import (
 	"github.com/vicanso/hes"
 )
 
-func checkResponse(t *testing.T, resp *httptest.ResponseRecorder, code int, data string) {
-	assert := assert.New(t)
-	assert.Equal(data, resp.Body.String())
-	assert.Equal(code, resp.Code)
-}
-
-func checkJSON(t *testing.T, resp *httptest.ResponseRecorder) {
-	assert := assert.New(t)
-	assert.Equal(elton.MIMEApplicationJSON, resp.Header().Get(elton.HeaderContentType))
-}
-
-func checkContentType(t *testing.T, resp *httptest.ResponseRecorder, contentType string) {
-	assert := assert.New(t)
-	assert.Equal(contentType, resp.Header().Get(elton.HeaderContentType))
-}
-
 func TestResponder(t *testing.T) {
 	assert := assert.New(t)
 	skipErr := errors.New("skip error")
