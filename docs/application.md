@@ -121,7 +121,7 @@ func main() {
 
 	e.NotFoundHandler = func(resp http.ResponseWriter, req *http.Request) {
 		// 可增加统计，方便分析404的处理是被攻击还是接口调用错误
-		log.Printf("404，url:%s", req.RequestURI)
+		log.Printf("404, url:%s", req.RequestURI)
 		resp.WriteHeader(http.StatusNotFound)
 		resp.Write([]byte("Custom not found"))
 	}
@@ -135,6 +135,43 @@ func main() {
 	}
 }
 ```
+
+## MethodNotAllowedHandler
+
+该HTTP请求方式不允许，路由匹配正确但是method不匹配时，则会调用此函数（此时所有的中间件也不会被调用）。如果有相关统计需要或者自定义的404页面，则可调整此函数，否则可不设置使用默认处理(返回405 Method Not Allowed)。
+
+***Example***
+```go
+package main
+
+import (
+	"log"
+	"net/http"
+
+	"github.com/vicanso/elton"
+	"github.com/vicanso/hes"
+)
+
+func main() {
+	e := elton.New()
+
+	e.NotFoundHandler = func(resp http.ResponseWriter, req *http.Request) {
+		// 可增加统计，方便分析405的处理是被攻击还是接口调用错误
+		log.Printf("405, method: %s, url:%s", req.Method, req.RequestURI)
+		resp.WriteHeader(http.StatusMethodNotAllowed)
+		resp.Write([]byte("Custom method not allowed"))
+	}
+
+	e.GET("/ping", func(c *elton.Context) (err error) {
+		return hes.New("abcd")
+	})
+	err := e.ListenAndServe(":3000")
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
 
 ## GenerateID
 
@@ -204,8 +241,7 @@ func main() {
 
 	fn := middleware.NewDefaultResponder()
 	// 自定义该中间件的名称，如果设置为"-"，则忽略该中间件
-	e.SetFunctionName(fn, "responder")
-	e.Use(fn)
+	e.UseWithName(fn, "responder")
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.Body = "Hello, World!"
@@ -412,9 +448,9 @@ func main() {
 }
 ```
 
-## Use
+## Use/UseWithName
 
-添加全局中间件处理函数，对于所有路由都需要使用到的中间件，则使用此函数添加，若非所有路由都使用到，可以只添加到相应的Group或者就单独添加至Handler。特别需要注意的是，如session之类需要读取数据库的，如非必要，不要使用全局中间件形式。
+添加全局中间件处理函数，对于所有路由都需要使用到的中间件，则使用此函数添加，若非所有路由都使用到，可以只添加到相应的Group或者就单独添加至Handler。特别需要注意的是，如session之类需要读取数据库的，如非必要，不要使用全局中间件形式。UseWithName在添加中间件时指定其名称，用于在trace时生成统计耗时使用。
 
 **Example**
 ```go
@@ -440,7 +476,7 @@ func main() {
 		return err
 	})
 
-	e.Use(middleware.NewDefaultResponder())
+	e.UseWithName(middleware.NewDefaultResponder(), "responder")
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.Body = "Hello, World!"
@@ -456,7 +492,7 @@ func main() {
 
 ## Pre
 
-添加全局前置中间件处理函数，对于所有请求都会调用（包括无匹配路由的请求）。
+添加全局前置中间件处理函数，对于所有请求都会调用（包括无匹配路由的请求），一般用于前置时对url做调整，如删除前缀等。
 
 **Example**
 ```go
@@ -495,7 +531,7 @@ func main() {
 
 ## AddGroup
 
-将group中的所有路由处理添加至Elton。
+将group中的所有路由处理添加至Elton，需要注意，在调用AddGroup时则将该分组下的所有路由都添加至实例，因此如果在AddGroup后再调整该group则是无效的。
 
 **Example**
 ```go
@@ -556,7 +592,7 @@ func main() {
 		return
 	})
 	// 由于未设置公共的出错处理中间件，此error会触发事件
-	// 实际使用中，需要添加公共的error handler来处理，error事件只用于异常的出错
+	// 实际使用中，需要添加公共的error handler来处理，error事件只用于监控异常的出错
 	e.GET("/error", func(c *elton.Context) (err error) {
 		return errors.New("abcd")
 	})

@@ -26,11 +26,11 @@ Context ID，如果有设置Elton.GenerateID，则在每次接收到请求，创
 
 ## Next
 
-next函数，此函数会在获取请求时自动生成，无需调整。
+next函数，此函数会在获取请求时自动生成，无需调整。如果是测试是直接NewContext，则需要设置对应的Next方法。
 
 ## Params
 
-路由参数对象，提供获取路由中参数方法
+路由参数对象，提供获取路由中参数方法，不需要直接使用此对象，使用Context中的Param方法获取则可
 
 ## StatusCode
 
@@ -42,11 +42,11 @@ HTTP响应数据，此属性为interface{}，因此可以设置不同的数据�
 
 ## BodyBuffer
 
-HTTP的响应数据缓冲（字节），此数据为真正返回的响应体，一般不需要赋值此属性，而由responder中间件将Body转换为字节(BodyBuffer)，并写入相应的`Content-Type`。
+HTTP的响应数据缓冲（字节），此数据为真正返回的响应体，不建议直接赋值此属性，而应该则responder中间件将Body转换为字节(BodyBuffer)，并写入相应的`Content-Type`。
 
 ## RequestBody
 
-HTTP请求体，对于`POST`，`PUT`以及`PATCH`提交数据的请求，此字段用于保存请求体。注意：默认Elton中并未从请求中读取相应的请求体，需要使用`body_parser`中间件来生成或者自定义相应的中间件。
+HTTP请求体，对于`POST`，`PUT`以及`PATCH`提交数据的请求，此字段用于保存请求体。注意：默认Elton中并未从请求中读取相应的请求体，需要使用`body_parser`中间件来获取或者自定义相应的中间件。
 
 ## RemoteAddr
 
@@ -393,6 +393,15 @@ func main() {
 }
 ```
 
+## Context
+
+Get context of request.
+
+## WithContext
+
+Set request with context.
+
+
 ## Header
 
 返回HTTP响应头。
@@ -513,6 +522,39 @@ func main() {
 	e.GET("/", func(c *elton.Context) (err error) {
 		c.AddHeader("X-Response-Id", "1")
 		c.AddHeader("X-Response-Id", "2")
+		c.Body = c.Header()
+		return
+	})
+	err := e.ListenAndServe(":3000")
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+## MergeHeader
+
+合并HTTP头
+
+**Example**
+```go
+package main
+
+import (
+	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/middleware"
+)
+
+func main() {
+	e := elton.New()
+
+	e.Use(middleware.NewDefaultResponder())
+
+	e.GET("/", func(c *elton.Context) (err error) {
+		h := make(http.Header)
+		h.Add("X-Response-Id", "1")
+		h.Add("X-Response-Id", "2")
+		c.MergeHeader(h)
 		c.Body = c.Header()
 		return
 	})
@@ -671,7 +713,7 @@ func main() {
 
 ## NotModified
 
-设置HTTP请求的响应状态码为304，响应体为空。注意此方法判断是否客户端的缓存数据与服务端的响应数据一致再使用，不建议自己调用此函数，建议使用中间件`fresh`。
+设置HTTP请求的响应状态码为304，响应体为空。注意此方法判断是否客户端的缓存数据与服务端的响应数据一致再使用，建议使用中间件`fresh`处理则可。
 
 **Example**
 ```go
@@ -699,37 +741,6 @@ func main() {
 }
 ```
 
-## Created
-
-设置HTTP请求的响应码为201，并设置响应体。
-
-**Example**
-```go
-// curl -XPOST 'http://127.0.0.1:3000/' -v
-package main
-
-import (
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
-)
-
-func main() {
-	e := elton.New()
-
-	e.Use(middleware.NewDefaultResponder())
-
-	e.POST("/", func(c *elton.Context) (err error) {
-		c.Created(map[string]string{
-			"account": "tree.xie",
-		})
-		return
-	})
-	err := e.ListenAndServe(":3000")
-	if err != nil {
-		panic(err)
-	}
-}
-```
 
 ## NoCache
 
@@ -813,8 +824,41 @@ func main() {
 	e.Use(middleware.NewDefaultResponder())
 
 	e.GET("/", func(c *elton.Context) (err error) {
-		c.CacheMaxAge("1m", "10s")
+		c.CacheMaxAge(time.Minute, 10 * time.Second)
 		c.Body = "Hello, World!"
+		return
+	})
+	err := e.ListenAndServe(":3000")
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+
+## Created
+
+设置HTTP请求的响应码为201，并设置响应体。
+
+**Example**
+```go
+// curl -XPOST 'http://127.0.0.1:3000/' -v
+package main
+
+import (
+	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/middleware"
+)
+
+func main() {
+	e := elton.New()
+
+	e.Use(middleware.NewDefaultResponder())
+
+	e.POST("/", func(c *elton.Context) (err error) {
+		c.Created(map[string]string{
+			"account": "tree.xie",
+		})
 		return
 	})
 	err := e.ListenAndServe(":3000")
@@ -895,10 +939,15 @@ func main() {
 }
 ```
 
+## Pass
+
+将当前context的处理pass给另一个Elton实例，设置Committed为true，此实例的所有处理函数均不再使用处理此context。
+
 ## Pipe
 
 将当前Reader pipe向Response，用于流式输出响应数据，节省内存使用。
 
+**Example**
 ```go
 package main
 

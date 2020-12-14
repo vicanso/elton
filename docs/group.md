@@ -21,7 +21,7 @@ func main() {
 	e := elton.New()
 
 	e.Use(middleware.NewDefaultResponder())
-
+	// user相关的公共中间件
 	noop := func(c *elton.Context) error {
 		return c.Next()
 	}

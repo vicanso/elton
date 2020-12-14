@@ -6,7 +6,7 @@ description: 各类常用的中间件
 
 - [basic auth](#basic-auth) HTTP Basic Auth，建议只用于内部管理系统使用
 - [body parser](#body-parser) 请求数据的解析中间件，支持`application/json`以及`application/x-www-form-urlencoded`两种数据类型
-- [compress](#compress) 数据压缩中间件，默认仅支持gzip。如果需要支持更多的压缩方式，如brotli、snappy、s2、zstd以及lz4，可以使用[elton-compress](https://github.com/vicanso/elton-compress)，也可根据需要增加相应的压缩处理
+- [compress](#compress) 数据压缩中间件，默认仅支持gzip。如果需要支持更多的压缩方式，如brotli、snappy、zstd以及lz4，可以使用[elton-compress](https://github.com/vicanso/elton-compress)，也可根据需要增加相应的压缩处理
 - [concurrent limiter](#concurrent-limiter) 根据指定参数限制并发请求，可用于订单提交等防止重复提交或限制提交频率的场景
 - [error handler](#error-handler) 用于将处理函数的Error转换为对应的响应数据，如HTTP响应中的状态码(40x, 50x)，对应的出错类别等，建议在实际使用中根据项目自定义的Error对象生成相应的响应数据
 - [etag](#etag) 用于生成HTTP响应数据的ETag
@@ -100,7 +100,7 @@ e.Use(middleware.NewBodyParser(conf))
 
 ### NewFormURLEncodedDecoder
 
-创建一个form数据的decoder
+创建一个form数据的decoder(不建议使用)
 
 ```go
 conf := middleware.BodyParserConfig{
@@ -322,7 +322,7 @@ func main() {
 
 ## etag
 
-根据响应数据生成HTTP响应头的ETag。
+根据响应数据生成HTTP响应头的ETag，需要从BodyBuffer中生成，因此需要先通过Responder中间件将响应转换为Buffer或直接设置BodyBuffer。
 
 **Example**
 ```go
@@ -489,7 +489,7 @@ func main() {
 
 ## recover
 
-Recover中间件，用于捕获各种panic异常，避免程序异常退出。可根据应用场景编写自定义的panic处理，如增加告警等。
+Recover中间件，用于捕获各种panic异常，避免程序异常退出，但建议自定义recover中间件，在获取到此类异常时，发送告警后做graceful restart。 
 
 **Example**
 ```go
@@ -662,7 +662,7 @@ func main() {
 		SMaxAge:             60 * 60,
 		DenyQueryString:     true,
 		DisableLastModified: true,
-		// packr不支持Stat，因此需要用强ETag
+		// 如果使用packr，它不支持Stat，因此需要用强ETag
 		EnableStrongETag: true,
 	}))
 

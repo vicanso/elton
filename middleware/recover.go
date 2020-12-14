@@ -61,7 +61,7 @@ func NewRecover() elton.Handler {
 				} {
 					c.SetHeader(key, "")
 				}
-				// 如果已直接对Response写入数据，则将 Committed设置为 true
+				// 直接对Response写入数据，则将 Committed设置为 true
 				c.Committed = true
 				resp := c.Response
 				buf := []byte(err.Error())

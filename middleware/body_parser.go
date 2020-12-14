@@ -140,6 +140,8 @@ func (fd *formURLEncodedDecoder) Decode(c *elton.Context, originalData []byte) (
 
 	arr := make([]string, 0, len(urlValues))
 	for key, values := range urlValues {
+		// 此处有可能导致如果一次该值只有一个，一次有两个，会导致数据不匹配
+		// 后续再确认是否调整（不建议使用form url encode）
 		if len(values) < 2 {
 			arr = append(arr, fmt.Sprintf(`"%s":"%s"`, key, values[0]))
 			continue

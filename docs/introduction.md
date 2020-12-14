@@ -28,17 +28,24 @@ elton参考koa的实现，能够简单的添加各类中间件，中间件的执
 package main
 
 import (
-	"bytes"
 	"errors"
 
 	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/middleware"
 )
 
 func main() {
 	e := elton.New()
 
+	e.Use(middleware.NewDefaultResponder())
+	e.Use(middleware.NewDefaultError())
+
 	e.GET("/", func(c *elton.Context) (err error) {
-		c.BodyBuffer = bytes.NewBufferString("Hello, World!")
+		c.Body = &struct {
+			Message string `json:"message,omitempty"`
+		}{
+			Message: "Hello world!",
+		}
 		return
 	})
 
@@ -54,7 +61,7 @@ func main() {
 }
 ```
 
-如代码所示，处理过程非常简单，响应数据由BodyBuffer中获取，如果流程出错，直接返回Error则可。不过例子中的与koa的处理还是有所差距，koa中返回数据时可以随意的指定各种Object(转换为json)，而在golang中因为是强类型，所以增加interface{}类型的`ctx.Body`，将返回的数据赋值至此属性中，再由中间件处理返回。
+如代码所示，处理过程非常简单，响应数据直接赋值至Body(interface{})，通过Responder中间件可将struct等数据转换为json响应(也可通过自定义中间件实现更多类型的响应输出)。如果处理出错，直接返回error则可，由error中间件可将error转换为对应的http响应信息。此两类中间件后续会有更详细的介绍说明。
 
 
 ## 统一的HTTP响应
@@ -170,11 +177,9 @@ func NewResponder(config ResponderConfig) elton.Handler {
 			return
 		}
 
-		ct := elton.HeaderContentType
-
 		hadContentType := false
 		// 判断是否已设置响应头的Content-Type
-		if c.GetHeader(ct) != "" {
+		if c.GetHeader(elton.HeaderContentType) != "" {
 			hadContentType = true
 		}
 
@@ -183,25 +188,26 @@ func NewResponder(config ResponderConfig) elton.Handler {
 			switch data := c.Body.(type) {
 			case string:
 				if !hadContentType {
-					c.SetHeader(ct, elton.MIMETextPlain)
+					c.SetHeader(elton.HeaderContentType, elton.MIMETextPlain)
 				}
 				body = []byte(data)
 			case []byte:
 				if !hadContentType {
-					c.SetHeader(ct, elton.MIMEBinary)
+					c.SetHeader(elton.HeaderContentType, elton.MIMEBinary)
 				}
 				body = data
 			default:
-				// 转换为json
+				// 使用marshal转换（默认为转换为json）
 				buf, e := marshal(data)
 				if e != nil {
 					he := hes.NewWithErrorStatusCode(e, http.StatusInternalServerError)
+					he.Category = ErrResponderCategory
 					he.Exception = true
 					err = he
 					return
 				}
 				if !hadContentType {
-					c.SetHeader(ct, contentType)
+					c.SetHeader(elton.HeaderContentType, contentType)
 				}
 				body = buf
 			}
@@ -255,6 +261,7 @@ func NewError(config ErrorConfig) elton.Handler {
 		he, ok := err.(*hes.Error)
 		if !ok {
 			he = hes.Wrap(err)
+			// 非hes的error，则都认为是500出错异常
 			he.StatusCode = http.StatusInternalServerError
 			he.Exception = true
 			he.Category = ErrErrorCategory

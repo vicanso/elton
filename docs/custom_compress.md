@@ -9,7 +9,7 @@ description: 自定义压缩
 - 根据响应头`Content-Type`判断只压缩文本类的响应数据
 - 根据场景平衡压缩率与性能的选择，如内网的可以选择snappy，lz4等高效压缩算法
 
-[elton-compress](https://github.com/vicanso/elton-compress)中间件已提供了6种常用的压缩方式，包括`gzip`, `brotli`以及`snappy`等。如果要增加压缩方式，只需要实现`Compressor`的三个函数则可。
+[elton-compress](https://github.com/vicanso/elton-compress)中间件提供了其它几种常用的压缩方式，包括`brotli`以及`snappy`等。如果要增加压缩方式，只需要实现`Compressor`的三个函数则可。
 
 ```go
 // Compressor compressor interface
