@@ -31,6 +31,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -473,6 +474,31 @@ func (c *Context) SignedCookie(name string) (cookie *http.Cookie, err error) {
 		cookie = nil
 		err = http.ErrNoCookie
 	}
+	return
+}
+
+// SendFile send file to http response
+func (c *Context) SendFile(file string) (err error) {
+	info, err := os.Stat(file)
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = ErrFileNotFound
+		}
+		return
+	}
+	if info != nil {
+		c.SetHeader(HeaderContentLength, strconv.Itoa(int(info.Size())))
+		if c.GetHeader(HeaderLastModified) == "" {
+			lmd := info.ModTime().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT")
+			c.SetHeader(HeaderLastModified, lmd)
+		}
+	}
+	r, err := os.Open(file)
+	if err != nil {
+		return
+	}
+	c.SetContentTypeByExt(file)
+	c.Body = r
 	return
 }
 

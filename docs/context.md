@@ -681,6 +681,38 @@ func main() {
 }
 ```
 
+## SendFile
+
+读取文件并响应，在获取时根据文件的修改时间生成`Last-Modified`，并设置`Content-Length`与`Content-Type`，数据以Pipe的形式响应。
+
+**Example**
+```go
+package main
+
+import (
+	"math/rand"
+	"net/http"
+	"strconv"
+
+	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/middleware"
+)
+
+func main() {
+	e := elton.New()
+
+	e.Use(middleware.NewDefaultResponder())
+
+	e.GET("/", func(c *elton.Context) (err error) {
+		return c.SendFile("index.html")
+	})
+	err := e.ListenAndServe(":3000")
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
 ## NoContent
 
 设置HTTP请求的响应状态码为204，响应体为空。

@@ -44,26 +44,32 @@ var (
 	ErrInvalidRedirect = &hes.Error{
 		StatusCode: 400,
 		Message:    "invalid redirect",
-		Category:   ErrCategoryCod,
+		Category:   ErrCategory,
 	}
 
 	// ErrNilResponse nil response
 	ErrNilResponse = &hes.Error{
 		StatusCode: 500,
 		Message:    "nil response",
-		Category:   ErrCategoryCod,
+		Category:   ErrCategory,
 	}
 	// ErrNotSupportPush not support http push
 	ErrNotSupportPush = &hes.Error{
 		StatusCode: 500,
 		Message:    "not support http push",
-		Category:   ErrCategoryCod,
+		Category:   ErrCategory,
+	}
+	// ErrFileNotFound file not found
+	ErrFileNotFound = &hes.Error{
+		StatusCode: 404,
+		Message:    "file not found",
+		Category:   ErrCategory,
 	}
 )
 
 const (
-	// ErrCategoryCod elton category
-	ErrCategoryCod = "elton"
+	// ErrCategory elton category
+	ErrCategory = "elton"
 	// HeaderXForwardedFor x-forwarded-for
 	HeaderXForwardedFor = "X-Forwarded-For"
 	// HeaderXRealIP x-real-ip

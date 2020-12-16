@@ -477,6 +477,42 @@ func TestSignedCookie(t *testing.T) {
 
 }
 
+func TestSendFile(t *testing.T) {
+	assert := assert.New(t)
+	tests := []struct {
+		newContext func() *Context
+		file       string
+		err        error
+	}{
+		{
+			newContext: func() *Context {
+				c := NewContext(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+				return c
+			},
+			file: "abc.html",
+			err:  ErrFileNotFound,
+		},
+		{
+			newContext: func() *Context {
+				c := NewContext(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+				return c
+			},
+			file: "docs/book.json",
+		},
+	}
+	for _, tt := range tests {
+		c := tt.newContext()
+		err := c.SendFile(tt.file)
+		assert.Equal(tt.err, err)
+		if err == nil {
+			assert.NotEmpty(c.GetHeader(HeaderContentLength))
+			assert.NotEmpty(c.GetHeader(HeaderLastModified))
+			assert.NotEmpty(c.GetHeader(HeaderContentType))
+			assert.NotEmpty(c.Body)
+		}
+	}
+}
+
 func TestRedirect(t *testing.T) {
 	assert := assert.New(t)
 	req := httptest.NewRequest("GET", "/", nil)
