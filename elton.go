@@ -66,7 +66,7 @@ type (
 		NotFoundHandler http.HandlerFunc
 		// MethodNotAllowedHandler set the function for method not allowed handler
 		MethodNotAllowedHandler http.HandlerFunc
-		// GenerateID generate id function, will use it for create id for context
+		// GenerateID generate id function, will use it to create context's id
 		GenerateID GenerateID
 		// EnableTrace enable trace
 		EnableTrace bool
@@ -122,7 +122,7 @@ type (
 	PreHandler func(*http.Request)
 )
 
-// DefaultSkipper default skipper function(not skip)
+// DefaultSkipper default skipper function
 func DefaultSkipper(c *Context) bool {
 	return c.Committed
 }
@@ -249,14 +249,14 @@ func (e *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 	c := e.ctxPool.Get().(*Context)
 	c.Reset()
-	method := methodMap[req.Method]
-	rn := e.tree.findRoute(method, req.URL.Path, c.Params)
+	methodType := methodTypeMap[req.Method]
+	rn := e.tree.findRoute(methodType, req.URL.Path, c.Params)
 	if rn == nil {
 		if c.Params.methodNotAllowed {
-			e.MethodNotAllowed(resp, req)
+			e.methodNotAllowed(resp, req)
 		} else {
 			// 404处理
-			e.NotFound(resp, req)
+			e.notFound(resp, req)
 		}
 		// not found 与method not allowed所有context都可复用
 		e.ctxPool.Put(c)
@@ -269,7 +269,7 @@ func (e *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		c.ID = e.GenerateID()
 	}
 
-	rn.endpoints[method].handler(c)
+	rn.endpoints[methodType].handler(c)
 	if c.isReuse() {
 		e.ctxPool.Put(c)
 	}
@@ -298,7 +298,7 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 		Method: method,
 		Route:  path,
 	})
-	e.tree.InsertRoute(methodMap[method], path, func(c *Context) {
+	e.tree.InsertRoute(methodTypeMap[method], path, func(c *Context) {
 		c.Route = path
 		mids := e.middlewares
 		maxMid := len(mids)
@@ -367,7 +367,7 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 		}
 		c.Committed = true
 		if err != nil {
-			e.Error(c, err)
+			e.error(c, err)
 		} else {
 			if c.BodyBuffer != nil {
 				c.SetHeader(HeaderContentLength, strconv.Itoa(c.BodyBuffer.Len()))
@@ -468,8 +468,8 @@ func (e *Elton) Pre(handlerList ...PreHandler) *Elton {
 	return e
 }
 
-// NotFound not found handle
-func (e *Elton) NotFound(resp http.ResponseWriter, req *http.Request) *Elton {
+// notFound not found handle
+func (e *Elton) notFound(resp http.ResponseWriter, req *http.Request) *Elton {
 	if e.NotFoundHandler != nil {
 		e.NotFoundHandler(resp, req)
 		return e
@@ -482,8 +482,8 @@ func (e *Elton) NotFound(resp http.ResponseWriter, req *http.Request) *Elton {
 	return e
 }
 
-// MethodNotAllowed method not allowed handle
-func (e *Elton) MethodNotAllowed(resp http.ResponseWriter, req *http.Request) *Elton {
+// methodNotAllowed method not allowed handle
+func (e *Elton) methodNotAllowed(resp http.ResponseWriter, req *http.Request) *Elton {
 	if e.MethodNotAllowedHandler != nil {
 		e.MethodNotAllowedHandler(resp, req)
 		return e
@@ -496,8 +496,8 @@ func (e *Elton) MethodNotAllowed(resp http.ResponseWriter, req *http.Request) *E
 	return e
 }
 
-// Error error handle
-func (e *Elton) Error(c *Context, err error) *Elton {
+// error error handle
+func (e *Elton) error(c *Context, err error) *Elton {
 	// 出错时清除部分响应头
 	for _, key := range []string{
 		HeaderETag,

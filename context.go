@@ -69,10 +69,10 @@ type (
 		Params *RouteParams
 		// StatusCode http response's status code, default is 0 which will be handle as 200
 		StatusCode int
-		// Body http response's body, which should be converted to bytes by response middleware.
+		// Body http response's body, which should be converted to bytes by responder middleware.
 		// JSON response middleware,  xml response middleware and so on.
 		Body interface{}
-		// BodyBuffer http response's body buffer, it should be set by response middleware.
+		// BodyBuffer http response's body buffer, it should be set by responder middleware.
 		BodyBuffer *bytes.Buffer
 		// RequestBody http request body, which should be converted by request body parser middleware.
 		RequestBody []byte
@@ -355,7 +355,7 @@ func (c *Context) Context() context.Context {
 	return c.Request.Context()
 }
 
-// WithContext set context of request
+// WithContext set context to request
 func (c *Context) WithContext(ctx context.Context) *Context {
 	c.Request = c.Request.WithContext(ctx)
 	return c
@@ -489,7 +489,7 @@ func (c *Context) SendFile(file string) (err error) {
 	if info != nil {
 		c.SetHeader(HeaderContentLength, strconv.Itoa(int(info.Size())))
 		if c.GetHeader(HeaderLastModified) == "" {
-			lmd := info.ModTime().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT")
+			lmd := info.ModTime().UTC().Format(time.RFC1123)
 			c.SetHeader(HeaderLastModified, lmd)
 		}
 	}
@@ -531,30 +531,32 @@ func (c *Context) addSigCookie(cookie *http.Cookie) {
 	c.AddCookie(sc)
 }
 
-// AddSignedCookie add the signed cookie to the response
+// AddSignedCookie add cookie to the response, it will also add a signed cookie
 func (c *Context) AddSignedCookie(cookie *http.Cookie) {
 	c.AddCookie(cookie)
 	c.addSigCookie(cookie)
 }
 
-// NoContent no content for response
-func (c *Context) NoContent() {
-	c.StatusCode = http.StatusNoContent
-	c.Body = nil
-	c.BodyBuffer = nil
+// cleanContent clean content
+func (c *Context) cleanContent() {
 	c.SetHeader(HeaderContentType, "")
 	c.SetHeader(HeaderContentLength, "")
 	c.SetHeader(HeaderTransferEncoding, "")
+	c.SetHeader(HeaderContentEncoding, "")
+	c.Body = nil
+	c.BodyBuffer = nil
+}
+
+// NoContent no content for response
+func (c *Context) NoContent() {
+	c.StatusCode = http.StatusNoContent
+	c.cleanContent()
 }
 
 // NotModified response not modified
 func (c *Context) NotModified() {
 	c.StatusCode = http.StatusNotModified
-	c.SetHeader(HeaderContentType, "")
-	c.SetHeader(HeaderContentLength, "")
-	c.SetHeader(HeaderContentEncoding, "")
-	c.Body = nil
-	c.BodyBuffer = nil
+	c.cleanContent()
 }
 
 // NoCache set http response no cache
@@ -569,10 +571,9 @@ func (c *Context) NoStore() {
 
 // CacheMaxAge set http response to cache for max age
 func (c *Context) CacheMaxAge(age time.Duration, args ...time.Duration) {
-	cache := "public, max-age=" + strconv.Itoa(int(age.Seconds()))
+	cache := fmt.Sprintf("public, max-age=%d", int(age.Seconds()))
 	if len(args) != 0 {
 		sMaxAge := args[0]
-		// d1, _ := time.ParseDuration(args[0])
 		cache += fmt.Sprintf(", s-maxage=%d", int(sMaxAge.Seconds()))
 	}
 	c.SetHeader(HeaderCacheControl, cache)

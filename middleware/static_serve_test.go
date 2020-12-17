@@ -137,8 +137,9 @@ func TestStaticServe(t *testing.T) {
 		Header: map[string]string{
 			"X-IDC": "GZ",
 		},
-		MaxAge:  24 * time.Hour,
-		SMaxAge: 5 * time.Minute,
+		MaxAge:    24 * time.Hour,
+		SMaxAge:   5 * time.Minute,
+		Immutable: true,
 	})
 
 	tests := []struct {
@@ -220,7 +221,7 @@ func TestStaticServe(t *testing.T) {
 			eTag:         `"a-1oFGwuX-Q3qfLHqK_7iCcc_0YYI="`,
 			contentType:  "image/jpeg",
 			idc:          "GZ",
-			cacheControl: "public, max-age=86400, s-maxage=300",
+			cacheControl: "public, max-age=86400, s-maxage=300, immutable",
 		},
 		// index html
 		{
@@ -236,7 +237,7 @@ func TestStaticServe(t *testing.T) {
 			eTag:         `"10-FKjW3bSjaJvr_QYzQcHNFRn-rxc="`,
 			contentType:  "text/html; charset=utf-8",
 			idc:          "GZ",
-			cacheControl: "public, max-age=86400, s-maxage=300",
+			cacheControl: "public, max-age=86400, s-maxage=300, immutable",
 		},
 	}
 	for _, tt := range tests {

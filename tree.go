@@ -31,7 +31,7 @@ const (
 var mALL = mCONNECT | mDELETE | mGET | mHEAD |
 	mOPTIONS | mPATCH | mPOST | mPUT | mTRACE
 
-var methodMap = map[string]methodTyp{
+var methodTypeMap = map[string]methodTyp{
 	http.MethodConnect: mCONNECT,
 	http.MethodDelete:  mDELETE,
 	http.MethodGet:     mGET,
@@ -380,7 +380,7 @@ func (n *node) setEndpoint(method methodTyp, handler EndpointHandler, pattern st
 		h.handler = handler
 		h.pattern = pattern
 		h.paramKeys = paramKeys
-		for _, m := range methodMap {
+		for _, m := range methodTypeMap {
 			h := n.endpoints.Value(m)
 			h.handler = handler
 			h.pattern = pattern

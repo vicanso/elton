@@ -56,6 +56,8 @@ type (
 		MaxAge time.Duration
 		// http cache control s-maxage
 		SMaxAge time.Duration
+		// http cache control immutable
+		Immutable bool
 		// http response header
 		Header map[string]string
 		// 禁止query string（因为有时静态文件为CDN回源，避免生成各种重复的缓存）
@@ -147,20 +149,27 @@ func NewDefaultStaticServe(config StaticServeConfig) elton.Handler {
 	return NewStaticServe(&FS{}, config)
 }
 
+func toSeconds(d time.Duration) string {
+	return strconv.Itoa(int(d.Seconds()))
+}
+
 // NewStaticServe create a static serve middleware
 func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handler {
 	cacheArr := []string{
 		"public",
 	}
 	if config.MaxAge > 0 {
-		cacheArr = append(cacheArr, "max-age="+strconv.Itoa(int(config.MaxAge.Seconds())))
+		cacheArr = append(cacheArr, "max-age="+toSeconds(config.MaxAge))
 	}
 	if config.SMaxAge > 0 {
-		cacheArr = append(cacheArr, "s-maxage="+strconv.Itoa(int(config.SMaxAge.Seconds())))
+		cacheArr = append(cacheArr, "s-maxage="+toSeconds(config.SMaxAge))
 	}
 	cacheControl := ""
 	if len(cacheArr) > 1 {
 		cacheControl = strings.Join(cacheArr, ", ")
+	}
+	if cacheControl != "" && config.Immutable {
+		cacheControl += ", immutable"
 	}
 	skipper := config.Skipper
 	if skipper == nil {
@@ -251,7 +260,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 		if !config.DisableLastModified {
 			fileInfo := staticFile.Stat(file)
 			if fileInfo != nil {
-				lmd := fileInfo.ModTime().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT")
+				lmd := fileInfo.ModTime().UTC().Format(time.RFC1123)
 				c.SetHeader(elton.HeaderLastModified, lmd)
 			}
 		}

@@ -335,7 +335,7 @@ func TestErrorHandler(t *testing.T) {
 			c.SetHeader(key, "a")
 		}
 		message := "abcd"
-		e.Error(c, errors.New(message))
+		e.error(c, errors.New(message))
 		for _, key := range keys {
 			value := c.GetHeader(key)
 			assert.Equal(value, "", "the "+key+" header should be nil")
