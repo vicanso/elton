@@ -30,6 +30,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/vicanso/elton"
 	"github.com/vicanso/hes"
@@ -74,6 +75,28 @@ type (
 		Value  string
 	}
 )
+
+// bufferPool buffer pool for proxy read response content
+type bufferPool struct {
+	pool sync.Pool
+}
+
+func newBufferPool(size int) *bufferPool {
+	p := &bufferPool{}
+	p.pool.New = func() interface{} {
+		buf := make([]byte, size)
+		return &buf
+	}
+	return p
+}
+
+func (bp *bufferPool) Get() []byte {
+	p := bp.pool.Get().(*[]byte)
+	return *p
+}
+func (bp *bufferPool) Put(data []byte) {
+	bp.pool.Put(&data)
+}
 
 func captureTokens(pattern *regexp.Regexp, input string) *strings.Replacer {
 	groups := pattern.FindAllStringSubmatch(input, -1)
@@ -141,6 +164,8 @@ func NewProxy(config ProxyConfig) elton.Handler {
 	if skipper == nil {
 		skipper = elton.DefaultSkipper
 	}
+	// 默认使用32KB的buffer
+	bufPool := newBufferPool(32 * 1024)
 	return func(c *elton.Context) (err error) {
 		if skipper(c) {
 			return c.Next()
@@ -169,6 +194,7 @@ func NewProxy(config ProxyConfig) elton.Handler {
 		if config.Transport != nil {
 			p.Transport = config.Transport
 		}
+		p.BufferPool = bufPool
 		req := c.Request
 		var originalPath, originalHost string
 		if len(rewrites) != 0 {

@@ -261,3 +261,46 @@ func TestProxy(t *testing.T) {
 	}
 
 }
+
+func BenchmarkProxy(b *testing.B) {
+	// 使用target picker方法来获取target
+	l, target := newServer()
+	defer l.Close()
+
+	next := func() error {
+		return nil
+	}
+	fn := NewProxy(ProxyConfig{
+		Target: target,
+		Host:   "github.com",
+		Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+				DualStack: true,
+			}).DialContext,
+			ForceAttemptHTTP2:     true,
+			MaxIdleConns:          500,
+			MaxIdleConnsPerHost:   50,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+		Rewrites: []string{
+			"/api/*:/$1",
+		},
+	})
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		req := httptest.NewRequest("GET", "http://127.0.0.1/api/", nil)
+		resp := httptest.NewRecorder()
+		c := elton.NewContext(resp, req)
+		c.Next = next
+		err := fn(c)
+		if err != nil {
+			panic(err)
+		}
+
+	}
+}

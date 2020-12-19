@@ -202,16 +202,29 @@ func main() {
 ## bench
 
 ```
-BenchmarkRoutes-8                	 5626749	       220 ns/op	     152 B/op	       3 allocs/op
-BenchmarkGetFunctionName-8       	121043851	         9.61 ns/op	       0 B/op	       0 allocs/op
-BenchmarkContextGet-8            	14413359	        82.3 ns/op	      16 B/op	       1 allocs/op
-BenchmarkContextNewMap-8         	182361898	         6.60 ns/op	       0 B/op	       0 allocs/op
-BenchmarkConvertServerTiming-8   	 1377422	       878 ns/op	     360 B/op	      11 allocs/op
-BenchmarkGetStatus-8             	1000000000	         0.275 ns/op	       0 B/op	       0 allocs/op
-BenchmarkStatic-8                	   21412	     55142 ns/op	   25940 B/op	     628 allocs/op
-BenchmarkGitHubAPI-8             	   13143	     91191 ns/op	   33816 B/op	     812 allocs/op
-BenchmarkGplusAPI-8              	  271857	      4359 ns/op	    2144 B/op	      52 allocs/op
-BenchmarkParseAPI-8              	  136795	      8806 ns/op	    4287 B/op	     104 allocs/op
-BenchmarkRWMutexSignedKeys-8     	34447268	        33.8 ns/op
-BenchmarkAtomicSignedKeys-8      	1000000000	         0.412 ns/op
+goos: darwin
+goarch: amd64
+pkg: github.com/vicanso/elton
+BenchmarkRoutes-8                        5569852               214 ns/op             152 B/op          3 allocs/op
+BenchmarkGetFunctionName-8              124616256                9.61 ns/op            0 B/op          0 allocs/op
+BenchmarkContextGet-8                   13823508                84.1 ns/op            16 B/op          1 allocs/op
+BenchmarkContextNewMap-8                157319816                7.60 ns/op            0 B/op          0 allocs/op
+BenchmarkConvertServerTiming-8           1339969              1059 ns/op             360 B/op         11 allocs/op
+BenchmarkGetStatus-8                    1000000000               0.282 ns/op           0 B/op          0 allocs/op
+BenchmarkStatic-8                          20527             56061 ns/op           25975 B/op        628 allocs/op
+BenchmarkGitHubAPI-8                       13024             92207 ns/op           33829 B/op        812 allocs/op
+BenchmarkGplusAPI-8                       260158              4349 ns/op            2147 B/op         52 allocs/op
+BenchmarkParseAPI-8                       135792              8433 ns/op            4288 B/op        104 allocs/op
+BenchmarkRWMutexSignedKeys-8            75854030                15.9 ns/op             0 B/op          0 allocs/op
+BenchmarkAtomicSignedKeys-8             833694663                1.43 ns/op            0 B/op          0 allocs/op
+PASS
+ok      github.com/vicanso/elton        19.403s
+goos: darwin
+goarch: amd64
+pkg: github.com/vicanso/elton/middleware
+BenchmarkGenETag-8        244416              4521 ns/op             280 B/op          7 allocs/op
+BenchmarkMd5-8            196239              6011 ns/op             232 B/op          7 allocs/op
+BenchmarkProxy-8           14181             76270 ns/op           15840 B/op        105 allocs/op
+PASS
+ok      github.com/vicanso/elton/middleware     5.429s
 ```
