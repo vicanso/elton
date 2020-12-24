@@ -122,7 +122,7 @@ func TestResponder(t *testing.T) {
 			},
 			result:      bytes.NewBufferString("abc"),
 			statusCode:  200,
-			contentType: "text/plain; charset=UTF-8",
+			contentType: "text/plain; charset=utf-8",
 		},
 		// response byte
 		{
@@ -170,7 +170,7 @@ func TestResponder(t *testing.T) {
 			},
 			result:      bytes.NewBufferString(`{"name":"tree.xie"}`),
 			statusCode:  200,
-			contentType: "application/json; charset=UTF-8",
+			contentType: "application/json; charset=utf-8",
 		},
 		// response reader
 		{

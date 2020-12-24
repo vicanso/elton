@@ -230,11 +230,11 @@ func NewResponder(config ResponderConfig) elton.Handler {
 
 1、前置判断是否跳过中间件，主要判断条件为：是否出错，或者已设置`BodyBuffer`(表示已完成响应数据的处理)或者Body为Reader(以流的形式输出响应数据)。
 
-2、如果Body的类型为string，则将string转换为bytes，如果未设置数据类型，则设置为`text/plain; charset=UTF-8`
+2、如果Body的类型为string，则将string转换为bytes，如果未设置数据类型，则设置为`text/plain; charset=utf-8`
 
 3、如果Body的类型为[]byte，如果未设置数据类型，则设置为`application/octet-stream`
 
-4、对于其它类型，则使用marshal(默认为json.Marshal)转换为对应的[]byte，如果未设置数据类型，则设置Content-Type(默认为application/json; charset=UTF-8)
+4、对于其它类型，则使用marshal(默认为json.Marshal)转换为对应的[]byte，如果未设置数据类型，则设置Content-Type(默认为application/json; charset=utf-8)
 
 通过此中间件，在开发时可以简单的将各种struct对象，map对象以`json`的形式返回，无需要单独处理数据转换，方便快捷。如果应用需要以xml等其它形式返回，则可自定义marshal与contentType。
 

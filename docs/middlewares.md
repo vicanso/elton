@@ -523,7 +523,7 @@ func main() {
 用于将Body转换为对应的字节数据，并设置响应头。默认的处理为将struct(map)转换为json，对于不同的应用可以指定Marshal与ContentType来实现自定义响应。
 
 - `ResponderConfig.Marshal` 自定义的Marshal函数，默认为`json.Marshal`
-- `ResponderConfig.ContentType` 自定义的ContentType，默认为`application/json; charset=UTF-8`
+- `ResponderConfig.ContentType` 自定义的ContentType，默认为`application/json; charset=utf-8`
 
 **Example**
 ```go

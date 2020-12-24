@@ -157,7 +157,7 @@ func TestFormURLEncodedDecoder(t *testing.T) {
 	formURLEncodedDecoder := NewFormURLEncodedDecoder()
 	c := elton.NewContext(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
 	assert.False(formURLEncodedDecoder.Validate(c))
-	c.SetRequestHeader(elton.HeaderContentType, "application/x-www-form-urlencoded; charset=UTF-8")
+	c.SetRequestHeader(elton.HeaderContentType, "application/x-www-form-urlencoded; charset=utf-8")
 	assert.True(formURLEncodedDecoder.Validate(c))
 
 	tests := []struct {

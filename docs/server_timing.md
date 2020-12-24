@@ -71,7 +71,7 @@ curl -v 'http://127.0.0.1:3000/'
 < HTTP/1.1 200 OK
 < Cache-Control: no-cache
 < Content-Length: 44
-< Content-Type: application/json; charset=UTF-8
+< Content-Type: application/json; charset=utf-8
 < Server-Timing: elton-0;dur=0;desc="entry",elton-1;dur=0.03;desc="responder",elton-2;dur=0;desc="main.main.func3"
 < Date: Fri, 03 Jan 2020 13:08:50 GMT
 <
