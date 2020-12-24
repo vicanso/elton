@@ -111,9 +111,9 @@ const (
 	MaxRedirectCode = 308
 
 	// MIMETextPlain text plain
-	MIMETextPlain = "text/plain; charset=UTF-8"
+	MIMETextPlain = "text/plain; charset=utf-8"
 	// MIMEApplicationJSON application json
-	MIMEApplicationJSON = "application/json; charset=UTF-8"
+	MIMEApplicationJSON = "application/json; charset=utf-8"
 	// MIMEBinary binary data
 	MIMEBinary = "application/octet-stream"
 

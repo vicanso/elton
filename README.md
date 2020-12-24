@@ -1,5 +1,6 @@
 # Elton 
 
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/vicanso/elton/blob/master/LICENSE)
 [![Build Status](https://github.com/vicanso/elton/workflows/Test/badge.svg)](https://github.com/vicanso/elton/actions)
 
 
