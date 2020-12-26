@@ -42,7 +42,7 @@ HTTP响应数据，此属性为interface{}，因此可以设置不同的数据�
 
 ## BodyBuffer
 
-HTTP的响应数据缓冲（字节），此数据为真正返回的响应体，不建议直接赋值此属性，而应该则responder中间件将Body转换为字节(BodyBuffer)，并写入相应的`Content-Type`。
+HTTP的响应数据（字节），此数据为真正返回的响应体，大部分应用场景使用responder中间件将Body转换为字节赋值(BodyBuffer)，并写入相应的`Content-Type`则可，少量应用场景需要可以直接将响应数据赋值而不通过中间件处理。
 
 ## RequestBody
 
@@ -176,7 +176,7 @@ func main() {
 
 ## QueryParam
 
-获取query的参数值，此函数返回的并非字符串数组，只取数组的第一个，如果query中的相同的key的使用，请直接使用`Request.URL.Query()`来获取。
+获取query的参数值，此函数返回的并非字符串数组，只取数组的第一个，如果query中相同key的使用，请直接使用`Request.URL.Query()`来获取。
 
 **Example**
 ```go
@@ -534,7 +534,7 @@ func main() {
 
 ## MergeHeader
 
-合并HTTP头
+合并HTTP响应头
 
 **Example**
 ```go
@@ -870,7 +870,7 @@ func main() {
 
 ## Created
 
-设置HTTP请求的响应码为201，并设置响应体。
+设置HTTP请求的响应码为201，并设置响应体，等价于调用c.StatusCode = 201; c.Body = x;
 
 **Example**
 ```go

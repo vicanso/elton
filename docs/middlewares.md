@@ -8,7 +8,7 @@ description: 各类常用的中间件
 - [body parser](#body-parser) 请求数据的解析中间件，支持`application/json`以及`application/x-www-form-urlencoded`两种数据类型
 - [compress](#compress) 数据压缩中间件，默认仅支持gzip。如果需要支持更多的压缩方式，如brotli、snappy、zstd以及lz4，可以使用[elton-compress](https://github.com/vicanso/elton-compress)，也可根据需要增加相应的压缩处理
 - [concurrent limiter](#concurrent-limiter) 根据指定参数限制并发请求，可用于订单提交等防止重复提交或限制提交频率的场景
-- [error handler](#error-handler) 用于将处理函数的Error转换为对应的响应数据，如HTTP响应中的状态码(40x, 50x)，对应的出错类别等，建议在实际使用中根据项目自定义的Error对象生成相应的响应数据
+- [error handler](#error-handler) 用于将处理函数的Error转换为对应的响应数据，如HTTP响应中的状态码(4xx, 5xx)，对应的出错类别等，建议在实际使用中根据项目自定义的Error对象生成相应的响应数据
 - [etag](#etag) 用于生成HTTP响应数据的ETag
 - [fresh](#fresh) 判断HTTP请求是否未修改(Not Modified)
 - [json picker](https://github.com/vicanso/elton-json-picker) 用于从响应的JSON中筛选指定字段
@@ -18,7 +18,7 @@ description: 各类常用的中间件
 - [recover](#recover) 捕获程序的panic异常，避免程序崩溃
 - [responder](#responder) 响应处理中间件，用于将`Context.Body`(interface{})转换为对应的JSON数据并输出。如果系统使用xml等输出响应数据，可参考此中间件实现interface{}至xml的转换
 - [router-concurrent-limiter](#router-concurrent-limiter) 路由并发限制中间件，可以针对路由限制并发请求量。
-- [session](https://github.com/vicanso/elton-session) Session中间件，默认支持保存至redis或内存中，也可自定义相应的存储
+- [session](https://github.com/vicanso/elton-session) Session中间件，默认支持保存内存中，可自定义相应的存储实现保存至redis等数据库。
 - [stats](#stats) 请求处理的统计中间件，包括处理时长、状态码、响应数据长度、连接数等信息
 - [static serve](#static-serve) 静态文件处理中间件，默认支持从目录中读取静态文件或实现StaticFile的相关接口，从[packr](github.com/gobuffalo/packr/v2)或者数据库(mongodb)等读取文件
 - [tracker](#tracker) 可以用于在POST、PUT等提交类的接口中增加跟踪日志，此中间件将输出QueryString，Params以及RequestBody部分，并能将指定的字段做"***"的处理，避免输出敏感信息

@@ -59,7 +59,7 @@ func main() {
 
 自定义的Error处理，若路由处理过程中返回Error，则会触发此调用，若未指定此处理函数，则使用默认的处理，简单的输出`err.Error()`。
 
-注意若在处理过程中返回的Error已被处理（如Error Handler），则并不会触发此出错调用，尽量使用中间件将Error转换为相应的输出，如JSON。
+注意若在处理过程中返回的Error已被处理（如Error Handler），则并不会触发此出错调用，尽量使用中间件将Error转换为相应的输出（如JSON），而此处理仅用于针对未处理出错响应。
 
 **Example**
 ```go
@@ -138,7 +138,7 @@ func main() {
 
 ## MethodNotAllowedHandler
 
-该HTTP请求方式不允许，路由匹配正确但是method不匹配时，则会调用此函数（此时所有的中间件也不会被调用）。如果有相关统计需要或者自定义的404页面，则可调整此函数，否则可不设置使用默认处理(返回405 Method Not Allowed)。
+该HTTP请求方式不允许，路由匹配正确但是method不匹配时，则会调用此函数（此时所有的中间件也不会被调用）。如果有相关统计需要或者自定义的405页面，则可调整此函数，否则可不设置使用默认处理(返回405 Method Not Allowed)。
 
 ***Example***
 ```go
@@ -155,7 +155,7 @@ import (
 func main() {
 	e := elton.New()
 
-	e.NotFoundHandler = func(resp http.ResponseWriter, req *http.Request) {
+	e.MethodNotAllowedHandler = func(resp http.ResponseWriter, req *http.Request) {
 		// 可增加统计，方便分析405的处理是被攻击还是接口调用错误
 		log.Printf("405, method: %s, url:%s", req.Method, req.RequestURI)
 		resp.WriteHeader(http.StatusMethodNotAllowed)

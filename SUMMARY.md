@@ -1,5 +1,7 @@
 # Summary
 
+* [Introduction](./docs/introduction.md)
+
 * [Application](./docs/application.md)
 
 * [Context](./docs/context.md)
@@ -9,8 +11,6 @@
 * [Middlewares](./docs/middlewares.md)
 
 ## More
-
-* [Introduction](./docs/introduction.md)
 
 * [Body parse and validate](./docs/body_parse_validate.md)
 
