@@ -23,6 +23,7 @@
 package elton
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -207,13 +208,18 @@ func (e *Elton) Close() error {
 	return e.Server.Close()
 }
 
+// Shutdown shotdown the http server
+func (e *Elton) Shutdown() error {
+	return e.Server.Shutdown(context.Background())
+}
+
 // GracefulClose graceful close the http server.
 // It sets the status to be closing and delay to close.
 func (e *Elton) GracefulClose(delay time.Duration) error {
 	atomic.StoreInt32(&e.status, StatusClosing)
 	time.Sleep(delay)
 	atomic.StoreInt32(&e.status, StatusClosed)
-	return e.Close()
+	return e.Shutdown()
 }
 
 // GetStatus get status of elton

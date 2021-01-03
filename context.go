@@ -91,6 +91,8 @@ type (
 	}
 )
 
+var _ http.ResponseWriter = (*Context)(nil)
+
 var (
 	errSignKeyIsNil = hes.New("keys for sign cookie can't be nil")
 )
