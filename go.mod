@@ -3,7 +3,7 @@ module github.com/vicanso/elton
 go 1.12
 
 require (
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.6.7
 	github.com/vicanso/fresh v1.0.0
 	github.com/vicanso/hes v0.3.0
