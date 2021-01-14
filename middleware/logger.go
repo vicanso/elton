@@ -88,9 +88,11 @@ type (
 	OnLog func(string, *elton.Context)
 	// LoggerConfig logger config
 	LoggerConfig struct {
-		Format  string
-		OnLog   OnLog
-		Skipper elton.Skipper
+		// DefaultFill default fill for empty value
+		DefaultFill string
+		Format      string
+		OnLog       OnLog
+		Skipper     elton.Skipper
 	}
 )
 
@@ -191,7 +193,7 @@ func parseLoggerTags(desc []byte) []*LoggerTag {
 }
 
 // formatLog 格式化访问日志信息
-func formatLog(c *elton.Context, tags []*LoggerTag, startedAt time.Time) string {
+func formatLog(c *elton.Context, tags []*LoggerTag, startedAt time.Time, defaultFill string) string {
 	fn := func(tag *LoggerTag) string {
 		switch tag.category {
 		case host:
@@ -277,17 +279,13 @@ func formatLog(c *elton.Context, tags []*LoggerTag, startedAt time.Time) string 
 
 	arr := make([]string, 0, len(tags))
 	for _, tag := range tags {
-		arr = append(arr, fn(tag))
+		v := fn(tag)
+		if v == "" {
+			v = defaultFill
+		}
+		arr = append(arr, v)
 	}
 	return strings.Join(arr, "")
-}
-
-// GenerateLog generate log function
-func GenerateLog(layout string) func(*elton.Context, time.Time) string {
-	tags := parseLoggerTags([]byte(layout))
-	return func(c *elton.Context, startedAt time.Time) string {
-		return formatLog(c, tags, startedAt)
-	}
 }
 
 // New create a logger middleware
@@ -309,7 +307,7 @@ func NewLogger(config LoggerConfig) elton.Handler {
 		}
 		startedAt := time.Now()
 		err = c.Next()
-		str := formatLog(c, tags, startedAt)
+		str := formatLog(c, tags, startedAt, config.DefaultFill)
 		config.OnLog(str, c)
 		return err
 	}

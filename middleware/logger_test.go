@@ -47,11 +47,10 @@ func TestLogger(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("normal", func(t *testing.T) {
 		config := LoggerConfig{
-			Format: "{host} {remote} {real-ip} {method} {path} {proto} {query} {scheme} {uri} {referer} {userAgent} {size} {size-human} {status} {payload-size} {payload-size-human}",
+			DefaultFill: "-",
+			Format:      "{host} {remote} {real-ip} {method} {path} {proto} {query} {scheme} {uri} {referer} {userAgent} {size} {size-human} {status} {payload-size} {payload-size-human} {<x-empty}",
 			OnLog: func(log string, _ *elton.Context) {
-				if log != "aslant.site 192.0.2.1:1234 192.0.2.1 GET / HTTP/1.1 a=1&b=2 HTTPS https://aslant.site/?a=1&b=2 https://aslant.site/ test-agent 13 13B 200 12 12B" {
-					t.Fatalf("log format fail")
-				}
+				assert.Equal("aslant.site 192.0.2.1:1234 192.0.2.1 GET / HTTP/1.1 a=1&b=2 HTTPS https://aslant.site/?a=1&b=2 https://aslant.site/ test-agent 13 13B 200 12 12B -", log)
 			},
 		}
 		m := NewLogger(config)
@@ -164,21 +163,6 @@ func TestLogger(t *testing.T) {
 		}
 		err := m(c)
 		assert.Nil(err)
-	})
-
-	t.Run("get log function", func(t *testing.T) {
-		layout := "{host} {remote} {real-ip} {method} {path} {proto} {query} {scheme} {uri} {referer} {userAgent} {size} {size-human} {status} {payload-size} {payload-size-human}"
-		fn := GenerateLog(layout)
-		req := httptest.NewRequest("GET", "https://aslant.site/?a=1&b=2", nil)
-		req.Header.Set("Referer", "https://aslant.site/")
-		req.Header.Set("User-Agent", "test-agent")
-		resp := httptest.NewRecorder()
-		c := elton.NewContext(resp, req)
-		c.BodyBuffer = bytes.NewBufferString("response-body")
-		c.RequestBody = []byte("request-body")
-		c.StatusCode = 200
-		startedAt := time.Now()
-		assert.Equal("aslant.site 192.0.2.1:1234 192.0.2.1 GET / HTTP/1.1 a=1&b=2 HTTPS https://aslant.site/?a=1&b=2 https://aslant.site/ test-agent 13 13B 200 12 12B", fn(c, startedAt))
 	})
 
 }
