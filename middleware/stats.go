@@ -74,7 +74,7 @@ func NewStats(config StatsConfig) elton.Handler {
 		if skipper(c) {
 			return c.Next()
 		}
-		atomic.AddUint32(&connectingCount, 1)
+		connecting := atomic.AddUint32(&connectingCount, 1)
 		defer atomic.AddUint32(&connectingCount, ^uint32(0))
 
 		startedAt := time.Now()
@@ -89,7 +89,7 @@ func NewStats(config StatsConfig) elton.Handler {
 			Method:     req.Method,
 			Route:      c.Route,
 			URI:        uri,
-			Connecting: connectingCount,
+			Connecting: connecting,
 			IP:         c.RealIP(),
 		}
 

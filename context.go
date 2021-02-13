@@ -551,14 +551,14 @@ func (c *Context) cleanContent() {
 
 // NoContent no content for response
 func (c *Context) NoContent() {
-	c.StatusCode = http.StatusNoContent
 	c.cleanContent()
+	c.StatusCode = http.StatusNoContent
 }
 
 // NotModified response not modified
 func (c *Context) NotModified() {
-	c.StatusCode = http.StatusNotModified
 	c.cleanContent()
+	c.StatusCode = http.StatusNotModified
 }
 
 // NoCache set http response no cache
