@@ -38,6 +38,7 @@ import (
 	"time"
 
 	"github.com/vicanso/hes"
+	intranetip "github.com/vicanso/intranet-ip"
 )
 
 const (
@@ -159,6 +160,11 @@ func NewGroup(path string, handlerList ...Handler) *Group {
 		Path:        path,
 		HandlerList: handlerList,
 	}
+}
+
+// IsIntranet check ip is intranet
+func IsIntranet(ip string) bool {
+	return intranetip.Is(net.ParseIP(ip))
 }
 
 // SetFunctionName set function name

@@ -171,9 +171,10 @@ func TestProxy(t *testing.T) {
 				Transport: &http.Transport{},
 			}),
 			err: &hes.Error{
-				Category:  ErrProxyCategory,
-				Message:   "dial tcp 127.0.0.1:443: connect: connection refused",
-				Exception: true,
+				Category:   ErrProxyCategory,
+				StatusCode: 400,
+				Message:    "dial tcp 127.0.0.1:443: connect: connection refused",
+				Exception:  true,
 			},
 			target: "https://127.0.0.1",
 		},

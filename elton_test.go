@@ -38,6 +38,14 @@ import (
 	"github.com/vicanso/hes"
 )
 
+func TestIntranet(t *testing.T) {
+	assert := assert.New(t)
+
+	assert.True(IsIntranet("127.0.0.1"))
+	assert.True(IsIntranet("192.168.1.1"))
+	assert.False(IsIntranet("1.1.1.1"))
+}
+
 func TestSkipper(t *testing.T) {
 	c := &Context{
 		Committed: true,
@@ -296,7 +304,7 @@ func TestHandle(t *testing.T) {
 		resp := httptest.NewRecorder()
 		e.ServeHTTP(resp, req)
 		assert.Equal(http.StatusBadRequest, resp.Code, "default hes error status code should be 400")
-		assert.Equal("message=abcd", resp.Body.String())
+		assert.Equal("statusCode=400, message=abcd", resp.Body.String())
 	})
 
 	t.Run("get routers", func(t *testing.T) {

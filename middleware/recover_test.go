@@ -60,7 +60,7 @@ func TestRecoverResponseText(t *testing.T) {
 
 	e.ServeHTTP(resp, req)
 	assert.Equal(http.StatusInternalServerError, resp.Code)
-	assert.Equal("category=elton-recover, message=abc", resp.Body.String())
+	assert.Equal("statusCode=500, category=elton-recover, message=abc", resp.Body.String())
 	assert.True(ctx.Committed)
 	assert.True(catchError)
 	for _, key := range keys {

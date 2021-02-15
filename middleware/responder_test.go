@@ -105,9 +105,10 @@ func TestResponder(t *testing.T) {
 				return c
 			},
 			err: &hes.Error{
-				Message:   "json: unsupported type: func()",
-				Category:  ErrResponderCategory,
-				Exception: true,
+				Message:    "json: unsupported type: func()",
+				StatusCode: 500,
+				Category:   ErrResponderCategory,
+				Exception:  true,
 			},
 		},
 		// response string

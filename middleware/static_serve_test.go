@@ -205,7 +205,7 @@ func TestStaticServe(t *testing.T) {
 				}
 				return c
 			},
-			err: errors.New("category=elton-static-serve, message=abcd"),
+			err: errors.New("statusCode=500, category=elton-static-serve, message=abcd"),
 		},
 		// image
 		{
