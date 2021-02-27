@@ -129,7 +129,7 @@ func DefaultSkipper(c *Context) bool {
 	return c.Committed
 }
 
-// New create an elton instance
+// New returns a new elton instance
 func New() *Elton {
 	e := NewWithoutServer()
 	s := &http.Server{
@@ -139,7 +139,7 @@ func New() *Elton {
 	return e
 }
 
-// NewWithoutServer create an elton instance without http server
+// NewWithoutServer returns a new elton instance without http server
 func NewWithoutServer() *Elton {
 	e := &Elton{
 		tree:          new(node),
@@ -154,7 +154,7 @@ func NewWithoutServer() *Elton {
 	return e
 }
 
-// NewGroup new group
+// NewGroup returns a new  router group
 func NewGroup(path string, handlerList ...Handler) *Group {
 	return &Group{
 		Path:        path,
@@ -162,18 +162,19 @@ func NewGroup(path string, handlerList ...Handler) *Group {
 	}
 }
 
-// IsIntranet check ip is intranet
+// IsIntranet judgets whether the ip is intranet
 func IsIntranet(ip string) bool {
 	return intranetip.Is(net.ParseIP(ip))
 }
 
-// SetFunctionName set function name
+// SetFunctionName sets the name of handler function,
+// it will use to http timing
 func (e *Elton) SetFunctionName(fn interface{}, name string) {
 	p := reflect.ValueOf(fn).Pointer()
 	e.functionInfos[p] = name
 }
 
-// GetFunctionName get function name
+// GetFunctionName return the name of handler function
 func (e *Elton) GetFunctionName(fn interface{}) string {
 	p := reflect.ValueOf(fn).Pointer()
 	name := e.functionInfos[p]
@@ -183,7 +184,8 @@ func (e *Elton) GetFunctionName(fn interface{}) string {
 	return runtime.FuncForPC(p).Name()
 }
 
-// ListenAndServe listen and serve for http server
+// ListenAndServe listens the addr and serve http,
+// it will throw panic if the server of elton is nil.
 func (e *Elton) ListenAndServe(addr string) error {
 	if e.Server == nil {
 		panic(errors.New("server is not initialized"))
@@ -192,7 +194,8 @@ func (e *Elton) ListenAndServe(addr string) error {
 	return e.Server.ListenAndServe()
 }
 
-// ListenAndServeTLS listend and serve for https server
+// ListenAndServeTLS listens the addr and server https,
+// it will throw panic if the server of elton is nil.
 func (e *Elton) ListenAndServeTLS(addr, certFile, keyFile string) error {
 	if e.Server == nil {
 		panic(errors.New("server is not initialized"))
@@ -201,7 +204,8 @@ func (e *Elton) ListenAndServeTLS(addr, certFile, keyFile string) error {
 	return e.Server.ListenAndServeTLS(certFile, keyFile)
 }
 
-// Serve serve for http server
+// Serve serves http server,
+// it will throw panic if the server of elton is nil.
 func (e *Elton) Serve(l net.Listener) error {
 	if e.Server == nil {
 		panic(errors.New("server is not initialized"))
@@ -209,17 +213,17 @@ func (e *Elton) Serve(l net.Listener) error {
 	return e.Server.Serve(l)
 }
 
-// Close close the http server
+// Close closes the http server
 func (e *Elton) Close() error {
 	return e.Server.Close()
 }
 
-// Shutdown shotdown the http server
+// Shutdown shotdowns the http server
 func (e *Elton) Shutdown() error {
 	return e.Server.Shutdown(context.Background())
 }
 
-// GracefulClose graceful close the http server.
+// GracefulClose closes the http server graceful.
 // It sets the status to be closing and delay to close.
 func (e *Elton) GracefulClose(delay time.Duration) error {
 	atomic.StoreInt32(&e.status, StatusClosing)
@@ -228,17 +232,17 @@ func (e *Elton) GracefulClose(delay time.Duration) error {
 	return e.Shutdown()
 }
 
-// GetStatus get status of elton
+// GetStatus returns status of elton
 func (e *Elton) GetStatus() int32 {
 	return atomic.LoadInt32(&e.status)
 }
 
-// Closing check status of elton is closing
+// Closing judge the status whether is closing
 func (e *Elton) Closing() bool {
 	return e.GetStatus() == StatusClosing
 }
 
-// Running check status of elton is running
+// Running judge the status whether is running
 func (e *Elton) Running() bool {
 	return e.GetStatus() == StatusRunning
 }
@@ -287,7 +291,7 @@ func (e *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// GetRouters get routers
+// GetRouters returns routers of elton
 func (e *Elton) GetRouters() []RouterInfo {
 	routers := make([]RouterInfo, len(e.routers))
 	for index, r := range e.routers {
@@ -296,7 +300,7 @@ func (e *Elton) GetRouters() []RouterInfo {
 	return routers
 }
 
-// Handle add http handle function
+// Handle adds http handle function
 func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 	for _, fn := range handlerList {
 		name := e.GetFunctionName(fn)
@@ -402,47 +406,47 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 	return e
 }
 
-// GET add http get method handle
+// GET adds http get method handle
 func (e *Elton) GET(path string, handlerList ...Handler) *Elton {
 	return e.Handle(http.MethodGet, path, handlerList...)
 }
 
-// POST add http post method handle
+// POST adds http post method handle
 func (e *Elton) POST(path string, handlerList ...Handler) *Elton {
 	return e.Handle(http.MethodPost, path, handlerList...)
 }
 
-// PUT add http put method handle
+// PUT adds http put method handle
 func (e *Elton) PUT(path string, handlerList ...Handler) *Elton {
 	return e.Handle(http.MethodPut, path, handlerList...)
 }
 
-// PATCH add http patch method handle
+// PATCH adds http patch method handle
 func (e *Elton) PATCH(path string, handlerList ...Handler) *Elton {
 	return e.Handle(http.MethodPatch, path, handlerList...)
 }
 
-// DELETE add http delete method handle
+// DELETE adds http delete method handle
 func (e *Elton) DELETE(path string, handlerList ...Handler) *Elton {
 	return e.Handle(http.MethodDelete, path, handlerList...)
 }
 
-// HEAD add http head method handle
+// HEAD adds http head method handle
 func (e *Elton) HEAD(path string, handlerList ...Handler) *Elton {
 	return e.Handle(http.MethodHead, path, handlerList...)
 }
 
-// OPTIONS add http options method handle
+// OPTIONS adds http options method handle
 func (e *Elton) OPTIONS(path string, handlerList ...Handler) *Elton {
 	return e.Handle(http.MethodOptions, path, handlerList...)
 }
 
-// TRACE add http trace method handle
+// TRACE adds http trace method handle
 func (e *Elton) TRACE(path string, handlerList ...Handler) *Elton {
 	return e.Handle(http.MethodTrace, path, handlerList...)
 }
 
-// ALL add http all method handle
+// ALL adds http all method handle
 func (e *Elton) ALL(path string, handlerList ...Handler) *Elton {
 	for _, method := range methods {
 		e.Handle(method, path, handlerList...)
@@ -450,7 +454,7 @@ func (e *Elton) ALL(path string, handlerList ...Handler) *Elton {
 	return e
 }
 
-// Use add middleware function handle
+// Use adds middleware handler function to elton's middleware list
 func (e *Elton) Use(handlerList ...Handler) *Elton {
 	if e.middlewares == nil {
 		e.middlewares = make([]Handler, 0)
@@ -463,13 +467,13 @@ func (e *Elton) Use(handlerList ...Handler) *Elton {
 	return e
 }
 
-// UseWithName add middleware and set function's name
+// UseWithName adds middleware and set handler function's name
 func (e *Elton) UseWithName(handler Handler, name string) *Elton {
 	e.SetFunctionName(handler, name)
 	return e.Use(handler)
 }
 
-// Pre add pre middleware function handler
+// Pre adds pre middleware function handler to elton's pre middleware list
 func (e *Elton) Pre(handlerList ...PreHandler) *Elton {
 	if e.preMiddlewares == nil {
 		e.preMiddlewares = make([]PreHandler, 0)
@@ -538,7 +542,7 @@ func (e *Elton) error(c *Context, err error) *Elton {
 	return e
 }
 
-// EmitError emit error function
+// EmitError emits an error event, it will call the listen functions of error event
 func (e *Elton) EmitError(c *Context, err error) *Elton {
 	lns := e.errorListeners
 	for _, ln := range lns {
@@ -554,7 +558,7 @@ func (e *Elton) emitError(resp http.ResponseWriter, req *http.Request, err error
 	}, err)
 }
 
-// OnError on error function
+// OnError adds listen to error event
 func (e *Elton) OnError(ln ErrorListener) *Elton {
 	if e.errorListeners == nil {
 		e.errorListeners = make([]ErrorListener, 0)
@@ -563,7 +567,7 @@ func (e *Elton) OnError(ln ErrorListener) *Elton {
 	return e
 }
 
-// EmitTrace emit trace
+// EmitTrace emits a trace event, it will call the listen functions of trace event
 func (e *Elton) EmitTrace(c *Context, infos TraceInfos) *Elton {
 	lns := e.traceListeners
 	for _, ln := range lns {
@@ -572,7 +576,7 @@ func (e *Elton) EmitTrace(c *Context, infos TraceInfos) *Elton {
 	return e
 }
 
-// OnTrace on trace function
+// OnTrace adds listen to trace event
 func (e *Elton) OnTrace(ln TraceListener) *Elton {
 	if e.traceListeners == nil {
 		e.traceListeners = make([]TraceListener, 0)
@@ -581,7 +585,7 @@ func (e *Elton) OnTrace(ln TraceListener) *Elton {
 	return e
 }
 
-// AddGroup add the group to elton
+// AddGroup adds the group to elton
 func (e *Elton) AddGroup(g *Group) *Elton {
 	for _, r := range g.routers {
 		e.Handle(r.Method, r.Path, r.HandleList...)
@@ -608,63 +612,63 @@ func (g *Group) add(method, path string, handlerList ...Handler) {
 	})
 }
 
-// GET add group http get method handler
+// GET adds http get method handler to group
 func (g *Group) GET(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.add(http.MethodGet, p, fns...)
 }
 
-// POST add group http post method handler
+// POST adds http post method handler to group
 func (g *Group) POST(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.add(http.MethodPost, p, fns...)
 }
 
-// PUT add group http put method handler
+// PUT adds http put method handler to group
 func (g *Group) PUT(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.add(http.MethodPut, p, fns...)
 }
 
-// PATCH add group http patch method handler
+// PATCH adds http patch method handler to group
 func (g *Group) PATCH(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.add(http.MethodPatch, p, fns...)
 }
 
-// DELETE add group http delete method handler
+// DELETE adds http delete method handler to group
 func (g *Group) DELETE(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.add(http.MethodDelete, p, fns...)
 }
 
-// HEAD add group http head method handler
+// HEAD adds http head method handler to group
 func (g *Group) HEAD(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.add(http.MethodHead, p, fns...)
 }
 
-// OPTIONS add group http options method handler
+// OPTIONS adds http options method handler to group
 func (g *Group) OPTIONS(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.add(http.MethodOptions, p, fns...)
 }
 
-// TRACE add group http trace method handler
+// TRACE adds http trace method handler to group
 func (g *Group) TRACE(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	g.add(http.MethodTrace, p, fns...)
 }
 
-// ALL add group http all method handler
+// ALL adds http all methods handler to group
 func (g *Group) ALL(path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
@@ -673,7 +677,7 @@ func (g *Group) ALL(path string, handlerList ...Handler) {
 	}
 }
 
-// Compose compose handler list
+// Compose composes handler list as a handler
 func Compose(handlerList ...Handler) Handler {
 	max := len(handlerList)
 	if max == 0 {
@@ -722,7 +726,7 @@ func getMs(ns int) string {
 	return prefix + "." + strconv.Itoa(offset/unit)
 }
 
-// ServerTiming trace infos to server timing
+// ServerTiming return server timing with prefix
 func (traceInfos TraceInfos) ServerTiming(prefix string) string {
 	size := len(traceInfos)
 	if size == 0 {

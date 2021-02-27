@@ -61,7 +61,8 @@ func getBasicAuthError(err error, statusCode int) *hes.Error {
 	return he
 }
 
-// NewDefaultBasicAuth new default basic auth
+// NewDefaultBasicAuth returns a new basic auth middleware,
+// it will check the account and password, it will returns an error if check failed
 func NewDefaultBasicAuth(account, password string) elton.Handler {
 	return NewBasicAuth(BasicAuthConfig{
 		Validate: func(acc, pwd string, c *elton.Context) (bool, error) {
@@ -73,7 +74,7 @@ func NewDefaultBasicAuth(account, password string) elton.Handler {
 	})
 }
 
-// New new basic auth
+// NewBasicAuth create a basic auth middleware, it will throw an error if the the validate function is nil.
 func NewBasicAuth(config BasicAuthConfig) elton.Handler {
 	if config.Validate == nil {
 		panic(ErrBasicAuthRequireValidateFunction)

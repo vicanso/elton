@@ -78,7 +78,8 @@ func convertMap(data map[string]string, mask *regexp.Regexp) map[string]string {
 	return m
 }
 
-// NewTracker create a tracker middleware
+// NewTracker returns a new tracker middleware,
+// it will throw a panic if OnTrack function is nil.
 func NewTracker(config TrackerConfig) elton.Handler {
 	mask := config.Mask
 	if mask == nil {

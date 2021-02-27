@@ -156,7 +156,7 @@ func (fd *formURLEncodedDecoder) Decode(c *elton.Context, originalData []byte) (
 	return data, nil
 }
 
-// AddDecoder add decoder
+// AddDecoder to body parser config
 func (conf *BodyParserConfig) AddDecoder(decoder BodyDecoder) {
 	if len(conf.Decoders) == 0 {
 		conf.Decoders = make([]BodyDecoder, 0)
@@ -164,28 +164,28 @@ func (conf *BodyParserConfig) AddDecoder(decoder BodyDecoder) {
 	conf.Decoders = append(conf.Decoders, decoder)
 }
 
-// NewGzipDecoder new gzip decoder
+// NewGzipDecoder returns a new gzip decoder
 func NewGzipDecoder() BodyDecoder {
 	return &gzipDecoder{}
 }
 
-// NewJSONDecoder new json decoder
+// NewJSONDecoder returns a new json decoder, it only support application/json
 func NewJSONDecoder() BodyDecoder {
 	return &jsonDecoder{}
 }
 
-// NewFormURLEncodedDecoder new form url encode decoder
+// NewFormURLEncodedDecoder retruns a new url encoded decoder, it only support application/x-www-form-urlencoded
 func NewFormURLEncodedDecoder() BodyDecoder {
 	return &formURLEncodedDecoder{}
 }
 
-// DefaultJSONContentTypeValidate default json content type validate
+// DefaultJSONContentTypeValidate for validate json content type
 func DefaultJSONContentTypeValidate(c *elton.Context) bool {
 	ct := c.GetRequestHeader(elton.HeaderContentType)
 	return strings.HasPrefix(ct, jsonContentType)
 }
 
-// DefaultJSONAndFormContentTypeValidate default json and form content type validate
+// DefaultJSONAndFormContentTypeValidate for validate json content type and form url encoded content type
 func DefaultJSONAndFormContentTypeValidate(c *elton.Context) bool {
 	ct := c.GetRequestHeader(elton.HeaderContentType)
 	if strings.HasPrefix(ct, jsonContentType) {
@@ -194,7 +194,8 @@ func DefaultJSONAndFormContentTypeValidate(c *elton.Context) bool {
 	return strings.HasPrefix(ct, formURLEncodedContentType)
 }
 
-// NewDefaultBodyParser create a default body parser, default limit and only json parser
+// NewDefaultBodyParser returns a new default body parser, which include gzip and json decoder.
+// The body size is limited to 50KB.
 func NewDefaultBodyParser() elton.Handler {
 	conf := BodyParserConfig{
 		ContentTypeValidate: DefaultJSONContentTypeValidate,
@@ -261,7 +262,10 @@ func MaxBytesReader(r io.ReadCloser, n int64) *maxBytesReader {
 	}
 }
 
-// NewBodyParser create a body parser
+// NewBodyParser returns a new body parser middleware.
+// If limit < 0, it will be no limit for the body data.
+// If limit = 0, it will use the defalt limit(50KB) for the body data.
+// JSON content type validate is the default content validate function.
 func NewBodyParser(config BodyParserConfig) elton.Handler {
 	limit := defaultRequestBodyLimit
 	if config.Limit != 0 {

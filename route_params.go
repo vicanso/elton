@@ -28,20 +28,20 @@ type RouteParams struct {
 	methodNotAllowed bool
 }
 
-// Add will append a URL parameter to the end of the route param
+// Add a URL parameter to the end of the route param
 func (s *RouteParams) Add(key, value string) {
 	s.Keys = append(s.Keys, key)
 	s.Values = append(s.Values, value)
 }
 
-// Reset reset the params
+// Reset the params
 func (s *RouteParams) Reset() {
 	s.Keys = s.Keys[:0]
 	s.Values = s.Values[:0]
 	s.methodNotAllowed = false
 }
 
-// Get get param's value by key
+// Get value from params
 func (s *RouteParams) Get(key string) (value string) {
 	index := -1
 	for i, k := range s.Keys {
@@ -56,7 +56,7 @@ func (s *RouteParams) Get(key string) (value string) {
 	return
 }
 
-// ToMap convert route params to map[string]string
+// ToMap converts route params to map[string]string
 func (s *RouteParams) ToMap() map[string]string {
 	m := make(map[string]string, len(s.Keys))
 	for index, key := range s.Keys {

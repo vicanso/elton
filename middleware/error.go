@@ -44,12 +44,13 @@ const (
 	ErrErrorCategory = "elton-error"
 )
 
-// NewDefaultError create a default error handler
+// NewDefaultError return a new error handler, it will convert the error to hes.Error and response.
+// JSON will be used is client's request accept header support application/json, otherwise text will be used.
 func NewDefaultError() elton.Handler {
 	return NewError(ErrorConfig{})
 }
 
-// NewError create a error handler
+// NewError return a new error handler.
 func NewError(config ErrorConfig) elton.Handler {
 	skipper := config.Skipper
 	if skipper == nil {

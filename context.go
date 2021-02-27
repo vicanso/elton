@@ -102,7 +102,7 @@ const (
 	SignedCookieSuffix = ".sig"
 )
 
-// Reset reset context
+// Reset all fields of context
 func (c *Context) Reset() {
 	c.Request = nil
 	c.Response = nil
@@ -122,18 +122,21 @@ func (c *Context) Reset() {
 	c.cacheQuery = nil
 }
 
-// GetRemoteAddr get remote addr
+// GetRemoteAddr returns the remote addr of request
 func GetRemoteAddr(req *http.Request) string {
 	remoteAddr, _, _ := net.SplitHostPort(req.RemoteAddr)
 	return remoteAddr
 }
 
-// RemoteAddr get remote address
+// RemoteAddr returns the remote addr of request
 func (c *Context) RemoteAddr() string {
 	return GetRemoteAddr(c.Request)
 }
 
-// GetRealIP get real ip
+// GetRealIP returns the real ip of request,
+// it will get ip from x-forwared-for from request header,
+// if not exists then it will get ip from x-real-ip from request header,
+// if not exists then it will use remote addr.
 func GetRealIP(req *http.Request) string {
 	h := req.Header
 	ip := h.Get(HeaderXForwardedFor)
@@ -147,7 +150,10 @@ func GetRealIP(req *http.Request) string {
 	return GetRemoteAddr(req)
 }
 
-// RealIP get the real ip
+// RealIP returns the real ip of request,
+// it will get ip from x-forwared-for from request header,
+// if not exists then it will get ip from x-real-ip from request header,
+// if not exists then it will use remote addr.
 func (c *Context) RealIP() string {
 	if c.realIP != "" {
 		return c.realIP
@@ -156,7 +162,10 @@ func (c *Context) RealIP() string {
 	return c.realIP
 }
 
-// GetClientIP get client ip
+// GetClientIP returns the client ip of request,
+// it will get ip from x-forwared-for from request header and get the first public ip,
+// if not exists then it will get ip from x-real-ip from request header,
+// if not exists then it will use remote addr.
 func GetClientIP(req *http.Request) string {
 	h := req.Header
 	ip := h.Get(HeaderXForwardedFor)
@@ -183,9 +192,10 @@ func GetClientIP(req *http.Request) string {
 	return GetRemoteAddr(req)
 }
 
-// ClientIP get the client ip
-// get the first public ip from x-forwarded-for --> x-real-ip
-// if not found, then get remote addr
+// ClientIP returns the client ip of request,
+// it will get ip from x-forwared-for from request header and get the first public ip,
+// if not exists then it will get ip from x-real-ip from request header,
+// if not exists then it will use remote addr.
 func (c *Context) ClientIP() string {
 	if c.clientIP != "" {
 		return c.clientIP
@@ -194,7 +204,7 @@ func (c *Context) ClientIP() string {
 	return c.clientIP
 }
 
-// Param get the value from route params
+// Param returns the route param value
 func (c *Context) Param(name string) string {
 	if c.Params == nil {
 		return ""
@@ -202,7 +212,7 @@ func (c *Context) Param(name string) string {
 	return c.Params.Get(name)
 }
 
-// getCacheQuery get the cache query
+// getCacheQuery returns the cache of query
 func (c *Context) getCacheQuery() url.Values {
 	if c.cacheQuery == nil {
 		c.cacheQuery = c.Request.URL.Query()
@@ -210,7 +220,7 @@ func (c *Context) getCacheQuery() url.Values {
 	return c.cacheQuery
 }
 
-// QueryParam get the value from query
+// QueryParam returns the query param value
 func (c *Context) QueryParam(name string) string {
 	query := c.getCacheQuery()
 	values := query[name]
@@ -220,7 +230,7 @@ func (c *Context) QueryParam(name string) string {
 	return values[0]
 }
 
-// Query get the query map.
+// Query returns the query map.
 // It will return map[string]string, not the same as url.Values
 // If want to get url.Values, use c.Request.URL.Query()
 func (c *Context) Query() map[string]string {
@@ -232,7 +242,7 @@ func (c *Context) Query() map[string]string {
 	return m
 }
 
-// Redirect redirect the http request
+// Redirect the http request to new location
 func (c *Context) Redirect(code int, url string) (err error) {
 	if code < MinRedirectCode || code > MaxRedirectCode {
 		err = ErrInvalidRedirect
@@ -247,7 +257,7 @@ func (c *Context) Redirect(code int, url string) (err error) {
 	return
 }
 
-// Set store the value in the context
+// Set the value to the context
 func (c *Context) Set(key, value interface{}) {
 	if c.m == nil {
 		c.m = make(map[interface{}]interface{}, 5)
@@ -255,7 +265,7 @@ func (c *Context) Set(key, value interface{}) {
 	c.m[key] = value
 }
 
-// Get get the value from context
+// Get the value from context
 func (c *Context) Get(key interface{}) (value interface{}, exists bool) {
 	if c.m == nil {
 		return nil, false
@@ -264,7 +274,7 @@ func (c *Context) Get(key interface{}) (value interface{}, exists bool) {
 	return
 }
 
-// GetInt get int value from context, if not exists, it will return zero.
+// GetInt returns int value from context
 func (c *Context) GetInt(key interface{}) (i int) {
 	if value, exists := c.Get(key); exists && value != nil {
 		i, _ = value.(int)
@@ -272,7 +282,7 @@ func (c *Context) GetInt(key interface{}) (i int) {
 	return
 }
 
-// GetInt64 get int64 value from context, if not exists, it will return zero.
+// GetInt64 returns int64 value from context
 func (c *Context) GetInt64(key interface{}) (i int64) {
 	if value, exists := c.Get(key); exists && value != nil {
 		i, _ = value.(int64)
@@ -280,7 +290,7 @@ func (c *Context) GetInt64(key interface{}) (i int64) {
 	return
 }
 
-// GetString get string value from context, if not exists, it will return empty string.
+// GetString returns string value from context
 func (c *Context) GetString(key interface{}) (s string) {
 	if value, exists := c.Get(key); exists && value != nil {
 		s, _ = value.(string)
@@ -288,7 +298,7 @@ func (c *Context) GetString(key interface{}) (s string) {
 	return
 }
 
-// GetBool get bool value from context, if not exists, it will return false.
+// GetBool returns bool value from context
 func (c *Context) GetBool(key interface{}) (b bool) {
 	if value, exists := c.Get(key); exists && value != nil {
 		b, _ = value.(bool)
@@ -296,7 +306,7 @@ func (c *Context) GetBool(key interface{}) (b bool) {
 	return
 }
 
-// GetFloat32 get float32 value from context, if not exists, it will return 0.
+// GetFloat32 returns float32 value from context
 func (c *Context) GetFloat32(key interface{}) (f float32) {
 	if value, exists := c.Get(key); exists && value != nil {
 		f, _ = value.(float32)
@@ -304,7 +314,7 @@ func (c *Context) GetFloat32(key interface{}) (f float32) {
 	return
 }
 
-// GetFloat64 get float64 value from context, if not exists, it will return 0.
+// GetFloat64 returns float64 value from context
 func (c *Context) GetFloat64(key interface{}) (f float64) {
 	if value, exists := c.Get(key); exists && value != nil {
 		f, _ = value.(float64)
@@ -312,7 +322,7 @@ func (c *Context) GetFloat64(key interface{}) (f float64) {
 	return
 }
 
-// GetTime get time value from context
+// GetTime returns time value from context
 func (c *Context) GetTime(key interface{}) (t time.Time) {
 	if value, exists := c.Get(key); exists && value != nil {
 		t, _ = value.(time.Time)
@@ -320,7 +330,7 @@ func (c *Context) GetTime(key interface{}) (t time.Time) {
 	return
 }
 
-// GetDuration get duration from context
+// GetDuration returns duration from context
 func (c *Context) GetDuration(key interface{}) (d time.Duration) {
 	if value, exists := c.Get(key); exists && value != nil {
 		d, _ = value.(time.Duration)
@@ -328,7 +338,7 @@ func (c *Context) GetDuration(key interface{}) (d time.Duration) {
 	return
 }
 
-// GetStringSlice get string slice from context
+// GetStringSlice returns string slice from context
 func (c *Context) GetStringSlice(key interface{}) (arr []string) {
 	if value, exists := c.Get(key); exists && value != nil {
 		arr, _ = value.([]string)
@@ -336,12 +346,12 @@ func (c *Context) GetStringSlice(key interface{}) (arr []string) {
 	return
 }
 
-// GetRequestHeader get header value from http request
+// GetRequestHeader returns header value from http request
 func (c *Context) GetRequestHeader(key string) string {
 	return c.Request.Header.Get(key)
 }
 
-// SetRequestHeader set http header to request.
+// SetRequestHeader sets http header to request.
 // It replaces any existing values of the key.
 func (c *Context) SetRequestHeader(key, value string) {
 	h := c.Request.Header
@@ -352,34 +362,34 @@ func (c *Context) SetRequestHeader(key, value string) {
 	h.Set(key, value)
 }
 
-// Context get context of request
+// Context returns context of request
 func (c *Context) Context() context.Context {
 	return c.Request.Context()
 }
 
-// WithContext set context to request
+// WithContext changes the request to new request with context
 func (c *Context) WithContext(ctx context.Context) *Context {
 	c.Request = c.Request.WithContext(ctx)
 	return c
 }
 
-// AddRequestHeader add http header to request.
+// AddRequestHeader adds the key/value to http header.
 // It appends to any existing value of the key.
 func (c *Context) AddRequestHeader(key, value string) {
 	c.Request.Header.Add(key, value)
 }
 
-// Header get headers of http response
+// Header returns headers of http response
 func (c *Context) Header() http.Header {
 	return c.Response.Header()
 }
 
-// WriteHeader set the http status code
+// WriteHeader sets the http status code
 func (c *Context) WriteHeader(statusCode int) {
 	c.StatusCode = statusCode
 }
 
-// Write write the response body
+// Write the response body
 func (c *Context) Write(buf []byte) (int, error) {
 	if c.BodyBuffer == nil {
 		c.BodyBuffer = new(bytes.Buffer)
@@ -387,12 +397,12 @@ func (c *Context) Write(buf []byte) (int, error) {
 	return c.BodyBuffer.Write(buf)
 }
 
-// GetHeader get header from http response
+// GetHeader return header value from http response
 func (c *Context) GetHeader(key string) string {
 	return c.Header().Get(key)
 }
 
-// SetHeader set http header to response.
+// SetHeader sets the key/value to response header.
 // It replaces any existing values of the key.
 func (c *Context) SetHeader(key, value string) {
 	if value == "" {
@@ -402,13 +412,13 @@ func (c *Context) SetHeader(key, value string) {
 	c.Header().Set(key, value)
 }
 
-// AddHeader add http header to response.
+// AddHeader adds the key/value to response header.
 // It appends to any existing value of the key.
 func (c *Context) AddHeader(key, value string) {
 	c.Header().Add(key, value)
 }
 
-// MergeHeader merge http header to response
+// MergeHeader merges http header to response header
 func (c *Context) MergeHeader(h http.Header) {
 	for key, values := range h {
 		for _, value := range values {
@@ -417,7 +427,7 @@ func (c *Context) MergeHeader(h http.Header) {
 	}
 }
 
-// ResetHeader reset response header
+// ResetHeader resets response header
 func (c *Context) ResetHeader() {
 	h := c.Header()
 	for k := range h {
@@ -425,12 +435,12 @@ func (c *Context) ResetHeader() {
 	}
 }
 
-// Cookie get cookie from http request
+// Cookie return the cookie from http request
 func (c *Context) Cookie(name string) (*http.Cookie, error) {
 	return c.Request.Cookie(name)
 }
 
-// AddCookie add the cookie to the response
+// AddCookie adds the cookie to the response
 func (c *Context) AddCookie(cookie *http.Cookie) {
 	http.SetCookie(c, cookie)
 }
@@ -443,7 +453,7 @@ func (c *Context) getKeys() []string {
 	return e.SignedKeys.GetKeys()
 }
 
-// GetSignedCookie get signed cookie
+// GetSignedCookie returns signed cookie from http request
 func (c *Context) GetSignedCookie(name string) (cookie *http.Cookie, index int, err error) {
 	index = -1
 	cookie, err = c.Cookie(name)
@@ -466,7 +476,7 @@ func (c *Context) GetSignedCookie(name string) (cookie *http.Cookie, index int, 
 	return
 }
 
-// SignedCookie get signed cookie from http request
+// SignedCookie returns signed cookie from http request
 func (c *Context) SignedCookie(name string) (cookie *http.Cookie, err error) {
 	cookie, index, err := c.GetSignedCookie(name)
 	if err != nil {
@@ -479,7 +489,7 @@ func (c *Context) SignedCookie(name string) (cookie *http.Cookie, err error) {
 	return
 }
 
-// SendFile send file to http response
+// SendFile to http response
 func (c *Context) SendFile(file string) (err error) {
 	info, err := os.Stat(file)
 	if err != nil {
@@ -533,7 +543,7 @@ func (c *Context) addSigCookie(cookie *http.Cookie) {
 	c.AddCookie(sc)
 }
 
-// AddSignedCookie add cookie to the response, it will also add a signed cookie
+// AddSignedCookie adds cookie to the response, it will also add a signed cookie
 func (c *Context) AddSignedCookie(cookie *http.Cookie) {
 	c.AddCookie(cookie)
 	c.addSigCookie(cookie)
@@ -549,29 +559,30 @@ func (c *Context) cleanContent() {
 	c.BodyBuffer = nil
 }
 
-// NoContent no content for response
+// NoContent clean all content and set status to 204
 func (c *Context) NoContent() {
 	c.cleanContent()
 	c.StatusCode = http.StatusNoContent
 }
 
-// NotModified response not modified
+// NotModified clean all content and set status to 304
 func (c *Context) NotModified() {
 	c.cleanContent()
 	c.StatusCode = http.StatusNotModified
 }
 
-// NoCache set http response no cache
+// NoCache set `Cache-Control: no-cache` to the http response header
 func (c *Context) NoCache() {
 	c.SetHeader(HeaderCacheControl, "no-cache")
 }
 
-// NoStore set http response no store
+// NoStore set `Cache-Control: no-store` to the http response header
 func (c *Context) NoStore() {
 	c.SetHeader(HeaderCacheControl, "no-store")
 }
 
-// CacheMaxAge set http response to cache for max age
+// CacheMaxAge set `Cache-Control: public, max-age=MaxAge, s-maxage=SMaxAge` to the http response header.
+// If args is not empty, it will use the first duration as SMaxAge
 func (c *Context) CacheMaxAge(age time.Duration, args ...time.Duration) {
 	cache := fmt.Sprintf("public, max-age=%d", int(age.Seconds()))
 	if len(args) != 0 {
@@ -581,13 +592,13 @@ func (c *Context) CacheMaxAge(age time.Duration, args ...time.Duration) {
 	c.SetHeader(HeaderCacheControl, cache)
 }
 
-// Created created for response
+// Created sets the body to response and set the status to 201
 func (c *Context) Created(body interface{}) {
 	c.StatusCode = http.StatusCreated
 	c.Body = body
 }
 
-// SetContentTypeByExt set content type by file extname
+// SetContentTypeByExt sets content type by file extname
 func (c *Context) SetContentTypeByExt(file string) {
 	ext := filepath.Ext(file)
 	contentType := mime.TypeByExtension(ext)
@@ -596,7 +607,7 @@ func (c *Context) SetContentTypeByExt(file string) {
 	}
 }
 
-// DisableReuse set the context disable reuse
+// DisableReuse sets the context disable reuse
 func (c *Context) DisableReuse() {
 	atomic.StoreInt32(&c.reuseStatus, ReuseContextDisabled)
 }
@@ -605,7 +616,7 @@ func (c *Context) isReuse() bool {
 	return atomic.LoadInt32(&c.reuseStatus) == ReuseContextEnabled
 }
 
-// Push http server push
+// Push the target to http response
 func (c *Context) Push(target string, opts *http.PushOptions) (err error) {
 	if c.Response == nil {
 		return ErrNilResponse
@@ -617,19 +628,19 @@ func (c *Context) Push(target string, opts *http.PushOptions) (err error) {
 	return pusher.Push(target, opts)
 }
 
-// Elton get elton instance
+// Elton returns the elton instance of context
 func (c *Context) Elton() *Elton {
 	return c.elton
 }
 
-// Pass pass request to another elton
+// Pass request to another elton instance and set the context is committed
 func (c *Context) Pass(another *Elton) {
 	// 设置为已commit，避免当前cod继续处理
 	c.Committed = true
 	another.ServeHTTP(c.Response, c.Request)
 }
 
-// Pipe pie to the response
+// Pipe the reader to the response
 func (c *Context) Pipe(r io.Reader) (written int64, err error) {
 	c.Committed = true
 	// 如果是 closer，则需要调用close函数
@@ -640,7 +651,7 @@ func (c *Context) Pipe(r io.Reader) (written int64, err error) {
 	return io.Copy(c.Response, r)
 }
 
-// IsReaderBody check body is reader
+// IsReaderBody judgets whether body is reader
 func (c *Context) IsReaderBody() bool {
 	if c.Body == nil {
 		return false
@@ -649,7 +660,7 @@ func (c *Context) IsReaderBody() bool {
 	return ok
 }
 
-// ServerTiming convert trace info to http response server timing
+// ServerTiming converts trace info to http response server timing
 func (c *Context) ServerTiming(traceInfos TraceInfos, prefix string) {
 	value := traceInfos.ServerTiming(prefix)
 	if value != "" {
@@ -657,7 +668,7 @@ func (c *Context) ServerTiming(traceInfos TraceInfos, prefix string) {
 	}
 }
 
-// NewContext new a context
+// NewContext return a new context
 func NewContext(resp http.ResponseWriter, req *http.Request) *Context {
 	c := &Context{}
 	c.Request = req

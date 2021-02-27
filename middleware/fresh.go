@@ -36,12 +36,12 @@ type (
 	}
 )
 
-// NewDefault create a default ETag middleware
+// NewDefaultFresh returns a default fresh middleware, it will return 304 modified if the data is not modified.
 func NewDefaultFresh() elton.Handler {
 	return NewFresh(FreshConfig{})
 }
 
-// NewFresh create a fresh checker
+// NewFresh returns a fresh middleware.
 func NewFresh(config FreshConfig) elton.Handler {
 	skipper := config.Skipper
 	if skipper == nil {

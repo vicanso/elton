@@ -63,7 +63,7 @@ type (
 	}
 )
 
-// NewLocalLimiter create a new limiter
+// NewLocalLimiter returns a new local limiter, it's useful for limit concurrency for process.
 func NewLocalLimiter(data map[string]uint32) *RCLLocalLimiter {
 	m := make(map[string]*rclConcurrency, len(data))
 	for route, max := range data {
@@ -77,7 +77,7 @@ func NewLocalLimiter(data map[string]uint32) *RCLLocalLimiter {
 	}
 }
 
-// IncConcurrency concurrency inc
+// IncConcurrency inc 1
 func (l *RCLLocalLimiter) IncConcurrency(key string) (current, max uint32) {
 	concur, ok := l.m[key]
 	if !ok {
@@ -87,7 +87,7 @@ func (l *RCLLocalLimiter) IncConcurrency(key string) (current, max uint32) {
 	return v, concur.max
 }
 
-// DecConcurrency concurrency dec
+// DecConcurrency dec 1
 func (l *RCLLocalLimiter) DecConcurrency(key string) {
 	concur, ok := l.m[key]
 	if !ok {
@@ -96,7 +96,7 @@ func (l *RCLLocalLimiter) DecConcurrency(key string) {
 	atomic.AddUint32(&concur.current, ^uint32(0))
 }
 
-// GetConcurrency get concurrency
+// GetConcurrency value
 func (l *RCLLocalLimiter) GetConcurrency(key string) uint32 {
 	concur, ok := l.m[key]
 	if !ok {
@@ -112,7 +112,8 @@ func createRCLError(current, max uint32) error {
 	return he
 }
 
-// NewRCL create a router concurrent limiter middleware
+// NewRCL returns a router concurrent limiter middleware.
+// It will throw panic if Limiter is nil.
 func NewRCL(config RCLConfig) elton.Handler {
 	skipper := config.Skipper
 	if skipper == nil {

@@ -53,12 +53,12 @@ func genETag(buf []byte) (string, error) {
 	return fmt.Sprintf(`"%x-%s"`, size, hash), nil
 }
 
-// NewDefault create a default ETag middleware
+// NewDefaultETag returns a default ETag middleware, it will use sha1 to generate etag.
 func NewDefaultETag() elton.Handler {
 	return NewETag(ETagConfig{})
 }
 
-// New create a ETag middleware
+// NewETag returns a default ETag middleware.
 func NewETag(config ETagConfig) elton.Handler {
 	skipper := config.Skipper
 	if skipper == nil {

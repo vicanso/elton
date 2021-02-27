@@ -57,12 +57,14 @@ var (
 	}
 )
 
-// NewDefaultResponder create a default responder
+// NewDefaultResponder returns a new default responder middleware, it will use json.Marshal and application/json for response.
 func NewDefaultResponder() elton.Handler {
 	return NewResponder(ResponderConfig{})
 }
 
-// NewResponder create a responder
+// NewResponder returns a new responder middleware.
+// If will use json.Marshal as default marshal function.
+// If will use application/json as default content type.
 func NewResponder(config ResponderConfig) elton.Handler {
 	skipper := config.Skipper
 	if skipper == nil {

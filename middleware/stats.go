@@ -60,7 +60,8 @@ type (
 	}
 )
 
-// NewStats create a new stats middleware
+// NewStats returns a new stats middleware,
+// it will throw a panic if the OnStats is nil.
 func NewStats(config StatsConfig) elton.Handler {
 	if config.OnStats == nil {
 		panic(ErrStatsNoFunction)

@@ -71,7 +71,7 @@ func AcceptEncoding(c *elton.Context, encoding string) (bool, string) {
 	return false, ""
 }
 
-// AddCompressor add compressor
+// AddCompressor to the compress config
 func (conf *CompressConfig) AddCompressor(compressor Compressor) {
 	if conf.Compressors == nil {
 		conf.Compressors = make([]Compressor, 0)
@@ -79,7 +79,7 @@ func (conf *CompressConfig) AddCompressor(compressor Compressor) {
 	conf.Compressors = append(conf.Compressors, compressor)
 }
 
-// NewCompressConfig create a new compress config
+// NewCompressConfig returns a compress config with multi-compressor
 func NewCompressConfig(compressors ...Compressor) CompressConfig {
 	cfg := CompressConfig{}
 	for _, compressor := range compressors {
@@ -88,13 +88,15 @@ func NewCompressConfig(compressors ...Compressor) CompressConfig {
 	return cfg
 }
 
-// NewDefaultCompress create a new default compress middleware(include gzip)
+// NewDefaultCompress return a new compress middleware, it include gzip compress
 func NewDefaultCompress() elton.Handler {
 	cfg := NewCompressConfig(new(GzipCompressor))
 	return NewCompress(cfg)
 }
 
-// NewCompress create a new compress middleware
+// NewCompress return a new compress middleware.
+// It will use 'text|javascript|json|wasm|font' as default content type checker for compress.
+// It will throw a panic if the compressors is empty.
 func NewCompress(config CompressConfig) elton.Handler {
 	skipper := config.Skipper
 	if skipper == nil {

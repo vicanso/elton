@@ -144,7 +144,7 @@ func generateETag(buf []byte) string {
 	return fmt.Sprintf(`"%x-%s"`, size, hash)
 }
 
-// NewDefaultStaticServe create a static server milldeware use FS
+// NewDefaultStaticServe returns a new default static server milldeware using FS
 func NewDefaultStaticServe(config StaticServeConfig) elton.Handler {
 	return NewStaticServe(&FS{}, config)
 }
@@ -153,7 +153,9 @@ func toSeconds(d time.Duration) string {
 	return strconv.Itoa(int(d.Seconds()))
 }
 
-// NewStaticServe create a static serve middleware
+// NewStaticServe returns a new static serve middleware, suggest to set the MaxAge and SMaxAge for cache control for better performance.
+// It will return an error if DenyDot is true and filename is start with '.'.
+// It will return an error if DenyQueryString is true and the querystring is not empty.
 func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handler {
 	cacheArr := []string{
 		"public",

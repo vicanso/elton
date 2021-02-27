@@ -151,7 +151,9 @@ func generateRewrites(arr []string) (rewrites []*rewriteRegexp, err error) {
 	return
 }
 
-// NewProxy create a proxy middleware
+// NewProxy returns a new proxy middleware, it can proxy the request to other server.
+// It will throw a panic if Target and TargetPicker function is nil.
+// It will throw a panic if Rewrites config is not a regexp.
 func NewProxy(config ProxyConfig) elton.Handler {
 	if config.Target == nil && config.TargetPicker == nil {
 		panic(ErrProxyNoTargetFunction)

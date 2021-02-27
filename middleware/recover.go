@@ -36,7 +36,9 @@ const (
 	ErrRecoverCategory = "elton-recover"
 )
 
-// New new recover
+// NewRecover return a recover middleware, it can recover from panic,
+// and then emit an `elton-recover` error.
+// Suggest to graceful close the elton instance for recover error.
 func NewRecover() elton.Handler {
 	return func(c *elton.Context) error {
 		defer func() {

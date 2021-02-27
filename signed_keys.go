@@ -48,26 +48,26 @@ type (
 	}
 )
 
-// GetKeys get keys
+// GetKeys returns the key list of simple signed keys
 func (sk *SimpleSignedKeys) GetKeys() []string {
 	return sk.keys
 }
 
-// SetKeys set keys
+// SetKeys sets the key list of simple signed keys
 func (sk *SimpleSignedKeys) SetKeys(values []string) {
 	keys := make([]string, len(values))
 	copy(keys, values)
 	sk.keys = keys
 }
 
-// GetKeys get keys
+// GetKeys returns the key list of rwmutex signed keys
 func (rwSk *RWMutexSignedKeys) GetKeys() []string {
 	rwSk.RLock()
 	defer rwSk.RUnlock()
 	return rwSk.keys
 }
 
-// SetKeys set keys
+// SetKeys sets the key list of rwmutex signed keys
 func (rwSk *RWMutexSignedKeys) SetKeys(values []string) {
 	keys := make([]string, len(values))
 	copy(keys, values)
@@ -76,7 +76,7 @@ func (rwSk *RWMutexSignedKeys) SetKeys(values []string) {
 	rwSk.keys = keys
 }
 
-// GetKeys get keys
+// GetKeys returns the key list of atomic signed keys
 func (atSk *AtomicSignedKeys) GetKeys() []string {
 	if value := atSk.value.Load(); value != nil {
 		// atomic value只能相同的类型，因此只要值存在，转换时直接转换
@@ -85,7 +85,7 @@ func (atSk *AtomicSignedKeys) GetKeys() []string {
 	return nil
 }
 
-// SetKeys set keys
+// SetKeys sets the key list of atomic signed keys
 func (atSk *AtomicSignedKeys) SetKeys(values []string) {
 	keys := make([]string, len(values))
 	copy(keys, values)

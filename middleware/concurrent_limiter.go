@@ -93,7 +93,8 @@ type (
 	}
 )
 
-// NewConcurrentLimiter create a concurrent limiter middleware
+// NewConcurrentLimiter returns a new concurrent limiter middleware.
+// It will throw a panic if Lock function is nil.
 func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 
 	if config.Lock == nil {
@@ -190,7 +191,8 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 	}
 }
 
-// NewGlobalConcurrentLimiter create a new global concurrent limiter
+// NewGlobalConcurrentLimiter returns a new global concurrent limiter,
+// it use for global processing request limit.
 func NewGlobalConcurrentLimiter(config GlobalConcurrentLimiterConfig) elton.Handler {
 	var count uint32
 	return func(c *elton.Context) (err error) {
