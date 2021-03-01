@@ -41,6 +41,7 @@ const (
 	query            = "query"
 	remote           = "remote"
 	realIP           = "real-ip"
+	clientIP         = "client-ip"
 	scheme           = "scheme"
 	uri              = "uri"
 	referer          = "referer"
@@ -214,6 +215,8 @@ func formatLog(c *elton.Context, tags []*LoggerTag, startedAt time.Time, default
 			return c.Request.RemoteAddr
 		case realIP:
 			return c.RealIP()
+		case clientIP:
+			return c.ClientIP()
 		case scheme:
 			if c.Request.TLS != nil {
 				return httpsProto
