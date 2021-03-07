@@ -1,6 +1,6 @@
 module github.com/vicanso/elton
 
-go 1.12
+go 1.16
 
 require (
 	github.com/stretchr/testify v1.7.0
