@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -46,11 +47,12 @@ func TestGetHumanReadableSize(t *testing.T) {
 func TestLogger(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("normal", func(t *testing.T) {
+		os.Setenv("__LOGGER__", "LOGGER")
 		config := LoggerConfig{
 			DefaultFill: "-",
-			Format:      "{host} {remote} {real-ip} {client-ip} {method} {path} {proto} {query} {scheme} {uri} {referer} {userAgent} {size} {size-human} {status} {payload-size} {payload-size-human} {<x-empty}",
+			Format:      "{host} {remote} {real-ip} {client-ip} {method} {path} {proto} {query} {scheme} {uri} {referer} {userAgent} {size} {size-human} {status} {payload-size} {payload-size-human} {<x-empty} {$__LOGGER__}",
 			OnLog: func(log string, _ *elton.Context) {
-				assert.Equal("aslant.site 192.0.2.1:1234 192.0.2.1 192.0.2.1 GET / HTTP/1.1 a=1&b=2 HTTPS https://aslant.site/?a=1&b=2 https://aslant.site/ test-agent 13 13B 200 12 12B -", log)
+				assert.Equal("aslant.site 192.0.2.1:1234 192.0.2.1 192.0.2.1 GET / HTTP/1.1 a=1&b=2 HTTPS https://aslant.site/?a=1&b=2 https://aslant.site/ test-agent 13 13B 200 12 12B - LOGGER", log)
 			},
 		}
 		m := NewLogger(config)

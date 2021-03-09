@@ -24,6 +24,7 @@ package middleware
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -65,6 +66,8 @@ const (
 	context          = "context"
 	httpProto        = "HTTP"
 	httpsProto       = "HTTPS"
+	// get from env
+	env = "env"
 
 	kbytes = 1024
 	mbytes = 1024 * 1024
@@ -175,6 +178,11 @@ func parseLoggerTags(desc []byte) []*LoggerTag {
 			arr = append(arr, &LoggerTag{
 				category: context,
 				data:     byteSliceToString(k[1:]),
+			})
+		case byte('$'):
+			arr = append(arr, &LoggerTag{
+				category: env,
+				data:     os.Getenv(string(k[1:])),
 			})
 		default:
 			arr = append(arr, &LoggerTag{
