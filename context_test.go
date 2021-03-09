@@ -431,7 +431,7 @@ func TestSignedCookie(t *testing.T) {
 			HttpOnly: true,
 		}
 		c.AddSignedCookie(cookie)
-		assert.Equal("a=b; Path=/; Max-Age=300; HttpOnly; Secure,a.sig=9yv2rWFijew8K8a5Uw9jxRJE53s; Path=/; Max-Age=300; HttpOnly; Secure", strings.Join(c.Header()[HeaderSetCookie], ","))
+		assert.Equal("a=b; Path=/; Max-Age=300; HttpOnly; Secure,a.sig=jK8pWDfgnIdsDF73KVgdXnXvk63BBCDOcaqwVjasY-0; Path=/; Max-Age=300; HttpOnly; Secure", strings.Join(c.Header()[HeaderSetCookie], ","))
 	})
 
 	t.Run("get signed cookie", func(t *testing.T) {
@@ -443,7 +443,7 @@ func TestSignedCookie(t *testing.T) {
 		})
 		req.AddCookie(&http.Cookie{
 			Name:  "a.sig",
-			Value: "9yv2rWFijew8K8a5Uw9jxRJE53s",
+			Value: "jK8pWDfgnIdsDF73KVgdXnXvk63BBCDOcaqwVjasY-0",
 		})
 		resp := httptest.NewRecorder()
 		c := NewContext(resp, req)
