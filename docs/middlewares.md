@@ -387,16 +387,39 @@ func main() {
 
 ## logger
 
-Logger中间件，支持从请求头、响应头等获取信息，支持以下标签：
+Logger中间件，支持从请求头、响应头等获取信息，日志中标签以{}标记，支持的标签如下：
 
-{host} {remote} {real-ip} {method} {path} {proto} {query} {scheme} {uri} {referer} {userAgent} {size} {size-human} {status} {payload-size} {payload-size-human}
-
-其中`size-human`以及`payload-size-human`是将字节格式化带单位的形式，主要讲解三种字段的使用：
-
+- `host` 请求的host
+- `method` 请求的method
+- `path` 请求的path
+- `proto` 请求的协议类型
+- `query` 请求的raw query
+- `remote` 请求的remote addr
+- `real-ip` 客户的真实IP
+- `client-ip` 客户的IP，与real-ip的区别是会判断IP是否公网IP
+- `scheme` HTTP或者HTTPS
+- `uri` 请求的完整地址
+- `referer` 请求的referer
+- `userAgent` 请求的user agent
+- `when` 当前时间RFC1123带时区的格式化
+- `when-iso` 当前时间RFC3339的格式化
+- `when-utc-iso` 当前UTC时间的ISO格式化
+- `when-unix` 当前时间的unix时间戳(秒)
+- `when-iso-ms` 当前时间RFC3339的格式化(毫秒)
+- `when-utc-iso-ms` 当前UTC时间的ISO格式化(毫秒)
+- `size` 响应数据长度(字节)
+- `size-human` 响应数据长度，格式化为KB/MB(以1024换算)
+- `status` 状态码
+- `latency` 响应时间
+- `latency-ms` 响应时间(毫秒)
 - `~cookie` 表示获取cookie的值，必须以~开头，后面的表示cookie的key
+- `payload-size` 提交数据长度(字节)
+- `payload-size-human` 提交数据长度，格式化为KB/MB(以1024换算)
 - `>header` 表示获取请求头的值，必须以>开头，后面表示header的key
 - `<header` 表示获取响应头的值，必须以<开头，后面表示header的key
 - `:key` 获取获取context设置的值，必须以:开头，后面表示对应的key，需要注意，设置至context中的值必须为string
+- `$key` 从ENV中获取该key对应的值，必须以$开头，后面表示对应的key
+
 
 预定义了四种格式化模板(建议使用时自定义日志模板)：
 - `LoggerCombined`: `{remote} {when-iso} "{method} {uri} {proto}" {status} {size-human} "{referer}" "{userAgent}"`
