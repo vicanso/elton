@@ -17,6 +17,7 @@ description: 各类常用的中间件
 - [proxy](#proxy) Proxy中间件，可定义请求转发至其它的服务
 - [recover](#recover) 捕获程序的panic异常，避免程序崩溃
 - [responder](#responder) 响应处理中间件，用于将`Context.Body`(interface{})转换为对应的JSON数据并输出。如果系统使用xml等输出响应数据，可参考此中间件实现interface{}至xml的转换
+- [response-size-limiter](#response-size-limiter) 响应长度限制中间件，用于限制响应数据的最大长度
 - [router-concurrent-limiter](#router-concurrent-limiter) 路由并发限制中间件，可以针对路由限制并发请求量。
 - [session](https://github.com/vicanso/elton-session) Session中间件，默认支持保存内存中，可自定义相应的存储实现保存至redis等数据库。
 - [stats](#stats) 请求处理的统计中间件，包括处理时长、状态码、响应数据长度、连接数等信息
@@ -574,6 +575,45 @@ func main() {
 		return
 	})
 
+	err := e.ListenAndServe(":3000")
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+## response size limiter
+
+响应长度限制中间件，可以限制响应数据的长度，避免返回过大的数据导致网络占用过大。此中间件主要用于避免一些非法调用等导致查询过多数据。
+
+**Example**
+```go
+package main
+
+import (
+	"bytes"
+	"time"
+
+	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/middleware"
+)
+
+func main() {
+	e := elton.New()
+
+	e.Use(middleware.NewResponseSizeLimiter(middleware.ResponseSizeLimiterConfig{
+		// 1MB
+		MaxSize: 1024 * 1024,
+	}))
+
+	e.GET("/users/me", func(c *elton.Context) (err error) {
+		time.Sleep(time.Second)
+		c.BodyBuffer = bytes.NewBufferString(`{
+			"account": "tree",
+			"name": "tree.xie"
+		}`)
+		return nil
+	})
 	err := e.ListenAndServe(":3000")
 	if err != nil {
 		panic(err)
