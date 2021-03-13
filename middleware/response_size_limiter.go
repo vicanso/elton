@@ -49,10 +49,17 @@ var ErrResponseTooLarge = &hes.Error{
 
 // NewResponseSizeLimiter returns a new response size limiter
 func NewResponseSizeLimiter(config ResponseSizeLimiterConfig) elton.Handler {
+	skipper := config.Skipper
+	if skipper == nil {
+		skipper = elton.DefaultSkipper
+	}
 	if config.MaxSize <= 0 {
 		panic(errors.New("max size should be > 0"))
 	}
 	return func(c *elton.Context) (err error) {
+		if skipper(c) {
+			return c.Next()
+		}
 		err = c.Next()
 		if err != nil {
 			return
