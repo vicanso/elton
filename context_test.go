@@ -627,6 +627,16 @@ func TestCacheControl(t *testing.T) {
 			},
 			cacheControl: "public, max-age=60, s-maxage=10",
 		},
+		// private max-age
+		{
+			newContext: func() *Context {
+				resp := httptest.NewRecorder()
+				c := NewContext(resp, nil)
+				c.PrivateCacheMaxAge(time.Minute)
+				return c
+			},
+			cacheControl: "private, max-age=60",
+		},
 	}
 
 	for _, tt := range tests {

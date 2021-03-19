@@ -571,17 +571,17 @@ func (c *Context) NotModified() {
 	c.StatusCode = http.StatusNotModified
 }
 
-// NoCache set `Cache-Control: no-cache` to the http response header
+// NoCache sets `Cache-Control: no-cache` to the http response header
 func (c *Context) NoCache() {
 	c.SetHeader(HeaderCacheControl, "no-cache")
 }
 
-// NoStore set `Cache-Control: no-store` to the http response header
+// NoStore sets `Cache-Control: no-store` to the http response header
 func (c *Context) NoStore() {
 	c.SetHeader(HeaderCacheControl, "no-store")
 }
 
-// CacheMaxAge set `Cache-Control: public, max-age=MaxAge, s-maxage=SMaxAge` to the http response header.
+// CacheMaxAge sets `Cache-Control: public, max-age=MaxAge, s-maxage=SMaxAge` to the http response header.
 // If args is not empty, it will use the first duration as SMaxAge
 func (c *Context) CacheMaxAge(age time.Duration, args ...time.Duration) {
 	cache := fmt.Sprintf("public, max-age=%d", int(age.Seconds()))
@@ -590,6 +590,11 @@ func (c *Context) CacheMaxAge(age time.Duration, args ...time.Duration) {
 		cache += fmt.Sprintf(", s-maxage=%d", int(sMaxAge.Seconds()))
 	}
 	c.SetHeader(HeaderCacheControl, cache)
+}
+
+// PrivateCacheMaxAge sets `Cache-Control: private, max-age=MaxAge` to the response header.
+func (c *Context) PrivateCacheMaxAge(age time.Duration) {
+	c.SetHeader(HeaderCacheControl, fmt.Sprintf("private, max-age=%d", int(age.Seconds())))
 }
 
 // Created sets the body to response and set the status to 201
