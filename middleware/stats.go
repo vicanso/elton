@@ -47,16 +47,17 @@ type (
 	}
 	// StatsInfo stats's info
 	StatsInfo struct {
-		CID        string        `json:"cid,omitempty"`
-		IP         string        `json:"ip,omitempty"`
-		Method     string        `json:"method,omitempty"`
-		Route      string        `json:"route,omitempty"`
-		URI        string        `json:"uri,omitempty"`
-		Status     int           `json:"status,omitempty"`
-		Consuming  time.Duration `json:"consuming,omitempty"`
-		Type       int           `json:"type,omitempty"`
-		Size       int           `json:"size,omitempty"`
-		Connecting uint32        `json:"connecting,omitempty"`
+		CID             string        `json:"cid,omitempty"`
+		IP              string        `json:"ip,omitempty"`
+		Method          string        `json:"method,omitempty"`
+		Route           string        `json:"route,omitempty"`
+		URI             string        `json:"uri,omitempty"`
+		Status          int           `json:"status,omitempty"`
+		Consuming       time.Duration `json:"consuming,omitempty"`
+		Type            int           `json:"type,omitempty"`
+		RequestBodySize int           `json:"requestBodySize"`
+		Size            int           `json:"size,omitempty"`
+		Connecting      uint32        `json:"connecting,omitempty"`
 	}
 )
 
@@ -86,12 +87,13 @@ func NewStats(config StatsConfig) elton.Handler {
 			uri = req.RequestURI
 		}
 		info := &StatsInfo{
-			CID:        c.ID,
-			Method:     req.Method,
-			Route:      c.Route,
-			URI:        uri,
-			Connecting: connecting,
-			IP:         c.RealIP(),
+			CID:             c.ID,
+			Method:          req.Method,
+			Route:           c.Route,
+			URI:             uri,
+			Connecting:      connecting,
+			IP:              c.RealIP(),
+			RequestBodySize: len(c.RequestBody),
 		}
 
 		err = c.Next()
