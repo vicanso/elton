@@ -192,12 +192,11 @@ func TestGetClientIP(t *testing.T) {
 			},
 			ip: "1.1.1.1",
 		},
-		// x-real-ip is local ip, so get by remote addr
+		// get by remote addr
 		{
 			newContext: func() *Context {
 				req := httptest.NewRequest("GET", "/", nil)
 				req.RemoteAddr = "192.168.1.1:7000"
-				req.Header.Set(HeaderXRealIP, "192.168.0.1")
 				c := NewContext(nil, req)
 				return c
 			},

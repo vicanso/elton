@@ -382,24 +382,25 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 			return
 		}
 		c.Committed = true
+		// 如果出错则触发出错处理，返回
 		if err != nil {
 			e.error(c, err)
-		} else {
-			if c.StatusCode != 0 {
-				c.Response.WriteHeader(c.StatusCode)
+			return
+		}
+		if c.StatusCode != 0 {
+			c.Response.WriteHeader(c.StatusCode)
+		}
+		if c.BodyBuffer != nil {
+			c.SetHeader(HeaderContentLength, strconv.Itoa(c.BodyBuffer.Len()))
+			_, responseErr := c.Response.Write(c.BodyBuffer.Bytes())
+			if responseErr != nil {
+				e.EmitError(c, responseErr)
 			}
-			if c.BodyBuffer != nil {
-				c.SetHeader(HeaderContentLength, strconv.Itoa(c.BodyBuffer.Len()))
-				_, responseErr := c.Response.Write(c.BodyBuffer.Bytes())
-				if responseErr != nil {
-					e.EmitError(c, responseErr)
-				}
-			} else if c.IsReaderBody() {
-				r, _ := c.Body.(io.Reader)
-				_, pipeErr := c.Pipe(r)
-				if pipeErr != nil {
-					e.EmitError(c, pipeErr)
-				}
+		} else if c.IsReaderBody() {
+			r, _ := c.Body.(io.Reader)
+			_, pipeErr := c.Pipe(r)
+			if pipeErr != nil {
+				e.EmitError(c, pipeErr)
 			}
 		}
 	})

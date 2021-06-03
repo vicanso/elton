@@ -155,10 +155,9 @@ func GetRealIP(req *http.Request) string {
 // if not exists then it will get ip from x-real-ip from request header,
 // if not exists then it will use remote addr.
 func (c *Context) RealIP() string {
-	if c.realIP != "" {
-		return c.realIP
+	if c.realIP == "" {
+		c.realIP = GetRealIP(c.Request)
 	}
-	c.realIP = GetRealIP(c.Request)
 	return c.realIP
 }
 
@@ -183,11 +182,10 @@ func GetClientIP(req *http.Request) string {
 			return strings.TrimSpace(arr[0])
 		}
 	}
+	// x-real-ip为前置设置，如果有，则直接认为是客户IP
 	ip = h.Get(HeaderXRealIP)
 	if ip != "" {
-		if !intranetip.Is(net.ParseIP(ip)) {
-			return ip
-		}
+		return ip
 	}
 	return GetRemoteAddr(req)
 }
@@ -197,10 +195,9 @@ func GetClientIP(req *http.Request) string {
 // if not exists then it will get ip from x-real-ip from request header,
 // if not exists then it will use remote addr.
 func (c *Context) ClientIP() string {
-	if c.clientIP != "" {
-		return c.clientIP
+	if c.clientIP == "" {
+		c.clientIP = GetClientIP(c.Request)
 	}
-	c.clientIP = GetClientIP(c.Request)
 	return c.clientIP
 }
 
@@ -467,6 +464,7 @@ func (c *Context) GetSignedCookie(name string) (cookie *http.Cookie, index int, 
 	}
 
 	sc, err := c.Cookie(name + SignedCookieSuffix)
+	// 如果获取失败，则获取不到cookie
 	if err != nil {
 		cookie = nil
 		return
@@ -482,6 +480,7 @@ func (c *Context) SignedCookie(name string) (cookie *http.Cookie, err error) {
 	if err != nil {
 		return
 	}
+	// 如果校验失败，返回无cookie的错误
 	if index < 0 {
 		cookie = nil
 		err = http.ErrNoCookie
@@ -505,6 +504,7 @@ func (c *Context) SendFile(file string) (err error) {
 			c.SetHeader(HeaderLastModified, lmd)
 		}
 	}
+	// elton对于实现了closer的会自动调用关闭
 	r, err := os.Open(file)
 	if err != nil {
 		return
