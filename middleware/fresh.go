@@ -26,7 +26,6 @@ import (
 	"net/http"
 
 	"github.com/vicanso/elton"
-	"github.com/vicanso/fresh"
 )
 
 type (
@@ -77,7 +76,7 @@ func NewFresh(config FreshConfig) elton.Handler {
 		}
 
 		// 304的处理
-		if fresh.Fresh(c.Request.Header, c.Header()) {
+		if elton.Fresh(c.Request.Header, c.Header()) {
 			c.NotModified()
 		}
 		return
