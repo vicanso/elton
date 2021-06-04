@@ -708,6 +708,8 @@ func main() {
 package main
 
 import (
+	"time"
+
 	"github.com/vicanso/elton"
 	"github.com/vicanso/elton/middleware"
 )
@@ -720,9 +722,9 @@ func main() {
 	e.GET("/*", middleware.NewStaticServe(sf, middleware.StaticServeConfig{
 		Path: "/tmp",
 		// 客户端缓存一年
-		MaxAge: 365 * 24 * 3600,
+		MaxAge: 365 * 24 * time.Hour,
 		// 缓存服务器缓存一个小时
-		SMaxAge:             60 * 60,
+		SMaxAge:             time.Hour,
 		DenyQueryString:     true,
 		DisableLastModified: true,
 		// 如果使用packr，它不支持Stat，因此需要用强ETag
@@ -745,6 +747,7 @@ package main
 import (
 	"bytes"
 	"io"
+	"time"
 	"os"
 
 	packr "github.com/gobuffalo/packr/v2"
@@ -789,9 +792,9 @@ func main() {
 	// static file route
 	e.GET("/static/*", middleware.NewStaticServe(sf, middleware.StaticServeConfig{
 		// 客户端缓存一年
-		MaxAge: 365 * 24 * 3600,
+		MaxAge: 365 * 24 * time.Hour,
 		// 缓存服务器缓存一个小时
-		SMaxAge:             60 * 60,
+		SMaxAge:             time.Hour,
 		DenyQueryString:     true,
 		DisableLastModified: true,
 	}))
