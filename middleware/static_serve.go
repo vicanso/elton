@@ -276,6 +276,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 			c.NoCache()
 		}
 		if fileBuf != nil {
+			c.StatusCode = http.StatusOK
 			c.BodyBuffer = bytes.NewBuffer(fileBuf)
 		} else {
 			r, e := staticFile.NewReader(file)
@@ -283,6 +284,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 				err = getStaticServeError(e.Error(), http.StatusBadRequest)
 				return
 			}
+			c.StatusCode = http.StatusOK
 			c.Body = r
 		}
 		return c.Next()
