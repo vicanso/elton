@@ -24,6 +24,7 @@ package middleware
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -261,7 +262,11 @@ func formatLog(c *elton.Context, tags []*LoggerTag, startedAt time.Time, default
 		case whenUnix:
 			return strconv.FormatInt(time.Now().Unix(), 10)
 		case status:
-			return strconv.Itoa(c.StatusCode)
+			statusCode := c.StatusCode
+			if statusCode == 0 {
+				statusCode = http.StatusOK
+			}
+			return strconv.Itoa(statusCode)
 		case payloadSize:
 			return strconv.Itoa(len(c.RequestBody))
 		case payloadSizeHuman:
