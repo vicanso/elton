@@ -25,6 +25,7 @@ package middleware
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"regexp"
 
 	"github.com/vicanso/elton"
@@ -56,13 +57,17 @@ type (
 	OnTrack func(*TrackerInfo, *elton.Context)
 	// TrackerConfig tracker config
 	TrackerConfig struct {
+		// On Track function
 		OnTrack OnTrack
-		Mask    *regexp.Regexp
-		Skipper elton.Skipper
+		// mask regexp
+		Mask *regexp.Regexp
+		// max length for filed
+		MaxLength int
+		Skipper   elton.Skipper
 	}
 )
 
-func convertMap(data map[string]string, mask *regexp.Regexp) map[string]string {
+func convertMap(data map[string]string, mask *regexp.Regexp, maxLength int) map[string]string {
 	size := len(data)
 	if size == 0 {
 		return nil
@@ -70,10 +75,12 @@ func convertMap(data map[string]string, mask *regexp.Regexp) map[string]string {
 	m := make(map[string]string, size)
 	for k, v := range data {
 		if mask.MatchString(k) {
+			v = "***"
 			m[k] = "***"
-		} else {
-			m[k] = v
+		} else if maxLength > 0 && len(v) > maxLength {
+			v = fmt.Sprintf("%s ... (%d more)", v[:maxLength], len(v)-maxLength)
 		}
+		m[k] = v
 	}
 	return m
 }
@@ -97,8 +104,8 @@ func NewTracker(config TrackerConfig) elton.Handler {
 			return c.Next()
 		}
 		result := HandleSuccess
-		query := convertMap(c.Query(), mask)
-		params := convertMap(c.Params.ToMap(), mask)
+		query := convertMap(c.Query(), mask, config.MaxLength)
+		params := convertMap(c.Params.ToMap(), mask, config.MaxLength)
 		var form map[string]interface{}
 		if len(c.RequestBody) != 0 {
 			form = make(map[string]interface{})
@@ -106,6 +113,12 @@ func NewTracker(config TrackerConfig) elton.Handler {
 			for k := range form {
 				if mask.MatchString(k) {
 					form[k] = "***"
+				} else {
+					str, ok := form[k].(string)
+					if ok && len(str) > config.MaxLength {
+						str = fmt.Sprintf("%s ... (%d more)", str[:config.MaxLength], len(str)-config.MaxLength)
+						form[k] = str
+					}
 				}
 			}
 		}

@@ -46,14 +46,14 @@ func TestNoTrackPanic(t *testing.T) {
 
 func TestConvertMap(t *testing.T) {
 	assert := assert.New(t)
-	assert.Nil(convertMap(nil, nil))
+	assert.Nil(convertMap(nil, nil, 0))
 	assert.Equal(map[string]string{
-		"foo":      "bar",
+		"foo":      "b ... (2 more)",
 		"password": "***",
 	}, convertMap(map[string]string{
 		"password": "123",
 		"foo":      "bar",
-	}, defaultTrackerMaskFields))
+	}, defaultTrackerMaskFields, 1))
 }
 
 func TestTracker(t *testing.T) {
@@ -70,6 +70,7 @@ func TestTracker(t *testing.T) {
 		OnTrack: func(info *TrackerInfo, c *elton.Context) {
 			c.Set(trackerInfoKey, info)
 		},
+		MaxLength: 5,
 	})
 	tests := []struct {
 		newContext func() *elton.Context
@@ -100,7 +101,7 @@ func TestTracker(t *testing.T) {
 					"category": "login",
 				},
 				Form: map[string]interface{}{
-					"account":  "tree.xie",
+					"account":  "tree. ... (3 more)",
 					"password": "***",
 				},
 				Err: skipErr,
