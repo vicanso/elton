@@ -218,8 +218,9 @@ func doGunzip(buf []byte) ([]byte, error) {
 
 type maxBytesReader struct {
 	r   io.ReadCloser // underlying reader
-	n   int64         // max bytes remaining
-	err error         // sticky error
+	max int64
+	n   int64 // max bytes remaining
+	err error // sticky error
 }
 
 func (l *maxBytesReader) Read(p []byte) (n int, err error) {
@@ -243,7 +244,7 @@ func (l *maxBytesReader) Read(p []byte) (n int, err error) {
 		return n, err
 	}
 
-	l.err = fmt.Errorf("request body is too large, it should be <= %d", l.n)
+	l.err = fmt.Errorf("request body is too large, it should be <= %d", l.max)
 
 	n = int(l.n)
 	l.n = 0
@@ -257,8 +258,9 @@ func (l *maxBytesReader) Close() error {
 
 func MaxBytesReader(r io.ReadCloser, n int64) *maxBytesReader {
 	return &maxBytesReader{
-		n: n,
-		r: r,
+		max: n,
+		n:   n,
+		r:   r,
 	}
 }
 
