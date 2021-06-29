@@ -32,6 +32,17 @@ import (
 //go:embed *
 var assetFS embed.FS
 
+func TestEmbedGetFile(t *testing.T) {
+	assert := assert.New(t)
+	es := embedStaticFS{
+		Prefix: "web",
+	}
+	file := es.getFile("abc\\test.txt")
+	assert.Equal("web/abc/test.txt", file)
+	file = es.getFile("abc/test.txt")
+	assert.Equal("web/abc/test.txt", file)
+
+}
 func TestEmbedStaticFS(t *testing.T) {
 	assert := assert.New(t)
 	file := "static_embed.go"

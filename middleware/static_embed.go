@@ -28,6 +28,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/vicanso/elton"
 )
@@ -47,7 +48,8 @@ func NewEmbedStaticFS(fs embed.FS, prefix string) *embedStaticFS {
 }
 
 func (es *embedStaticFS) getFile(file string) string {
-	return filepath.Join(es.Prefix, file)
+	windowsPathSeparator := "\\"
+	return strings.ReplaceAll(filepath.Join(es.Prefix, file), windowsPathSeparator, "/")
 }
 
 // Exists check the file exists
