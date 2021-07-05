@@ -587,9 +587,11 @@ func (e *Elton) OnTrace(ln TraceListener) *Elton {
 }
 
 // AddGroup adds the group to elton
-func (e *Elton) AddGroup(g *Group) *Elton {
-	for _, r := range g.routers {
-		e.Handle(r.Method, r.Path, r.HandleList...)
+func (e *Elton) AddGroup(groups ...*Group) *Elton {
+	for _, g := range groups {
+		for _, r := range g.routers {
+			e.Handle(r.Method, r.Path, r.HandleList...)
+		}
 	}
 	return e
 }
