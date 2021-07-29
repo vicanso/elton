@@ -99,13 +99,17 @@ func NewTracker(config TrackerConfig) elton.Handler {
 	if skipper == nil {
 		skipper = elton.DefaultSkipper
 	}
+	maxLength := config.MaxLength
+	if maxLength <= 0 {
+		maxLength = 20
+	}
 	return func(c *elton.Context) (err error) {
 		if skipper(c) {
 			return c.Next()
 		}
 		result := HandleSuccess
-		query := convertMap(c.Query(), mask, config.MaxLength)
-		params := convertMap(c.Params.ToMap(), mask, config.MaxLength)
+		query := convertMap(c.Query(), mask, maxLength)
+		params := convertMap(c.Params.ToMap(), mask, maxLength)
 		var form map[string]interface{}
 		if len(c.RequestBody) != 0 {
 			form = make(map[string]interface{})
@@ -115,8 +119,8 @@ func NewTracker(config TrackerConfig) elton.Handler {
 					form[k] = "***"
 				} else {
 					str, ok := form[k].(string)
-					if ok && len(str) > config.MaxLength {
-						str = fmt.Sprintf("%s ... (%d more)", str[:config.MaxLength], len(str)-config.MaxLength)
+					if ok && len(str) > maxLength {
+						str = fmt.Sprintf("%s ... (%d more)", str[:maxLength], len(str)-maxLength)
 						form[k] = str
 					}
 				}

@@ -70,7 +70,6 @@ func TestTracker(t *testing.T) {
 		OnTrack: func(info *TrackerInfo, c *elton.Context) {
 			c.Set(trackerInfoKey, info)
 		},
-		MaxLength: 5,
 	})
 	tests := []struct {
 		newContext func() *elton.Context
@@ -82,7 +81,7 @@ func TestTracker(t *testing.T) {
 				req := httptest.NewRequest("POST", "/users/login?type=1&passwordType=2", nil)
 				c := elton.NewContext(nil, req)
 				c.RequestBody = []byte(`{
-		"account": "tree.xie",
+		"account": "tree.xie tree.xie tree.xie",
 		"password": "password"
 	}`)
 				c.Params = new(elton.RouteParams)
@@ -101,7 +100,7 @@ func TestTracker(t *testing.T) {
 					"category": "login",
 				},
 				Form: map[string]interface{}{
-					"account":  "tree. ... (3 more)",
+					"account":  "tree.xie tree.xie tr ... (6 more)",
 					"password": "***",
 				},
 				Err: skipErr,
