@@ -46,24 +46,24 @@ func NewFresh(config FreshConfig) elton.Handler {
 	if skipper == nil {
 		skipper = elton.DefaultSkipper
 	}
-	return func(c *elton.Context) (err error) {
+	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
 		}
-		err = c.Next()
+		err := c.Next()
 		if err != nil {
-			return
+			return err
 		}
 		// 如果空数据或者已经是304，则跳过
 		bodyBuf := c.BodyBuffer
 		if bodyBuf == nil || bodyBuf.Len() == 0 || c.StatusCode == http.StatusNotModified {
-			return
+			return nil
 		}
 
 		// 如果非GET HEAD请求，则跳过
 		method := c.Request.Method
 		if method != http.MethodGet && method != http.MethodHead {
-			return
+			return nil
 		}
 
 		// 如果响应状态码不为0 而且( < 200 或者 >= 300)，则跳过
@@ -72,13 +72,13 @@ func NewFresh(config FreshConfig) elton.Handler {
 		if statusCode != 0 &&
 			(statusCode < http.StatusOK ||
 				statusCode >= http.StatusMultipleChoices) {
-			return
+			return nil
 		}
 
 		// 304的处理
 		if elton.Fresh(c.Request.Header, c.Header()) {
 			c.NotModified()
 		}
-		return
+		return nil
 	}
 }

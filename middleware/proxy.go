@@ -168,7 +168,7 @@ func NewProxy(config ProxyConfig) elton.Handler {
 	}
 	// 默认使用32KB的buffer
 	bufPool := newBufferPool(32 * 1024)
-	return func(c *elton.Context) (err error) {
+	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
 		}
@@ -180,7 +180,7 @@ func NewProxy(config ProxyConfig) elton.Handler {
 		if target == nil {
 			target, done, err = config.TargetPicker(c)
 			if err != nil {
-				return
+				return err
 			}
 			if done != nil {
 				defer done(c)
@@ -188,8 +188,7 @@ func NewProxy(config ProxyConfig) elton.Handler {
 		}
 		// 如果无target，则抛错
 		if target == nil {
-			err = ErrProxyTargetIsNil
-			return
+			return ErrProxyTargetIsNil
 		}
 		c.Set(ProxyTargetKey, target.String())
 		p := httputil.NewSingleHostReverseProxy(target)
@@ -216,7 +215,7 @@ func NewProxy(config ProxyConfig) elton.Handler {
 		p.ServeHTTP(c, req)
 
 		if err != nil {
-			return
+			return err
 		}
 		if originalPath != "" {
 			req.URL.Path = originalPath

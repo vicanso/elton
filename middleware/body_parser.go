@@ -101,7 +101,7 @@ func (jd *jsonDecoder) Validate(c *elton.Context) bool {
 	ctFields := strings.Split(ct, ";")
 	return ctFields[0] == jsonContentType
 }
-func (jd *jsonDecoder) Decode(c *elton.Context, originalData []byte) (data []byte, err error) {
+func (jd *jsonDecoder) Decode(c *elton.Context, originalData []byte) ([]byte, error) {
 	originalData = bytes.TrimSpace(originalData)
 	if len(originalData) == 0 {
 		return nil, nil
@@ -110,16 +110,13 @@ func (jd *jsonDecoder) Decode(c *elton.Context, originalData []byte) (data []byt
 	lastByte := originalData[len(originalData)-1]
 
 	if firstByte != jsonBytes[0] && firstByte != jsonBytes[2] {
-		err = ErrInvalidJSON
-		return
+		return nil, ErrInvalidJSON
 	}
 	if firstByte == jsonBytes[0] && lastByte != jsonBytes[1] {
-		err = ErrInvalidJSON
-		return
+		return nil, ErrInvalidJSON
 	}
 	if firstByte == jsonBytes[2] && lastByte != jsonBytes[3] {
-		err = ErrInvalidJSON
-		return
+		return nil, ErrInvalidJSON
 	}
 	return originalData, nil
 }
@@ -130,7 +127,7 @@ func (fd *formURLEncodedDecoder) Validate(c *elton.Context) bool {
 	return ctFields[0] == formURLEncodedContentType
 }
 
-func (fd *formURLEncodedDecoder) Decode(c *elton.Context, originalData []byte) (data []byte, err error) {
+func (fd *formURLEncodedDecoder) Decode(c *elton.Context, originalData []byte) ([]byte, error) {
 	urlValues, err := url.ParseQuery(string(originalData))
 	if err != nil {
 		he := hes.Wrap(err)
@@ -152,7 +149,7 @@ func (fd *formURLEncodedDecoder) Decode(c *elton.Context, originalData []byte) (
 		}
 		arr = append(arr, fmt.Sprintf(`"%s":[%s]`, key, strings.Join(tmpArr, ",")))
 	}
-	data = []byte("{" + strings.Join(arr, ",") + "}")
+	data := []byte("{" + strings.Join(arr, ",") + "}")
 	return data, nil
 }
 
@@ -281,7 +278,7 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 	if contentTypeValidate == nil {
 		contentTypeValidate = DefaultJSONContentTypeValidate
 	}
-	return func(c *elton.Context) (err error) {
+	return func(c *elton.Context) error {
 		if skipper(c) || c.RequestBody != nil || !contentTypeValidate(c) {
 			return c.Next()
 		}
@@ -303,21 +300,20 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 			r = MaxBytesReader(r, int64(limit))
 		}
 		defer r.Close()
-		body, e := ioutil.ReadAll(r)
-		if e != nil {
-			if hes.IsError(e) {
-				err = e
-				return
+		var body []byte
+		body, err := ioutil.ReadAll(r)
+		if err != nil {
+			if hes.IsError(err) {
+				return err
 			}
 			// IO 读取失败的认为是 exception
-			err = &hes.Error{
+			return &hes.Error{
 				Exception:  true,
 				StatusCode: http.StatusInternalServerError,
-				Message:    e.Error(),
+				Message:    err.Error(),
 				Category:   ErrBodyParserCategory,
-				Err:        e,
+				Err:        err,
 			}
-			return
 		}
 		c.RequestBody = body
 
@@ -336,7 +332,7 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 		for _, decoder := range matchDecoders {
 			body, err = decoder.Decode(c, body)
 			if err != nil {
-				return
+				return err
 			}
 		}
 		c.RequestBody = body

@@ -44,10 +44,10 @@ type (
 )
 
 // Accept accept gzip encoding
-func (g *GzipCompressor) Accept(c *elton.Context, bodySize int) (acceptable bool, encoding string) {
+func (g *GzipCompressor) Accept(c *elton.Context, bodySize int) (bool, string) {
 	// 如果数据少于最低压缩长度，则不压缩（因为reader中的bodySize会设置为1，因此需要判断>=0）
 	if bodySize >= 0 && bodySize < g.getMinLength() {
-		return
+		return false, ""
 	}
 	return AcceptEncoding(c, GzipEncoding)
 }
@@ -88,7 +88,7 @@ func (g *GzipCompressor) getMinLength() int {
 }
 
 // Pipe compress by pipe
-func (g *GzipCompressor) Pipe(c *elton.Context) (err error) {
+func (g *GzipCompressor) Pipe(c *elton.Context) error {
 	r := c.Body.(io.Reader)
 	closer, ok := c.Body.(io.Closer)
 	if ok {
@@ -96,6 +96,6 @@ func (g *GzipCompressor) Pipe(c *elton.Context) (err error) {
 	}
 	w, _ := gzip.NewWriterLevel(c.Response, g.getLevel())
 	defer w.Close()
-	_, err = io.Copy(w, r)
-	return
+	_, err := io.Copy(w, r)
+	return err
 }

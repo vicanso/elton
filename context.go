@@ -240,10 +240,9 @@ func (c *Context) Query() map[string]string {
 }
 
 // Redirect the http request to new location
-func (c *Context) Redirect(code int, url string) (err error) {
+func (c *Context) Redirect(code int, url string) error {
 	if code < MinRedirectCode || code > MaxRedirectCode {
-		err = ErrInvalidRedirect
-		return
+		return ErrInvalidRedirect
 	}
 
 	c.StatusCode = code
@@ -251,7 +250,7 @@ func (c *Context) Redirect(code int, url string) (err error) {
 	c.Body = nil
 	c.BodyBuffer = nil
 	http.Redirect(c.Response, c.Request, url, code)
-	return
+	return nil
 }
 
 // Set the value to the context
@@ -263,12 +262,12 @@ func (c *Context) Set(key, value interface{}) {
 }
 
 // Get the value from context
-func (c *Context) Get(key interface{}) (value interface{}, exists bool) {
+func (c *Context) Get(key interface{}) (interface{}, bool) {
 	if c.m == nil {
 		return nil, false
 	}
-	value, exists = c.m[key]
-	return
+	value, exists := c.m[key]
+	return value, exists
 }
 
 // GetInt returns int value from context
@@ -451,51 +450,49 @@ func (c *Context) getKeys() []string {
 }
 
 // GetSignedCookie returns signed cookie from http request
-func (c *Context) GetSignedCookie(name string) (cookie *http.Cookie, index int, err error) {
-	index = -1
-	cookie, err = c.Cookie(name)
+func (c *Context) GetSignedCookie(name string) (*http.Cookie, int, error) {
+	cookie, err := c.Cookie(name)
 	if err != nil {
-		return
+		return nil, -1, err
 	}
 	keys := c.getKeys()
 	if len(keys) == 0 {
-		err = errSignKeyIsNil
-		return
+		return nil, -1, errSignKeyIsNil
 	}
 
 	sc, err := c.Cookie(name + SignedCookieSuffix)
 	// 如果获取失败，则获取不到cookie
 	if err != nil {
 		cookie = nil
-		return
+		return nil, -1, err
 	}
 	kg := keygrip.New(keys)
-	index = kg.Index([]byte(cookie.Value), []byte(sc.Value))
-	return
+	index := kg.Index([]byte(cookie.Value), []byte(sc.Value))
+	return cookie, index, nil
 }
 
 // SignedCookie returns signed cookie from http request
-func (c *Context) SignedCookie(name string) (cookie *http.Cookie, err error) {
+func (c *Context) SignedCookie(name string) (*http.Cookie, error) {
 	cookie, index, err := c.GetSignedCookie(name)
 	if err != nil {
-		return
+		return cookie, err
 	}
 	// 如果校验失败，返回无cookie的错误
 	if index < 0 {
 		cookie = nil
 		err = http.ErrNoCookie
 	}
-	return
+	return cookie, err
 }
 
 // SendFile to http response
-func (c *Context) SendFile(file string) (err error) {
+func (c *Context) SendFile(file string) error {
 	info, err := os.Stat(file)
 	if err != nil {
 		if os.IsNotExist(err) {
-			err = ErrFileNotFound
+			return ErrFileNotFound
 		}
-		return
+		return err
 	}
 	if info != nil {
 		c.SetHeader(HeaderContentLength, strconv.Itoa(int(info.Size())))
@@ -507,11 +504,11 @@ func (c *Context) SendFile(file string) (err error) {
 	// elton对于实现了closer的会自动调用关闭
 	r, err := os.Open(file)
 	if err != nil {
-		return
+		return err
 	}
 	c.SetContentTypeByExt(file)
 	c.Body = r
-	return
+	return nil
 }
 
 func cloneCookie(cookie *http.Cookie) *http.Cookie {
@@ -622,7 +619,7 @@ func (c *Context) isReuse() bool {
 }
 
 // Push the target to http response
-func (c *Context) Push(target string, opts *http.PushOptions) (err error) {
+func (c *Context) Push(target string, opts *http.PushOptions) error {
 	if c.Response == nil {
 		return ErrNilResponse
 	}
@@ -646,7 +643,7 @@ func (c *Context) Pass(another *Elton) {
 }
 
 // Pipe the reader to the response
-func (c *Context) Pipe(r io.Reader) (written int64, err error) {
+func (c *Context) Pipe(r io.Reader) (int64, error) {
 	c.Committed = true
 	// 如果是 closer，则需要调用close函数
 	closer, ok := r.(io.Closer)

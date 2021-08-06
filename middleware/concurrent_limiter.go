@@ -140,7 +140,7 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 		skipper = elton.DefaultSkipper
 	}
 	keyLength := len(keys)
-	return func(c *elton.Context) (err error) {
+	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
 		}
@@ -163,8 +163,7 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 				v = gjson.GetBytes(c.RequestBody, name).String()
 			}
 			if config.NotAllowEmpty && len(v) == 0 {
-				err = ErrNotAllowEmpty
-				return
+				return ErrNotAllowEmpty
 			}
 			sb.WriteString(v)
 			if i < keyLength-1 {
@@ -175,12 +174,10 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 
 		success, unlock, err := config.Lock(lockKey, c)
 		if err != nil {
-			err = hes.Wrap(err)
-			return
+			return hes.Wrap(err)
 		}
 		if !success {
-			err = ErrSubmitTooFrequently
-			return
+			return ErrSubmitTooFrequently
 		}
 
 		if unlock != nil {
@@ -195,12 +192,11 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 // it use for global processing request limit.
 func NewGlobalConcurrentLimiter(config GlobalConcurrentLimiterConfig) elton.Handler {
 	var count uint32
-	return func(c *elton.Context) (err error) {
+	return func(c *elton.Context) error {
 		value := atomic.AddUint32(&count, 1)
 		defer atomic.AddUint32(&count, ^uint32(0))
 		if value >= config.Max {
-			err = ErrTooManyRequests
-			return
+			return ErrTooManyRequests
 		}
 		return c.Next()
 	}

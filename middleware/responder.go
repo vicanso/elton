@@ -80,27 +80,26 @@ func NewResponder(config ResponderConfig) elton.Handler {
 		contentType = elton.MIMEApplicationJSON
 	}
 
-	return func(c *elton.Context) (err error) {
+	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
 		}
-		err = c.Next()
+		err := c.Next()
 		if err != nil {
-			return
+			return err
 		}
 		// 如果已设置了BodyBuffer，则已生成好响应数据，跳过
 		if c.BodyBuffer != nil {
-			return
+			return nil
 		}
 
 		if c.StatusCode == 0 && c.Body == nil {
 			// 如果status code 与 body 都为空，则为非法响应
-			err = ErrInvalidResponse
-			return
+			return ErrInvalidResponse
 		}
 		// 如果body是reader，则跳过
 		if c.IsReaderBody() {
-			return
+			return nil
 		}
 
 		hadContentType := false
@@ -129,8 +128,7 @@ func NewResponder(config ResponderConfig) elton.Handler {
 					he := hes.NewWithErrorStatusCode(e, http.StatusInternalServerError)
 					he.Category = ErrResponderCategory
 					he.Exception = true
-					err = he
-					return
+					return he
 				}
 				if !hadContentType {
 					c.SetHeader(elton.HeaderContentType, contentType)

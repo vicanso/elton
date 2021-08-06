@@ -83,14 +83,14 @@ func (es *embedStaticFS) NewReader(file string) (io.Reader, error) {
 }
 
 // SendFile sends file to http response and set content type
-func (es *embedStaticFS) SendFile(c *elton.Context, file string) (err error) {
+func (es *embedStaticFS) SendFile(c *elton.Context, file string) error {
 	// 因为静态文件打包至程序中，直接读取
 	buf, err := es.Get(file)
 	if err != nil {
-		return
+		return err
 	}
 	// 根据文件后续设置类型
 	c.SetContentTypeByExt(file)
 	c.BodyBuffer = bytes.NewBuffer(buf)
-	return
+	return nil
 }

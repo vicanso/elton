@@ -89,7 +89,7 @@ func NewBasicAuth(config BasicAuthConfig) elton.Handler {
 	if skipper == nil {
 		skipper = elton.DefaultSkipper
 	}
-	return func(c *elton.Context) (err error) {
+	return func(c *elton.Context) error {
 		if skipper(c) || c.Request.Method == http.MethodOptions {
 			return c.Next()
 		}
@@ -98,8 +98,7 @@ func NewBasicAuth(config BasicAuthConfig) elton.Handler {
 		// 如果请求头无认证头，则返回出错
 		if !hasAuth {
 			c.SetHeader(elton.HeaderWWWAuthenticate, wwwAuthenticate)
-			err = ErrBasicAuthUnauthorized
-			return
+			return ErrBasicAuthUnauthorized
 		}
 
 		valid, e := config.Validate(user, password, c)
@@ -116,8 +115,7 @@ func NewBasicAuth(config BasicAuthConfig) elton.Handler {
 		// 如果校验失败，设置认证头，客户重新输入
 		if !valid {
 			c.SetHeader(elton.HeaderWWWAuthenticate, wwwAuthenticate)
-			err = ErrBasicAuthUnauthorized
-			return
+			return ErrBasicAuthUnauthorized
 		}
 		return c.Next()
 	}

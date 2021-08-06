@@ -72,7 +72,7 @@ func NewStats(config StatsConfig) elton.Handler {
 	if skipper == nil {
 		skipper = elton.DefaultSkipper
 	}
-	return func(c *elton.Context) (err error) {
+	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
 		}
@@ -96,7 +96,7 @@ func NewStats(config StatsConfig) elton.Handler {
 			RequestBodySize: len(c.RequestBody),
 		}
 
-		err = c.Next()
+		err := c.Next()
 
 		info.Consuming = time.Since(startedAt)
 		status := c.StatusCode
@@ -120,6 +120,6 @@ func NewStats(config StatsConfig) elton.Handler {
 		info.Size = size
 
 		config.OnStats(info, c)
-		return
+		return err
 	}
 }

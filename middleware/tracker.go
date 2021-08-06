@@ -103,7 +103,7 @@ func NewTracker(config TrackerConfig) elton.Handler {
 	if maxLength <= 0 {
 		maxLength = 20
 	}
-	return func(c *elton.Context) (err error) {
+	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
 		}
@@ -126,7 +126,7 @@ func NewTracker(config TrackerConfig) elton.Handler {
 				}
 			}
 		}
-		err = c.Next()
+		err := c.Next()
 		if err != nil {
 			result = HandleFail
 		}
@@ -138,6 +138,6 @@ func NewTracker(config TrackerConfig) elton.Handler {
 			Result: result,
 			Err:    err,
 		}, c)
-		return
+		return err
 	}
 }

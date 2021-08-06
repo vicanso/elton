@@ -56,17 +56,17 @@ func NewResponseSizeLimiter(config ResponseSizeLimiterConfig) elton.Handler {
 	if config.MaxSize <= 0 {
 		panic(errors.New("max size should be > 0"))
 	}
-	return func(c *elton.Context) (err error) {
+	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
 		}
-		err = c.Next()
+		err := c.Next()
 		if err != nil {
-			return
+			return err
 		}
 		if c.BodyBuffer != nil && c.BodyBuffer.Len() > config.MaxSize {
 			return ErrResponseTooLarge
 		}
-		return
+		return nil
 	}
 }

@@ -42,7 +42,7 @@ func (s *RouteParams) Reset() {
 }
 
 // Get value from params
-func (s *RouteParams) Get(key string) (value string) {
+func (s *RouteParams) Get(key string) string {
 	index := -1
 	for i, k := range s.Keys {
 		if key == k {
@@ -51,9 +51,9 @@ func (s *RouteParams) Get(key string) (value string) {
 		}
 	}
 	if index != -1 {
-		value = s.Values[index]
+		return s.Values[index]
 	}
-	return
+	return ""
 }
 
 // ToMap converts route params to map[string]string

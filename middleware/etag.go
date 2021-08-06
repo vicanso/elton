@@ -64,20 +64,20 @@ func NewETag(config ETagConfig) elton.Handler {
 	if skipper == nil {
 		skipper = elton.DefaultSkipper
 	}
-	return func(c *elton.Context) (err error) {
+	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
 		}
-		err = c.Next()
+		err := c.Next()
 		if err != nil {
-			return
+			return err
 		}
 		bodyBuf := c.BodyBuffer
 		// 如果无内容或已设置 ETag ，则跳过
 		// 因为没有内容也不生成 ETag
 		if bodyBuf == nil || bodyBuf.Len() == 0 ||
 			c.GetHeader(elton.HeaderETag) != "" {
-			return
+			return nil
 		}
 		// 如果响应状态码不为0 而且( < 200 或者 >= 300)，则跳过
 		// 如果未设置状态码，最终为200
@@ -85,12 +85,12 @@ func NewETag(config ETagConfig) elton.Handler {
 		if statusCode != 0 &&
 			(statusCode < http.StatusOK ||
 				statusCode >= http.StatusMultipleChoices) {
-			return
+			return nil
 		}
 		eTag, _ := genETag(bodyBuf.Bytes())
 		if eTag != "" {
 			c.SetHeader(elton.HeaderETag, eTag)
 		}
-		return
+		return nil
 	}
 }

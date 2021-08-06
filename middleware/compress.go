@@ -110,28 +110,28 @@ func NewCompress(config CompressConfig) elton.Handler {
 	if len(compressorList) == 0 {
 		panic(errors.New("compressor can't be empty"))
 	}
-	return func(c *elton.Context) (err error) {
+	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
 		}
-		err = c.Next()
+		err := c.Next()
 		if err != nil {
-			return
+			return err
 		}
 		isReaderBody := c.IsReaderBody()
 		// 如果数据为空，而且body不是reader，直接跳过
 		if c.BodyBuffer == nil && !isReaderBody {
-			return
+			return nil
 		}
 
 		// encoding 不为空，已做处理，无需要压缩
 		if c.GetHeader(elton.HeaderContentEncoding) != "" {
-			return
+			return nil
 		}
 		contentType := c.GetHeader(elton.HeaderContentType)
 		// 数据类型为非可压缩，则返回
 		if !checker.MatchString(contentType) {
-			return
+			return nil
 		}
 
 		var body []byte
@@ -168,7 +168,7 @@ func NewCompress(config CompressConfig) elton.Handler {
 				err = compressor.Pipe(c)
 				// 如果出错直接返回，此时也有可能已经开始写入数据，导致http后续无法再写入status code
 				if err != nil {
-					return
+					return err
 				}
 				// 成功跳出循环
 				// pipe 将数据直接转至原有的Response，因此设置committed为true
@@ -188,6 +188,6 @@ func NewCompress(config CompressConfig) elton.Handler {
 				c.BodyBuffer = newBuf
 			}
 		}
-		return
+		return nil
 	}
 }

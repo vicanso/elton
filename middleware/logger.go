@@ -319,12 +319,12 @@ func NewLogger(config LoggerConfig) elton.Handler {
 	if skipper == nil {
 		skipper = elton.DefaultSkipper
 	}
-	return func(c *elton.Context) (err error) {
+	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
 		}
 		startedAt := time.Now()
-		err = c.Next()
+		err := c.Next()
 		str := formatLog(c, tags, startedAt, config.DefaultFill)
 		config.OnLog(str, c)
 		return err

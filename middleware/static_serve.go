@@ -110,9 +110,8 @@ func (fs *FS) Stat(file string) os.FileInfo {
 }
 
 // Get get the file's content
-func (fs *FS) Get(file string) (buf []byte, err error) {
-	buf, err = ioutil.ReadFile(file)
-	return
+func (fs *FS) Get(file string) ([]byte, error) {
+	return ioutil.ReadFile(file)
 }
 
 // NewReader new a reader for file
@@ -179,7 +178,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 	}
 	// convert different os file path
 	basePath := filepath.Join(config.Path, "")
-	return func(c *elton.Context) (err error) {
+	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
 		}
@@ -198,8 +197,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 		file = filepath.Join(config.Path, file)
 		// 避免文件名是有 .. 等导致最终文件路径越过配置的路径
 		if !strings.HasPrefix(file, basePath) {
-			err = ErrStaticServeOutOfPath
-			return
+			return ErrStaticServeOutOfPath
 		}
 
 		// 检查文件（路径）是否包括.
@@ -207,24 +205,21 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 			arr := strings.SplitN(file, string(filepath.Separator), -1)
 			for _, item := range arr {
 				if item != "" && item[0] == '.' {
-					err = ErrStaticServeNotAllowAccessDot
-					return
+					return ErrStaticServeNotAllowAccessDot
 				}
 			}
 		}
 
 		// 禁止 querystring
 		if config.DenyQueryString && url.RawQuery != "" {
-			err = ErrStaticServeNotAllowQueryString
-			return
+			return ErrStaticServeNotAllowQueryString
 		}
 		exists := staticFile.Exists(file)
 		if !exists {
 			if config.NotFoundNext {
 				return c.Next()
 			}
-			err = ErrStaticServeNotFound
-			return
+			return ErrStaticServeNotFound
 		}
 
 		c.SetContentTypeByExt(file)
@@ -238,8 +233,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 					he = hes.NewWithErrorStatusCode(e, http.StatusInternalServerError)
 					he.Category = ErrStaticServeCategory
 				}
-				err = he
-				return
+				return he
 			}
 			fileBuf = buf
 		}
@@ -281,8 +275,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 		} else {
 			r, e := staticFile.NewReader(file)
 			if e != nil {
-				err = getStaticServeError(e.Error(), http.StatusBadRequest)
-				return
+				return getStaticServeError(e.Error(), http.StatusBadRequest)
 			}
 			c.StatusCode = http.StatusOK
 			c.Body = r

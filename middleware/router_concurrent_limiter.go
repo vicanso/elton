@@ -78,7 +78,7 @@ func NewLocalLimiter(data map[string]uint32) *RCLLocalLimiter {
 }
 
 // IncConcurrency inc 1
-func (l *RCLLocalLimiter) IncConcurrency(key string) (current, max uint32) {
+func (l *RCLLocalLimiter) IncConcurrency(key string) (uint32, uint32) {
 	concur, ok := l.m[key]
 	if !ok {
 		return 0, 0
@@ -123,7 +123,7 @@ func NewRCL(config RCLConfig) elton.Handler {
 		panic(ErrRCLRequireLimiter)
 	}
 	limiter := config.Limiter
-	return func(c *elton.Context) (err error) {
+	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
 		}
@@ -131,8 +131,7 @@ func NewRCL(config RCLConfig) elton.Handler {
 		current, max := limiter.IncConcurrency(key)
 		defer limiter.DecConcurrency(key)
 		if max != 0 && current > max {
-			err = createRCLError(current, max)
-			return
+			return createRCLError(current, max)
 		}
 		return c.Next()
 	}
