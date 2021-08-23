@@ -271,75 +271,85 @@ func (c *Context) Get(key interface{}) (interface{}, bool) {
 }
 
 // GetInt returns int value from context
-func (c *Context) GetInt(key interface{}) (i int) {
+func (c *Context) GetInt(key interface{}) int {
 	if value, exists := c.Get(key); exists && value != nil {
-		i, _ = value.(int)
+		i, _ := value.(int)
+		return i
 	}
-	return
+	return 0
 }
 
 // GetInt64 returns int64 value from context
-func (c *Context) GetInt64(key interface{}) (i int64) {
+func (c *Context) GetInt64(key interface{}) int64 {
 	if value, exists := c.Get(key); exists && value != nil {
-		i, _ = value.(int64)
+		i, _ := value.(int64)
+		return i
 	}
-	return
+	return 0
 }
 
 // GetString returns string value from context
-func (c *Context) GetString(key interface{}) (s string) {
+func (c *Context) GetString(key interface{}) string {
 	if value, exists := c.Get(key); exists && value != nil {
-		s, _ = value.(string)
+		s, _ := value.(string)
+		return s
 	}
-	return
+	return ""
 }
 
 // GetBool returns bool value from context
-func (c *Context) GetBool(key interface{}) (b bool) {
+func (c *Context) GetBool(key interface{}) bool {
 	if value, exists := c.Get(key); exists && value != nil {
-		b, _ = value.(bool)
+		b, _ := value.(bool)
+		return b
 	}
-	return
+	return false
 }
 
 // GetFloat32 returns float32 value from context
-func (c *Context) GetFloat32(key interface{}) (f float32) {
+func (c *Context) GetFloat32(key interface{}) float32 {
 	if value, exists := c.Get(key); exists && value != nil {
-		f, _ = value.(float32)
+		f, _ := value.(float32)
+		return f
 	}
-	return
+	return 0
 }
 
 // GetFloat64 returns float64 value from context
-func (c *Context) GetFloat64(key interface{}) (f float64) {
+func (c *Context) GetFloat64(key interface{}) float64 {
 	if value, exists := c.Get(key); exists && value != nil {
-		f, _ = value.(float64)
+		f, _ := value.(float64)
+		return f
 	}
-	return
+	return 0
 }
 
 // GetTime returns time value from context
-func (c *Context) GetTime(key interface{}) (t time.Time) {
+func (c *Context) GetTime(key interface{}) time.Time {
 	if value, exists := c.Get(key); exists && value != nil {
-		t, _ = value.(time.Time)
+		t, _ := value.(time.Time)
+		return t
+
 	}
-	return
+	return time.Time{}
 }
 
 // GetDuration returns duration from context
-func (c *Context) GetDuration(key interface{}) (d time.Duration) {
+func (c *Context) GetDuration(key interface{}) time.Duration {
 	if value, exists := c.Get(key); exists && value != nil {
-		d, _ = value.(time.Duration)
+		d, _ := value.(time.Duration)
+		return d
 	}
-	return
+	return 0
 }
 
 // GetStringSlice returns string slice from context
-func (c *Context) GetStringSlice(key interface{}) (arr []string) {
+func (c *Context) GetStringSlice(key interface{}) []string {
 	if value, exists := c.Get(key); exists && value != nil {
-		arr, _ = value.([]string)
+		arr, _ := value.([]string)
+		return arr
 	}
-	return
+	return nil
 }
 
 // GetRequestHeader returns header value from http request
@@ -579,12 +589,11 @@ func (c *Context) NoStore() {
 }
 
 // CacheMaxAge sets `Cache-Control: public, max-age=MaxAge, s-maxage=SMaxAge` to the http response header.
-// If args is not empty, it will use the first duration as SMaxAge
-func (c *Context) CacheMaxAge(age time.Duration, args ...time.Duration) {
+// If sMaxAge is not empty, it will use the first duration as SMaxAge
+func (c *Context) CacheMaxAge(age time.Duration, sMaxAge ...time.Duration) {
 	cache := fmt.Sprintf("public, max-age=%d", int(age.Seconds()))
-	if len(args) != 0 {
-		sMaxAge := args[0]
-		cache += fmt.Sprintf(", s-maxage=%d", int(sMaxAge.Seconds()))
+	if len(sMaxAge) != 0 {
+		cache += fmt.Sprintf(", s-maxage=%d", int(sMaxAge[0].Seconds()))
 	}
 	c.SetHeader(HeaderCacheControl, cache)
 }

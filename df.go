@@ -68,7 +68,7 @@ var (
 )
 
 // Version of elton
-const Version = "1.4.0"
+const Version = "1.4.4"
 
 const (
 	// ErrCategory elton category

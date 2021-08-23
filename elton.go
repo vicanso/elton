@@ -124,6 +124,8 @@ type (
 	PreHandler func(*http.Request)
 )
 
+var _ http.Handler = (*Elton)(nil)
+
 // DefaultSkipper default skipper function
 func DefaultSkipper(c *Context) bool {
 	return c.Committed
