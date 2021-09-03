@@ -545,6 +545,16 @@ func TestReadFile(t *testing.T) {
 	assert.Equal(testData, data)
 }
 
+func TestHTML(t *testing.T) {
+	assert := assert.New(t)
+
+	resp := httptest.NewRecorder()
+	c := NewContext(resp, nil)
+	html := "<html><body></body></html>"
+	c.HTML(html)
+	assert.Equal("text/html; charset=utf-8", resp.Header().Get(HeaderContentType))
+	assert.Equal(html, c.BodyBuffer.String())
+}
 
 func TestRedirect(t *testing.T) {
 	assert := assert.New(t)

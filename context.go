@@ -634,6 +634,12 @@ func (c *Context) ReadFile(key string) ([]byte, *multipart.FileHeader, error) {
 	return buf, header, nil
 }
 
+// HTML sets content type and response body as html
+func (c *Context) HTML(html string) {
+	c.SetContentTypeByExt(".html")
+	c.BodyBuffer = bytes.NewBufferString(html)
+}
+
 // DisableReuse sets the context disable reuse
 func (c *Context) DisableReuse() {
 	atomic.StoreInt32(&c.reuseStatus, ReuseContextDisabled)
