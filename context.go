@@ -27,7 +27,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"mime"
+	"mime/multipart"
 	"net"
 	"net/http"
 	"net/url"
@@ -616,6 +618,20 @@ func (c *Context) SetContentTypeByExt(file string) {
 	if contentType != "" {
 		c.SetHeader(HeaderContentType, contentType)
 	}
+}
+
+// ReadFile reads file data from request
+func (c *Context) ReadFile(key string) ([]byte, *multipart.FileHeader, error) {
+	file, header, err := c.Request.FormFile(key)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer file.Close()
+	buf, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, nil, err
+	}
+	return buf, header, nil
 }
 
 // DisableReuse sets the context disable reuse

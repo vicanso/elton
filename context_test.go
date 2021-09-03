@@ -24,6 +24,8 @@ package elton
 
 import (
 	"bytes"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -511,6 +513,38 @@ func TestSendFile(t *testing.T) {
 		}
 	}
 }
+
+func TestReadFile(t *testing.T) {
+	assert := assert.New(t)
+
+	testData := []byte("test data")
+	fileName := "test.txt"
+	// 生成http文件上传数据
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+	fw, err := w.CreateFormFile("file", fileName)
+	if err != nil {
+		return
+	}
+	_, err = io.Copy(fw, bytes.NewReader(testData))
+	assert.Nil(err)
+	err = w.Close()
+	assert.Nil(err)
+
+	req := httptest.NewRequest("POST", "/", bytes.NewReader(b.Bytes()))
+	req.Header = http.Header{
+		"Content-Type": []string{
+			w.FormDataContentType(),
+		},
+	}
+	c := NewContext(httptest.NewRecorder(), req)
+	data, fileHeader, err := c.ReadFile("file")
+	assert.Nil(err)
+	assert.Equal(fileName, fileHeader.Filename)
+	assert.Equal(int64(9), fileHeader.Size)
+	assert.Equal(testData, data)
+}
+
 
 func TestRedirect(t *testing.T) {
 	assert := assert.New(t)
