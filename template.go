@@ -25,8 +25,8 @@ package elton
 import (
 	"bytes"
 	"context"
+	"html/template"
 	"io/ioutil"
-	"text/template"
 )
 
 type TemplateParser interface {
@@ -35,14 +35,17 @@ type TemplateParser interface {
 }
 type TemplateParsers map[string]TemplateParser
 
-func (tps TemplateParsers) Add(tmplType string, parser TemplateParser) {
-	tps[tmplType] = parser
+func (tps TemplateParsers) Add(ext string, parser TemplateParser) {
+	if ext == "" || parser == nil {
+		panic("ext and parser can not be nil")
+	}
+	tps[ext] = parser
 }
-func (tps TemplateParsers) Get(tmplType string) TemplateParser {
+func (tps TemplateParsers) Get(ext string) TemplateParser {
 	if tps == nil {
 		return nil
 	}
-	return tps[tmplType]
+	return tps[ext]
 }
 func NewTemplateParsers() TemplateParsers {
 	return make(TemplateParsers)
@@ -51,8 +54,8 @@ func NewTemplateParsers() TemplateParsers {
 var _ TemplateParser = (*HTMLTemplate)(nil)
 var defaultTemplateParsers = NewTemplateParsers()
 
-func Register(tmplType string, parser TemplateParser) {
-	defaultTemplateParsers.Add(tmplType, parser)
+func Register(ext string, parser TemplateParser) {
+	defaultTemplateParsers.Add(ext, parser)
 }
 
 func init() {
@@ -60,8 +63,8 @@ func init() {
 	Register("html", &HTMLTemplate{})
 }
 
-func GetParser(tmplType string) TemplateParser {
-	return defaultTemplateParsers.Get(tmplType)
+func GetParser(ext string) TemplateParser {
+	return defaultTemplateParsers.Get(ext)
 }
 
 type HTMLTemplate struct{}
