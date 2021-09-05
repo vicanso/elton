@@ -43,3 +43,10 @@ func TestHTMLTemplate(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal("<p>2<span>tree</span></p>", html)
 }
+
+func TestTemplates(t *testing.T) {
+	assert := assert.New(t)
+
+	assert.NotNil(GetParser("html"))
+	assert.NotNil(GetParser("tmpl"))
+}

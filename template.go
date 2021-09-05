@@ -33,12 +33,26 @@ type TemplateParser interface {
 	Render(ctx context.Context, text string, data interface{}) (string, error)
 	RenderFile(ctx context.Context, filename string, data interface{}) (string, error)
 }
+type TemplateParsers map[string]TemplateParser
+
+func (tps TemplateParsers) Add(tmplType string, parser TemplateParser) {
+	tps[tmplType] = parser
+}
+func (tps TemplateParsers) Get(tmplType string) TemplateParser {
+	if tps == nil {
+		return nil
+	}
+	return tps[tmplType]
+}
+func NewTemplateParsers() TemplateParsers {
+	return make(TemplateParsers)
+}
 
 var _ TemplateParser = (*HTMLTemplate)(nil)
-var templateParsers = map[string]TemplateParser{}
+var defaultTemplateParsers = NewTemplateParsers()
 
 func Register(tmplType string, parser TemplateParser) {
-	templateParsers[tmplType] = parser
+	defaultTemplateParsers.Add(tmplType, parser)
 }
 
 func init() {
@@ -47,7 +61,7 @@ func init() {
 }
 
 func GetParser(tmplType string) TemplateParser {
-	return templateParsers[tmplType]
+	return defaultTemplateParsers.Get(tmplType)
 }
 
 type HTMLTemplate struct{}
