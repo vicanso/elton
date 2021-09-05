@@ -24,6 +24,7 @@ package elton
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -515,6 +516,20 @@ func TestGetSetFunctionName(t *testing.T) {
 	fnName := "test"
 	e.SetFunctionName(fn, fnName)
 	assert.Equal(fnName, e.GetFunctionName(fn))
+}
+
+func TestContextWithContext(t *testing.T) {
+	assert := assert.New(t)
+	req := httptest.NewRequest("GET", "/", nil)
+	c := NewContext(nil, req)
+
+	assert.Equal(req.Context(), c.Context())
+
+	ctx, cancel := context.WithTimeout(c.Context(), time.Second)
+	defer cancel()
+	c.WithContext(ctx)
+
+	assert.Equal(ctx, c.Context())
 }
 
 func TestConvertToServerTiming(t *testing.T) {

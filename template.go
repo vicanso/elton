@@ -35,36 +35,28 @@ type TemplateParser interface {
 }
 type TemplateParsers map[string]TemplateParser
 
-func (tps TemplateParsers) Add(ext string, parser TemplateParser) {
-	if ext == "" || parser == nil {
-		panic("ext and parser can not be nil")
+func (tps TemplateParsers) Add(template string, parser TemplateParser) {
+	if template == "" || parser == nil {
+		panic("template and parser can not be nil")
 	}
-	tps[ext] = parser
+	tps[template] = parser
 }
-func (tps TemplateParsers) Get(ext string) TemplateParser {
-	if tps == nil {
+func (tps TemplateParsers) Get(template string) TemplateParser {
+	if tps == nil || template == "" {
 		return nil
 	}
-	return tps[ext]
+	return tps[template]
 }
 func NewTemplateParsers() TemplateParsers {
 	return make(TemplateParsers)
 }
 
 var _ TemplateParser = (*HTMLTemplate)(nil)
-var defaultTemplateParsers = NewTemplateParsers()
-
-func Register(ext string, parser TemplateParser) {
-	defaultTemplateParsers.Add(ext, parser)
-}
+var DefaultTemplateParsers = NewTemplateParsers()
 
 func init() {
-	Register("tmpl", &HTMLTemplate{})
-	Register("html", &HTMLTemplate{})
-}
-
-func GetParser(ext string) TemplateParser {
-	return defaultTemplateParsers.Get(ext)
+	DefaultTemplateParsers.Add("tmpl", &HTMLTemplate{})
+	DefaultTemplateParsers.Add("html", &HTMLTemplate{})
 }
 
 type HTMLTemplate struct{}

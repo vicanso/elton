@@ -76,3 +76,27 @@ func TestGzipPipe(t *testing.T) {
 	buf, _ := ioutil.ReadAll(r)
 	assert.Equal(originalData, string(buf))
 }
+
+func TestGzipGetLevel(t *testing.T) {
+	assert := assert.New(t)
+	g := GzipCompressor{
+		Level: 1000,
+	}
+	assert.Equal(gzip.BestCompression, g.getLevel())
+
+	g.Level = 0
+	assert.Equal(gzip.DefaultCompression, g.getLevel())
+
+	g.Level = 1
+	assert.Equal(1, g.getLevel())
+}
+
+func TestGzipGetMinLength(t *testing.T) {
+	assert := assert.New(t)
+	g := GzipCompressor{}
+
+	assert.Equal(DefaultCompressMinLength, g.getMinLength())
+
+	g.MinLength = 1
+	assert.Equal(1, g.getMinLength())
+}
