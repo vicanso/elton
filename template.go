@@ -35,6 +35,9 @@ type TemplateParser interface {
 }
 type TemplateParsers map[string]TemplateParser
 
+// ReadFile defines how to read file
+type ReadFile func(filename string) ([]byte, error)
+
 func (tps TemplateParsers) Add(template string, parser TemplateParser) {
 	if template == "" || parser == nil {
 		panic("template and parser can not be nil")
@@ -55,11 +58,19 @@ var _ TemplateParser = (*HTMLTemplate)(nil)
 var DefaultTemplateParsers = NewTemplateParsers()
 
 func init() {
-	DefaultTemplateParsers.Add("tmpl", &HTMLTemplate{})
-	DefaultTemplateParsers.Add("html", &HTMLTemplate{})
+	DefaultTemplateParsers.Add("tmpl", NewHTMLTemplate(nil))
+	DefaultTemplateParsers.Add("html", NewHTMLTemplate(nil))
 }
 
-type HTMLTemplate struct{}
+func NewHTMLTemplate(read ReadFile) *HTMLTemplate {
+	return &HTMLTemplate{
+		readFile: read,
+	}
+}
+
+type HTMLTemplate struct {
+	readFile ReadFile
+}
 
 func (ht *HTMLTemplate) render(name, text string, data interface{}) (string, error) {
 	tpl, err := template.New(name).Parse(text)
@@ -81,7 +92,11 @@ func (ht *HTMLTemplate) Render(ctx context.Context, text string, data interface{
 
 // Render renders the text of file using text/template
 func (ht *HTMLTemplate) RenderFile(ctx context.Context, filename string, data interface{}) (string, error) {
-	buf, err := ioutil.ReadFile(filename)
+	read := ht.readFile
+	if read == nil {
+		read = ioutil.ReadFile
+	}
+	buf, err := read(filename)
 	if err != nil {
 		return "", err
 	}
