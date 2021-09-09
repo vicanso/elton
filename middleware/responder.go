@@ -89,7 +89,8 @@ func NewResponder(config ResponderConfig) elton.Handler {
 			return err
 		}
 		// 如果已设置了BodyBuffer，则已生成好响应数据，跳过
-		if c.BodyBuffer != nil {
+		// 如果设置为commit，则表示其响应数据已处理
+		if c.BodyBuffer != nil || c.Committed {
 			return nil
 		}
 

@@ -62,6 +62,18 @@ func TestResponder(t *testing.T) {
 			},
 			err: skipErr,
 		},
+		// committed(skip after next)
+		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), nil)
+				c.Next = func() error {
+					// 如果设置为commit，则表示其响应数据已处理
+					c.Committed = true
+					return nil
+				}
+				return c
+			},
+		},
 		// response error
 		{
 			newContext: func() *elton.Context {
