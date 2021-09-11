@@ -38,8 +38,9 @@ type RenderData struct {
 }
 
 type RendererConfig struct {
-	Skipper elton.Skipper
-	Parsers elton.TemplateParsers
+	Skipper  elton.Skipper
+	ViewPath string
+	Parsers  elton.TemplateParsers
 }
 
 func (data *RenderData) getTemplateType() string {
@@ -124,8 +125,9 @@ func NewRenderer(config RendererConfig) elton.Handler {
 			return ErrTemplateTypeInvalid
 		}
 		var html string
-		if data.File != "" {
-			html, err = parser.RenderFile(c.Context(), data.File, data.Data)
+		file := filepath.Join(config.ViewPath, data.File)
+		if file != "" {
+			html, err = parser.RenderFile(c.Context(), file, data.Data)
 		} else {
 			html, err = parser.Render(c.Context(), data.Text, data.Data)
 		}

@@ -61,8 +61,11 @@ func (g *GzipCompressor) Compress(buf []byte) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer w.Close()
 	_, err = w.Write(buf)
+	if err != nil {
+		return nil, err
+	}
+	err = w.Close()
 	if err != nil {
 		return nil, err
 	}

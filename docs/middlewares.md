@@ -16,6 +16,7 @@ description: 各类常用的中间件
 - [logger](#logger) 生成HTTP请求日志，支持从请求头、响应头中获取相应信息
 - [proxy](#proxy) Proxy中间件，可定义请求转发至其它的服务
 - [recover](#recover) 捕获程序的panic异常，避免程序崩溃
+- [renderer](#renderer) 模板渲染中间件，用于将模板编译输出为html
 - [responder](#responder) 响应处理中间件，用于将`Context.Body`(interface{})转换为对应的JSON数据并输出。如果系统使用xml等输出响应数据，可参考此中间件实现interface{}至xml的转换
 - [response-size-limiter](#response-size-limiter) 响应长度限制中间件，用于限制响应数据的最大长度
 - [router-concurrent-limiter](#router-concurrent-limiter) 路由并发限制中间件，可以针对路由限制并发请求量。
@@ -533,6 +534,38 @@ func main() {
 
 	e.GET("/", func(c *elton.Context) (err error) {
 		panic(errors.New("abcd"))
+	})
+
+	err := e.ListenAndServe(":3000")
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+## renderer
+
+模板渲染中间件，用于将各类模板渲染为html输出，默认支持`html`与`tmpl`两种后续文件使用`html/template`模块来渲染。
+
+```go
+package main
+
+import (
+	"errors"
+
+	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/middleware"
+)
+
+func main() {
+	e := elton.New()
+
+	e.Use(middleware.NewRenderer(middleware.RendererConfig{}))
+
+	e.GET("/", func(c *elton.Context) (err error) {
+		c.Body = middleware.RenderData{
+			File:         "index.html",
+		}
 	})
 
 	err := e.ListenAndServe(":3000")
