@@ -64,11 +64,15 @@ const (
 	ErrConcurrentLimiterCategory = "elton-concurrent-limiter"
 )
 
+type KeyGenerator func(*elton.Context) (string, error)
+
 type (
 	// ConcurrentLimiterLock lock the key
 	ConcurrentLimiterLock func(string, *elton.Context) (bool, func(), error)
 	// Config concurrent limiter config
 	ConcurrentLimiterConfig struct {
+		// KeyGenerator generate custom key
+		KeyGenerator KeyGenerator
 		// Keys keys for generate lock id
 		Keys []string
 		// Lock lock function
@@ -169,6 +173,17 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 			if i < keyLength-1 {
 				sb.WriteRune(',')
 			}
+		}
+		// 如果有指定key的生成函数
+		if config.KeyGenerator != nil {
+			customKey, err := config.KeyGenerator(c)
+			if err != nil {
+				return err
+			}
+			if sb.Len() != 0 {
+				sb.WriteRune(',')
+			}
+			sb.WriteString(customKey)
 		}
 		lockKey := sb.String()
 

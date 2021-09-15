@@ -54,8 +54,13 @@ func TestConcurrentLimiter(t *testing.T) {
 			"p:id",
 			"account",
 		},
-		Lock: func(key string, c *elton.Context) (success bool, unlock func(), err error) {
-			if key != "192.0.2.1,xyz,1,123,tree.xie" {
+		KeyGenerator: func(c *elton.Context) (string, error) {
+			return "abc", nil
+		},
+		Lock: func(key string, _ *elton.Context) (success bool, unlock func(), err error) {
+			value := "192.0.2.1,xyz,1,123,tree.xie,abc"
+			assert.Equal(value, key)
+			if key != value {
 				err = errors.New("key is invalid")
 				return
 			}
