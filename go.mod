@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/stretchr/testify v1.7.0
-	github.com/tidwall/gjson v1.9.0
+	github.com/tidwall/gjson v1.9.3
 	github.com/vicanso/hes v0.3.9
 	github.com/vicanso/intranet-ip v0.0.1
 	github.com/vicanso/keygrip v1.2.1

@@ -532,31 +532,6 @@ func TestContextWithContext(t *testing.T) {
 	assert.Equal(ctx, c.Context())
 }
 
-func TestConvertToServerTiming(t *testing.T) {
-	assert := assert.New(t)
-	traceInfos := make(TraceInfos, 0)
-
-	t.Run("get ms", func(t *testing.T) {
-		assert.Equal("0", getMs(10))
-		assert.Equal("0.10", getMs(100000))
-	})
-
-	t.Run("empty trace infos", func(t *testing.T) {
-		assert.Empty(traceInfos.ServerTiming(""), "no trace should return nil")
-	})
-	t.Run("server timing", func(t *testing.T) {
-		traceInfos = append(traceInfos, &TraceInfo{
-			Name:     "a",
-			Duration: time.Microsecond * 10,
-		})
-		traceInfos = append(traceInfos, &TraceInfo{
-			Name:     "b",
-			Duration: time.Millisecond + time.Microsecond,
-		})
-		assert.Equal(`elton-0;dur=0.01;desc="a",elton-1;dur=1;desc="b"`, string(traceInfos.ServerTiming("elton-")))
-	})
-}
-
 func TestGracefulClose(t *testing.T) {
 	e := New()
 	t.Run("running 404", func(t *testing.T) {

@@ -28,6 +28,10 @@ import (
 	"github.com/vicanso/hes"
 )
 
+type ContextKey string
+
+const ContextTraceKey ContextKey = "contextTrace"
+
 var (
 	methods = []string{
 		http.MethodGet,

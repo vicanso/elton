@@ -693,6 +693,11 @@ func (c *Context) IsReaderBody() bool {
 	return ok
 }
 
+// GetTrace get trace from context, if context without trace, new trace will be created.
+func (c *Context) GetTrace() *Trace {
+	return GetTrace(c.Context())
+}
+
 // ServerTiming converts trace info to http response server timing
 func (c *Context) ServerTiming(traceInfos TraceInfos, prefix string) {
 	value := traceInfos.ServerTiming(prefix)

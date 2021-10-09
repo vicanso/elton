@@ -32,7 +32,6 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -91,13 +90,7 @@ type (
 		functionInfos map[uintptr]string
 		ctxPool       sync.Pool
 	}
-	// TraceInfo trace's info
-	TraceInfo struct {
-		Name     string        `json:"name,omitempty"`
-		Duration time.Duration `json:"duration,omitempty"`
-	}
-	// TraceInfos trace infos
-	TraceInfos []*TraceInfo
+
 	// Router router
 	Router struct {
 		Method     string    `json:"method,omitempty"`
@@ -322,10 +315,10 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 		maxMid := len(mids)
 		maxNext := maxMid + len(handlerList)
 		index := -1
-		var traceInfos TraceInfos
+		var trace *Trace
 		if e.EnableTrace {
-			// TODO 复用traceInfos
-			traceInfos = make(TraceInfos, 0, maxNext)
+			trace = NewTrace()
+			c.WithContext(context.WithValue(c.Context(), ContextTraceKey, trace))
 		}
 		c.Next = func() error {
 			// 如果已设置响应数据，则不再执行后续的中间件
@@ -345,7 +338,7 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 			} else {
 				fn = mids[index]
 			}
-			if traceInfos == nil {
+			if trace == nil {
 				return fn(c)
 			}
 			fnName := e.GetFunctionName(fn)
@@ -356,25 +349,20 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 			startedAt := time.Now()
 
 			traceInfo := &TraceInfo{
-				Name: fnName,
+				Name:       fnName,
+				Middleware: true,
 			}
 			// 先添加至slice中，保证顺序
-			traceInfos = append(traceInfos, traceInfo)
+			trace.Add(traceInfo)
 			err := fn(c)
 			// 完成后计算时长（前面的中间件包括后面中间件的处理时长）
 			traceInfo.Duration = time.Since(startedAt)
 			return err
 		}
 		err := c.Next()
-		if traceInfos != nil {
-			max := len(traceInfos)
-			for i, traceInfo := range traceInfos {
-				if i < max-1 {
-					// 计算真实耗时（不包括后面中间件处理时长）
-					traceInfo.Duration -= traceInfos[i+1].Duration
-				}
-			}
-			e.EmitTrace(c, traceInfos)
+		if trace != nil {
+			trace.Calculate()
+			e.EmitTrace(c, trace.Infos)
 		}
 		if err != nil {
 			e.EmitError(c, err)
@@ -704,57 +692,4 @@ func Compose(handlerList ...Handler) Handler {
 		}
 		return c.Next()
 	}
-}
-
-func getMs(ns int) string {
-	microSecond := int(time.Microsecond)
-	milliSecond := int(time.Millisecond)
-	if ns < microSecond {
-		return "0"
-	}
-
-	// 计算ms的位
-	ms := ns / milliSecond
-	prefix := strconv.Itoa(ms)
-
-	// 计算micro seconds
-	offset := (ns % milliSecond) / microSecond
-	// 如果小于10，不展示小数点（取小数点两位）
-	unit := 10
-	if offset < unit {
-		return prefix
-	}
-	// 如果小于100，补一位0
-	if offset < 100 {
-		return prefix + ".0" + strconv.Itoa(offset/unit)
-	}
-	return prefix + "." + strconv.Itoa(offset/unit)
-}
-
-// ServerTiming return server timing with prefix
-func (traceInfos TraceInfos) ServerTiming(prefix string) string {
-	size := len(traceInfos)
-	if size == 0 {
-		return ""
-	}
-
-	// 转换为 http server timing
-	s := new(strings.Builder)
-	// 每一个server timing长度预估为30
-	s.Grow(30 * size)
-	for i, traceInfo := range traceInfos {
-		v := traceInfo.Duration.Nanoseconds()
-		s.WriteString(prefix)
-		s.WriteString(strconv.Itoa(i))
-		s.Write(ServerTimingDur)
-		s.WriteString(getMs(int(v)))
-		s.Write(ServerTimingDesc)
-		s.WriteString(traceInfo.Name)
-		s.Write(ServerTimingEnd)
-		if i != size-1 {
-			s.WriteRune(',')
-		}
-
-	}
-	return s.String()
 }
