@@ -698,6 +698,13 @@ func (c *Context) GetTrace() *Trace {
 	return GetTrace(c.Context())
 }
 
+// NewTrace returns a new trace and set it to context value
+func (c *Context) NewTrace() *Trace {
+	trace := NewTrace()
+	c.WithContext(context.WithValue(c.Context(), ContextTraceKey, trace))
+	return trace
+}
+
 // ServerTiming converts trace info to http response server timing
 func (c *Context) ServerTiming(traceInfos TraceInfos, prefix string) {
 	value := traceInfos.ServerTiming(prefix)
