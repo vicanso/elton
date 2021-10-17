@@ -25,6 +25,7 @@ package middleware
 import (
 	"bytes"
 	"errors"
+	"math"
 	"math/rand"
 	"net/http/httptest"
 	"testing"
@@ -42,7 +43,7 @@ func (t *testCompressor) Accept(c *elton.Context, bodySize int) (acceptable bool
 	return AcceptEncoding(c, "test")
 }
 
-func (t *testCompressor) Compress(buf []byte) (*bytes.Buffer, error) {
+func (t *testCompressor) Compress(buf []byte, levels ...int) (*bytes.Buffer, error) {
 	return bytes.NewBufferString("abcd"), nil
 }
 
@@ -98,6 +99,10 @@ func TestCompressMiddleware(t *testing.T) {
 	customCompress := NewCompress(CompressConfig{
 		Compressors: []Compressor{
 			new(testCompressor),
+		},
+		DynamicLevel: func(c *elton.Context, bodySize int, encoding string) int {
+			// 不指定压缩级别
+			return math.MinInt
 		},
 	})
 

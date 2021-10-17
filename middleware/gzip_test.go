@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io/ioutil"
+	"math"
 	"net/http/httptest"
 	"testing"
 
@@ -49,7 +50,9 @@ func TestGzipCompress(t *testing.T) {
 	assert.True(acceptable)
 	assert.Equal(GzipEncoding, encoding)
 
-	buf, err := g.Compress([]byte(originalData))
+	_, err := g.Compress([]byte(originalData), 1)
+	assert.Nil(err)
+	buf, err := g.Compress([]byte(originalData), math.MinInt)
 	assert.Nil(err)
 
 	r, err := gzip.NewReader(bytes.NewReader(buf.Bytes()))

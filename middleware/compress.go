@@ -47,7 +47,7 @@ type (
 		// Accept accept check function
 		Accept(c *elton.Context, bodySize int) (acceptable bool, encoding string)
 		// Compress compress function
-		Compress([]byte) (*bytes.Buffer, error)
+		Compress([]byte, ...int) (*bytes.Buffer, error)
 		// Pipe pipe function
 		Pipe(*elton.Context) error
 	}
@@ -59,6 +59,8 @@ type (
 		Compressors []Compressor
 		// Skipper skipper function
 		Skipper elton.Skipper
+		// DynamicLevel return dynamic level
+		DynamicLevel func(c *elton.Context, bodySize int, encoding string) int
 	}
 )
 
@@ -110,6 +112,7 @@ func NewCompress(config CompressConfig) elton.Handler {
 	if len(compressorList) == 0 {
 		panic(errors.New("compressor can't be empty"))
 	}
+	dynamicLevel := config.DynamicLevel
 	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
@@ -178,7 +181,13 @@ func NewCompress(config CompressConfig) elton.Handler {
 				break
 			}
 
-			newBuf, e := compressor.Compress(body)
+			levels := make([]int, 0)
+			// 如果获取压缩级别函数有设置
+			if dynamicLevel != nil {
+				levels = append(levels, dynamicLevel(c, len(body), encoding))
+			}
+
+			newBuf, e := compressor.Compress(body, levels...)
 			// 如果压缩成功，则使用压缩数据
 			// 失败则忽略
 			if e != nil {

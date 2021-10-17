@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
+	"math"
 
 	"github.com/vicanso/elton"
 )
@@ -53,8 +54,11 @@ func (g *GzipCompressor) Accept(c *elton.Context, bodySize int) (bool, string) {
 }
 
 // Compress compress data by gzip
-func (g *GzipCompressor) Compress(buf []byte) (*bytes.Buffer, error) {
+func (g *GzipCompressor) Compress(buf []byte, levels ...int) (*bytes.Buffer, error) {
 	level := g.getLevel()
+	if len(levels) != 0 && levels[0] != math.MinInt {
+		level = levels[0]
+	}
 	buffer := new(bytes.Buffer)
 
 	w, err := gzip.NewWriterLevel(buffer, level)
