@@ -41,6 +41,8 @@ const (
 	DefaultCompressMinLength = 1024
 )
 
+const IgnoreCompression = -128
+
 type (
 	// Compressor compressor interface
 	Compressor interface {

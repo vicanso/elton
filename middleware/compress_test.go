@@ -25,7 +25,6 @@ package middleware
 import (
 	"bytes"
 	"errors"
-	"math"
 	"math/rand"
 	"net/http/httptest"
 	"testing"
@@ -102,7 +101,7 @@ func TestCompressMiddleware(t *testing.T) {
 		},
 		DynamicLevel: func(c *elton.Context, bodySize int, encoding string) int {
 			// 不指定压缩级别
-			return math.MinInt
+			return IgnoreCompression
 		},
 	})
 
