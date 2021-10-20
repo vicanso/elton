@@ -64,6 +64,18 @@ func TestTrace(t *testing.T) {
 	assert.Equal(time.Millisecond, trace.Infos[3].Duration)
 }
 
+func TestTraceStart(t *testing.T) {
+	assert := assert.New(t)
+
+	trace := NewTrace()
+	done := trace.Start("test")
+	time.Sleep(2 * time.Millisecond)
+	done()
+	assert.Equal(1, len(trace.Infos))
+	assert.Equal("test", trace.Infos[0].Name)
+	assert.True(trace.Infos[0].Duration > 1)
+}
+
 func TestConvertToServerTiming(t *testing.T) {
 	assert := assert.New(t)
 	traceInfos := make(TraceInfos, 0)

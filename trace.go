@@ -52,6 +52,19 @@ func NewTrace() *Trace {
 	}
 }
 
+// Start starts a sub trace and return done function
+// for sub trace.
+func (t *Trace) Start(name string) func() {
+	startedAt := time.Now()
+	info := &TraceInfo{
+		Name: name,
+	}
+	t.Add(info)
+	return func() {
+		info.Duration = time.Since(startedAt)
+	}
+}
+
 // Add adds trace info to trace
 func (t *Trace) Add(info *TraceInfo) *Trace {
 	t.Infos = append(t.Infos, info)
