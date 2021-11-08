@@ -764,6 +764,16 @@ func TestNewContext(t *testing.T) {
 	assert.Equal(resp, c.Response)
 }
 
+func TestNewTrace(t *testing.T) {
+	assert := assert.New(t)
+
+	req := httptest.NewRequest("GET", "https://aslant.site/", nil)
+	resp := httptest.NewRecorder()
+	c := NewContext(resp, req)
+	trace := c.NewTrace()
+	assert.Equal(trace, c.NewTrace())
+}
+
 func TestContextPass(t *testing.T) {
 	assert := assert.New(t)
 	e := New()
