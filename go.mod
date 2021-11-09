@@ -3,6 +3,7 @@ module github.com/vicanso/elton
 go 1.16
 
 require (
+	github.com/andybalholm/brotli v1.0.4
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.9.4
 	github.com/vicanso/hes v0.3.9
