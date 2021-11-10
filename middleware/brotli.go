@@ -25,6 +25,7 @@ package middleware
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 
 	"github.com/andybalholm/brotli"
 	"github.com/vicanso/elton"
@@ -72,12 +73,8 @@ func (b *BrCompressor) Accept(c *elton.Context, bodySize int) (acceptable bool, 
 	return AcceptEncoding(c, BrEncoding)
 }
 
-// Compress brotli compress
-func (b *BrCompressor) Compress(buf []byte, levels ...int) (*bytes.Buffer, error) {
-	level := b.getLevel()
-	if len(levels) != 0 && levels[0] != IgnoreCompression {
-		level = levels[0]
-	}
+// BrotliCompress compress data by brotli
+func BrotliCompress(buf []byte, level int) (*bytes.Buffer, error) {
 	buffer := new(bytes.Buffer)
 	w := brotli.NewWriterLevel(buffer, level)
 	_, err := w.Write(buf)
@@ -90,6 +87,25 @@ func (b *BrCompressor) Compress(buf []byte, levels ...int) (*bytes.Buffer, error
 		return nil, err
 	}
 	return buffer, nil
+}
+
+// BrotliDecompress decompress data of brotli
+func BrotliDecompress(buf []byte) (*bytes.Buffer, error) {
+	r := brotli.NewReader(bytes.NewBuffer(buf))
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewBuffer(data), nil
+}
+
+// Compress brotli compress
+func (b *BrCompressor) Compress(buf []byte, levels ...int) (*bytes.Buffer, error) {
+	level := b.getLevel()
+	if len(levels) != 0 && levels[0] != IgnoreCompression {
+		level = levels[0]
+	}
+	return BrotliCompress(buf, level)
 }
 
 // Pipe brotli pipe

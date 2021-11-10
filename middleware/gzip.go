@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
+	"io/ioutil"
 
 	"github.com/vicanso/elton"
 )
@@ -52,12 +53,8 @@ func (g *GzipCompressor) Accept(c *elton.Context, bodySize int) (bool, string) {
 	return AcceptEncoding(c, GzipEncoding)
 }
 
-// Compress compress data by gzip
-func (g *GzipCompressor) Compress(buf []byte, levels ...int) (*bytes.Buffer, error) {
-	level := g.getLevel()
-	if len(levels) != 0 && levels[0] != IgnoreCompression {
-		level = levels[0]
-	}
+// GzipCompress compress data by gzip
+func GzipCompress(buf []byte, level int) (*bytes.Buffer, error) {
 	buffer := new(bytes.Buffer)
 
 	w, err := gzip.NewWriterLevel(buffer, level)
@@ -73,6 +70,29 @@ func (g *GzipCompressor) Compress(buf []byte, levels ...int) (*bytes.Buffer, err
 		return nil, err
 	}
 	return buffer, nil
+}
+
+// GzipDecompress decompress data of gzip
+func GzipDecompress(buf []byte) (*bytes.Buffer, error) {
+	r, err := gzip.NewReader(bytes.NewBuffer(buf))
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewBuffer(data), nil
+}
+
+// Compress compress data by gzip
+func (g *GzipCompressor) Compress(buf []byte, levels ...int) (*bytes.Buffer, error) {
+	level := g.getLevel()
+	if len(levels) != 0 && levels[0] != IgnoreCompression {
+		level = levels[0]
+	}
+	return GzipCompress(buf, level)
 }
 
 func (g *GzipCompressor) getLevel() int {

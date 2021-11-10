@@ -45,20 +45,22 @@ func TestCompressor(t *testing.T) {
 			compressor: new(GzipCompressor),
 			encoding:   GzipEncoding,
 			uncompress: func(b []byte) ([]byte, error) {
-				r, err := gzip.NewReader(bytes.NewReader(b))
+				buffer, err := GzipDecompress(b)
 				if err != nil {
 					return nil, err
 				}
-				defer r.Close()
-				return ioutil.ReadAll(r)
+				return buffer.Bytes(), nil
 			},
 		},
 		{
 			compressor: new(BrCompressor),
 			encoding:   BrEncoding,
 			uncompress: func(b []byte) ([]byte, error) {
-				r := brotli.NewReader(bytes.NewReader(b))
-				return ioutil.ReadAll(r)
+				buffer, err := BrotliDecompress(b)
+				if err != nil {
+					return nil, err
+				}
+				return buffer.Bytes(), nil
 			},
 		},
 	}
@@ -88,7 +90,7 @@ func TestCompressor(t *testing.T) {
 	}
 }
 
-func TestGzipPipe(t *testing.T) {
+func TestCompressorPipe(t *testing.T) {
 	assert := assert.New(t)
 	tests := []struct {
 		compressor Compressor
