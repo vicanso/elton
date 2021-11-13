@@ -119,7 +119,14 @@ func GetCacheMaxAge(header http.Header) int {
 		return 0
 	}
 	// 如果没有设置cache-control，则不可缓存
-	cc := strings.Join(header.Values(elton.HeaderCacheControl), ",")
+	cacheControlKey := strings.ToLower(elton.HeaderCacheControl)
+	var cc string
+	for k, v := range header {
+		if elton.HeaderCacheControl == k || strings.ToLower(k) == cacheControlKey {
+			cc = strings.Join(v, ",")
+			break
+		}
+	}
 	if cc == "" {
 		return 0
 	}
