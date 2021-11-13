@@ -34,15 +34,17 @@ func TestShortHeaderIndexes(t *testing.T) {
 	assert := assert.New(t)
 
 	name := shortHeaderIndexes.getName(1)
-	assert.Equal("cache-control", name)
+	assert.Equal("accept-charset", name)
 	name = shortHeaderIndexes.getName(3)
-	assert.Equal("content-type", name)
+	assert.Equal("accept-language", name)
 	assert.Empty(shortHeaderIndexes.getName(int(MaxShortHeader)))
+	name = shortHeaderIndexes.getName(30)
+	assert.Equal("last-modified", name)
 
 	// 故意大写了O
 	index, ok := shortHeaderIndexes.getIndex("Cache-COntrol")
 	assert.True(ok)
-	assert.Equal(index, uint8(1))
+	assert.Equal(index, uint8(10))
 
 	_, ok = shortHeaderIndexes.getIndex("abc")
 	assert.False(ok)
@@ -53,7 +55,7 @@ func TestHTTPHeader(t *testing.T) {
 
 	// 压缩的header
 	h := NewHTTPHeader("Cache-Control", []string{"no-cache"})
-	assert.Equal(uint8(1), h[0])
+	assert.Equal(uint8(10), h[0])
 	assert.Equal("no-cache", string(h[1:]))
 
 	name, values := h.Header()
@@ -98,9 +100,14 @@ func TestHTTPHeaders(t *testing.T) {
 		"X-Trace-Id": []string{
 			"83C9:30C1:9C96A:146FC2:61888203",
 		},
+		HeaderXCache: []string{
+			"ABCD",
+		},
 	}
-	hs := NewHTTPHeaders(header)
+	hs := NewHTTPHeaders(header, "x-cache")
 	assert.Equal(258, len(hs))
+
+	header.Del(HeaderXCache)
 	assert.Equal(header, hs.Header())
 }
 
@@ -146,7 +153,7 @@ func BenchmarkNewHTTPHeaders(b *testing.B) {
 	header := getTestHTTPHeader()
 
 	for i := 0; i < b.N; i++ {
-		_ = NewHTTPHeaders(header)
+		_ = NewHTTPHeaders(header, "Date")
 	}
 }
 
