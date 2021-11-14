@@ -60,18 +60,6 @@ type CacheStore interface {
 	Set(ctx context.Context, key string, data []byte, ttl time.Duration) error
 }
 
-// 状态字节数
-const statusByteSize = 1
-
-// 创建时间保存的字节数
-const createAtByteSize = 4
-
-// 状态码保存的字节数
-const statusCodeByteSize = 2
-
-// 保存请求头长度的字节数
-const headerBytesSize = 4
-
 const HeaderAge = "Age"
 const HeaderXCache = "X-Cache"
 
@@ -157,6 +145,20 @@ func GetCacheMaxAge(header http.Header) int {
 	return maxAge
 }
 
+const (
+	// 状态字节数
+	statusByteSize = 1
+	// 创建时间保存的字节数
+	createAtByteSize = 4
+	// 状态码保存的字节数
+	statusCodeByteSize = 2
+	// 保存请求头长度的字节数
+	headerBytesSize = 4
+	// 压缩类型的字节数
+	compressionBytesSize = 1
+)
+
+// 数据结构[状态(1字节), 创建时间(4字节), 状态码(2字节), 请求头长度(4字节), 请求头内容(N字节), 压缩类型(1字节) 响应内容(N字节)]
 type CacheResponse struct {
 	Status CacheStatus
 	// 创建时间
@@ -165,6 +167,8 @@ type CacheResponse struct {
 	StatusCode int
 	// 响应头
 	Header http.Header
+	// 压缩类型
+	Compression CompressionType
 	// 响应数据
 	Body *bytes.Buffer
 }
@@ -175,19 +179,26 @@ var hitForPassData = (&CacheResponse{
 
 // Bytes converts the cache response to bytes
 func (cp *CacheResponse) Bytes() []byte {
+	// 只有hit的才需要保存后续的数据
+	if cp.Status != StatusHit {
+		return []byte{
+			byte(cp.Status),
+		}
+	}
 	headers := NewHTTPHeaders(cp.Header, ignoreHeaders...)
 	headersLength := len(headers)
 	// 4个字节保存创建时间
 	// 2个字节保存status code
 	// 4个字节保存http header长度
 	// http header数据
+	// 1个字节保存compression type
 	// body 数据
 	bodySize := 0
 	if cp.Body != nil {
 		bodySize = cp.Body.Len()
 	}
 
-	size := statusByteSize + createAtByteSize + statusCodeByteSize + headerBytesSize + headersLength + bodySize
+	size := statusByteSize + createAtByteSize + statusCodeByteSize + headerBytesSize + headersLength + compressionBytesSize + bodySize
 
 	buf := make([]byte, size)
 	offset := 0
@@ -208,6 +219,10 @@ func (cp *CacheResponse) Bytes() []byte {
 		copy(buf[offset:], headers)
 		offset += headersLength
 	}
+
+	buf[offset] = byte(cp.Compression)
+	offset += compressionBytesSize
+
 	if bodySize != 0 {
 		copy(buf[offset:], cp.Body.Bytes())
 	}
@@ -215,11 +230,53 @@ func (cp *CacheResponse) Bytes() []byte {
 	return buf
 }
 
+// GetBody returns the data match accept encoding
+func (cp *CacheResponse) GetBody(acceptEncoding string) (*bytes.Buffer, string, error) {
+
+	for compressType, decompressor := range cacheDecompressors {
+		// comporession match decompressor
+		if cp.Compression == compressType {
+			encoding := decompressor.GetEncoding()
+			// client acccept the encoding
+			if strings.Contains(acceptEncoding, encoding) {
+				return cp.Body, encoding, nil
+			}
+			// decompress
+			data, err := decompressor.Decompress(cp.Body)
+			if err != nil {
+				return nil, "", err
+			}
+			return data, "", nil
+		}
+	}
+	return cp.Body, "", nil
+}
+
+// SetBody sets body to context, it will be matched acccept-encoding
+func (cp *CacheResponse) SetBody(c *elton.Context) error {
+	// 如果body不为空
+	if cp.Body != nil && cp.Body.Len() != 0 {
+		body, encoding, err := cp.GetBody(c.GetRequestHeader(elton.HeaderAcceptEncoding))
+		if err != nil {
+			return err
+		}
+		c.SetHeader(elton.HeaderContentEncoding, encoding)
+		c.BodyBuffer = body
+	}
+	return nil
+}
+
 // NewCacheResponse create a new cache response
 func NewCacheResponse(data []byte) *CacheResponse {
-	if len(data) < statusByteSize+statusCodeByteSize+headerBytesSize {
+	dataSize := len(data)
+	if dataSize < statusByteSize {
 		return &CacheResponse{
 			Status: StatusUnknown,
+		}
+	}
+	if dataSize < statusByteSize+statusCodeByteSize+headerBytesSize {
+		return &CacheResponse{
+			Status: CacheStatus(data[0]),
 		}
 	}
 	offset := 0
@@ -235,18 +292,22 @@ func NewCacheResponse(data []byte) *CacheResponse {
 
 	size := int(binary.BigEndian.Uint32(data[offset:]))
 	offset += headerBytesSize
-	hs := HTTPHeaders(data[offset : offset+size])
 
+	hs := HTTPHeaders(data[offset : offset+size])
 	offset += size
+
+	commpression := data[offset]
+	offset += compressionBytesSize
 
 	body := data[offset:]
 
 	return &CacheResponse{
-		Status:     CacheStatus(status),
-		CreatedAt:  createdAt,
-		StatusCode: int(statusCode),
-		Header:     hs.Header(),
-		Body:       bytes.NewBuffer(body),
+		Status:      CacheStatus(status),
+		CreatedAt:   createdAt,
+		StatusCode:  int(statusCode),
+		Header:      hs.Header(),
+		Compression: CompressionType(commpression),
+		Body:        bytes.NewBuffer(body),
 	}
 }
 
@@ -291,7 +352,7 @@ func NewCache(config CacheConfig) elton.Handler {
 			c.SetHeader(HeaderAge, strconv.Itoa(int(age)))
 			c.StatusCode = cacheResp.StatusCode
 			c.MergeHeader(cacheResp.Header)
-			c.BodyBuffer = cacheResp.Body
+			cacheResp.SetBody(c)
 			return nil
 		}
 		c.SetHeader(HeaderXCache, "fetch")
@@ -306,6 +367,7 @@ func NewCache(config CacheConfig) elton.Handler {
 			return store.Set(ctx, key, hitForPassData, hitForPassTTL)
 		}
 
+		// TODO 数据压缩
 		cacheResp = &CacheResponse{
 			// 状态设置为hit
 			Status:     StatusHit,
@@ -321,6 +383,6 @@ func NewCache(config CacheConfig) elton.Handler {
 		if err != nil {
 			return err
 		}
-		return nil
+		return cacheResp.SetBody(c)
 	}
 }

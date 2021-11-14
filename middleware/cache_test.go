@@ -108,16 +108,20 @@ func TestGetCacheMaxAge(t *testing.T) {
 
 func TestCacheResponse(t *testing.T) {
 	assert := assert.New(t)
+
 	cp := &CacheResponse{
+		Status:     StatusHitForPass,
 		StatusCode: 200,
 	}
 	data := cp.Bytes()
-	assert.Equal(11, len(data))
+	// hit for pass的只记录status
+	assert.Equal(1, len(data))
 
 	cp = &CacheResponse{
-		Status:     StatusHitForPass,
-		CreatedAt:  1001,
-		StatusCode: 200,
+		Status:      StatusHit,
+		CreatedAt:   1001,
+		StatusCode:  200,
+		Compression: CompressionGzip,
 		Header: http.Header{
 			"Cache-Control": []string{
 				"no-cache",
@@ -129,12 +133,13 @@ func TestCacheResponse(t *testing.T) {
 		Body: bytes.NewBufferString("abcd"),
 	}
 	data = cp.Bytes()
-	assert.Equal(42, len(data))
+	assert.Equal(43, len(data))
 
 	cp = NewCacheResponse(data)
-	assert.Equal(StatusHitForPass, cp.Status)
+	assert.Equal(StatusHit, cp.Status)
 	assert.Equal(uint32(1001), cp.CreatedAt)
 	assert.Equal(200, cp.StatusCode)
+	assert.Equal(CompressionGzip, cp.Compression)
 	assert.Equal(http.Header{
 		"Cache-Control": []string{
 			"no-cache",
@@ -144,6 +149,110 @@ func TestCacheResponse(t *testing.T) {
 		},
 	}, cp.Header)
 	assert.Equal("abcd", cp.Body.String())
+}
+
+func TestCacheResponseGetBody(t *testing.T) {
+	assert := assert.New(t)
+
+	data := []byte("hello world!hello world!hello world!hello world!hello world!hello world!")
+	brData, err := BrotliCompress(data, 1)
+	assert.Nil(err)
+	gzipData, err := GzipCompress(data, 1)
+	assert.Nil(err)
+
+	tests := []struct {
+		newRespone     func() *CacheResponse
+		acceptEncoding string
+		encoding       string
+		body           *bytes.Buffer
+	}{
+		// 数据br, 客户端支持br
+		{
+			newRespone: func() *CacheResponse {
+				return &CacheResponse{
+					Compression: CompressionBr,
+					Body:        brData,
+				}
+			},
+			acceptEncoding: BrEncoding,
+			encoding:       BrEncoding,
+			body:           brData,
+		},
+		// 数据br, 客户端不支持br
+		{
+			newRespone: func() *CacheResponse {
+				return &CacheResponse{
+					Compression: CompressionBr,
+					Body:        brData,
+				}
+			},
+			acceptEncoding: "",
+			encoding:       "",
+			body:           bytes.NewBuffer(data),
+		},
+		// 数据gzip, 客户端支持gzip
+		{
+			newRespone: func() *CacheResponse {
+				return &CacheResponse{
+					Compression: CompressionGzip,
+					Body:        gzipData,
+				}
+			},
+			acceptEncoding: GzipEncoding,
+			encoding:       GzipEncoding,
+			body:           gzipData,
+		},
+		// 数据gzip，客户端不支持gzip
+		{
+			newRespone: func() *CacheResponse {
+				return &CacheResponse{
+					Compression: CompressionGzip,
+					Body:        gzipData,
+				}
+			},
+			acceptEncoding: "",
+			encoding:       "",
+			body:           bytes.NewBuffer(data),
+		},
+		// 数据非压缩
+		{
+			newRespone: func() *CacheResponse {
+				return &CacheResponse{
+					Compression: CompressionNon,
+					Body:        bytes.NewBuffer(data),
+				}
+			},
+			acceptEncoding: "",
+			encoding:       "",
+			body:           bytes.NewBuffer(data),
+		},
+	}
+	for _, tt := range tests {
+		cp := tt.newRespone()
+		body, encoding, err := cp.GetBody(tt.acceptEncoding)
+		assert.Nil(err)
+		assert.Equal(tt.encoding, encoding)
+		assert.Equal(tt.body, body)
+	}
+}
+
+func TestCacheResponseSetBody(t *testing.T) {
+	assert := assert.New(t)
+	cp := CacheResponse{}
+	c := elton.NewContext(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+	c.SetRequestHeader(elton.HeaderAcceptEncoding, "br")
+
+	// 无数据
+	err := cp.SetBody(c)
+	assert.Nil(err)
+	assert.Nil(c.BodyBuffer)
+
+	cp.Body = bytes.NewBufferString("hello world!")
+	cp.Compression = CompressionBr
+	err = cp.SetBody(c)
+	assert.Nil(err)
+	assert.Equal(bytes.NewBufferString("hello world!"), c.BodyBuffer)
+	assert.Equal("br", c.GetHeader(elton.HeaderContentEncoding))
 }
 
 func TestIsPassCacheMethod(t *testing.T) {
