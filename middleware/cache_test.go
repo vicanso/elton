@@ -28,6 +28,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strconv"
 	"sync"
 	"testing"
@@ -234,6 +235,25 @@ func TestCacheResponseGetBody(t *testing.T) {
 		assert.Equal(tt.encoding, encoding)
 		assert.Equal(tt.body, body)
 	}
+}
+
+func TestNewBrotliCompress(t *testing.T) {
+	assert := assert.New(t)
+	fn := NewBrotliCompress(1, 20, regexp.MustCompile("text"))
+
+	data := bytes.NewBufferString("hello world!")
+	result, compressionType, err := fn(data, "text")
+	assert.Nil(err)
+	assert.Equal(data, result)
+	assert.Equal(CompressionNon, compressionType)
+
+	data = bytes.NewBufferString("hello world!hello world!hello world!")
+	result, compressionType, err = fn(data, "text")
+	assert.Nil(err)
+	assert.NotEqual(data, result)
+	assert.Equal(CompressionBr, compressionType)
+	result, _ = BrotliDecompress(result.Bytes())
+	assert.Equal(data, result)
 }
 
 func TestCacheResponseSetBody(t *testing.T) {

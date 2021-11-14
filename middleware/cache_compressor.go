@@ -39,9 +39,6 @@ type CacheDecompressor interface {
 	Decompress(buffer *bytes.Buffer) (data *bytes.Buffer, err error)
 	GetEncoding() (encoding string)
 }
-type CacheCompressor interface {
-	Compress(buffer *bytes.Buffer, contentType string) (data *bytes.Buffer, compressType CompressionType, err error)
-}
 
 var cacheDecompressors = map[CompressionType]CacheDecompressor{}
 

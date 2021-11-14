@@ -35,6 +35,7 @@ import (
 	"github.com/vicanso/elton"
 )
 
+type CacheBodyCompress func(buffer *bytes.Buffer, contentType string) (data *bytes.Buffer, compressType CompressionType, err error)
 type CacheConfig struct {
 	// Skipper skipper function
 	Skipper elton.Skipper
@@ -42,6 +43,8 @@ type CacheConfig struct {
 	Store CacheStore
 	// HitForPassTTL hit for pass ttl
 	HitForPassTTL time.Duration
+	// Compress compress function for data
+	Compress CacheBodyCompress
 }
 
 type CacheStatus uint8
@@ -308,6 +311,21 @@ func NewCacheResponse(data []byte) *CacheResponse {
 		Header:      hs.Header(),
 		Compression: CompressionType(commpression),
 		Body:        bytes.NewBuffer(body),
+	}
+}
+
+// NewBrotliCompress create a brotli compress function
+func NewBrotliCompress(quality, minLength int, contentTypeReg *regexp.Regexp) CacheBodyCompress {
+	return func(buffer *bytes.Buffer, contentType string) (*bytes.Buffer, CompressionType, error) {
+		if buffer.Len() < minLength ||
+			!contentTypeReg.MatchString(contentType) {
+			return buffer, CompressionNon, nil
+		}
+		data, err := BrotliCompress(buffer.Bytes(), quality)
+		if err != nil {
+			return nil, CompressionNon, err
+		}
+		return data, CompressionBr, nil
 	}
 }
 
