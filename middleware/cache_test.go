@@ -28,7 +28,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"regexp"
 	"strconv"
 	"sync"
 	"testing"
@@ -237,25 +236,6 @@ func TestCacheResponseGetBody(t *testing.T) {
 	}
 }
 
-func TestNewBrotliCompress(t *testing.T) {
-	assert := assert.New(t)
-	fn := NewBrotliCompress(1, 20, regexp.MustCompile("text"))
-
-	data := bytes.NewBufferString("hello world!")
-	result, compressionType, err := fn(data, "text")
-	assert.Nil(err)
-	assert.Equal(data, result)
-	assert.Equal(CompressionNon, compressionType)
-
-	data = bytes.NewBufferString("hello world!hello world!hello world!")
-	result, compressionType, err = fn(data, "text")
-	assert.Nil(err)
-	assert.NotEqual(data, result)
-	assert.Equal(CompressionBr, compressionType)
-	result, _ = BrotliDecompress(result.Bytes())
-	assert.Equal(data, result)
-}
-
 func TestCacheResponseSetBody(t *testing.T) {
 	assert := assert.New(t)
 	cp := CacheResponse{}
@@ -324,9 +304,7 @@ func (ts *testStore) Set(ctx context.Context, key string, data []byte, ttl time.
 func TestNewCache(t *testing.T) {
 	assert := assert.New(t)
 
-	fn := NewCache(CacheConfig{
-		Store: &testStore{},
-	})
+	fn := NewDefaultCache(&testStore{})
 
 	// POST 不可缓存
 	c := elton.NewContext(httptest.NewRecorder(), httptest.NewRequest("POST", "/", nil))
@@ -362,15 +340,24 @@ func TestNewCache(t *testing.T) {
 	// fetch，结果为可缓存
 	cacheableReq := httptest.NewRequest("GET", "/?cacheable", nil)
 	c = elton.NewContext(httptest.NewRecorder(), cacheableReq)
+	c.SetRequestHeader(elton.HeaderAcceptEncoding, "br")
+	buffer := &bytes.Buffer{}
+	for i := 0; i < 1000; i++ {
+		buffer.WriteString("hello world!")
+	}
 	c.Next = func() error {
 		c.CacheMaxAge(time.Minute)
-		c.BodyBuffer = bytes.NewBufferString("hello world!")
+		c.SetContentTypeByExt(".txt")
+		c.BodyBuffer = buffer
 		return nil
 	}
 	err = fn(c)
 	assert.Nil(err)
-	assert.Equal("hello world!", c.BodyBuffer.String())
+	assert.Equal("\x1b\xdf.\x00\xa4@Br\x90E\x1e\xcbe\xf2<\x9d\xda\xd1\x04 ", c.BodyBuffer.String())
 	assert.Equal("fetch", c.GetHeader(HeaderXCache))
+	decompressBuffer, err := BrotliDecompress(c.BodyBuffer.Bytes())
+	assert.Nil(err)
+	assert.Equal(buffer, decompressBuffer)
 
 	// hit
 	c = elton.NewContext(httptest.NewRecorder(), cacheableReq)
@@ -380,6 +367,18 @@ func TestNewCache(t *testing.T) {
 	}
 	err = fn(c)
 	assert.Nil(err)
-	assert.Equal("hello world!", c.BodyBuffer.String())
+	assert.Equal("\x1b\xdf.\x00\xa4@Br\x90E\x1e\xcbe\xf2<\x9d\xda\xd1\x04 ", c.BodyBuffer.String())
+	assert.Equal("hit", c.GetHeader(HeaderXCache))
+
+	// hit（不支持压缩）
+	c = elton.NewContext(httptest.NewRecorder(), cacheableReq)
+	c.SetRequestHeader(elton.HeaderAcceptEncoding, "")
+	c.Next = func() error {
+		// 直接读取缓存，不再调用next
+		return errors.New("abc")
+	}
+	err = fn(c)
+	assert.Nil(err)
+	assert.Equal(buffer, c.BodyBuffer)
 	assert.Equal("hit", c.GetHeader(HeaderXCache))
 }

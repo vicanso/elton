@@ -314,19 +314,13 @@ func NewCacheResponse(data []byte) *CacheResponse {
 	}
 }
 
-// NewBrotliCompress create a brotli compress function
-func NewBrotliCompress(quality, minLength int, contentTypeReg *regexp.Regexp) CacheBodyCompress {
-	return func(buffer *bytes.Buffer, contentType string) (*bytes.Buffer, CompressionType, error) {
-		if buffer.Len() < minLength ||
-			!contentTypeReg.MatchString(contentType) {
-			return buffer, CompressionNon, nil
-		}
-		data, err := BrotliCompress(buffer.Bytes(), quality)
-		if err != nil {
-			return nil, CompressionNon, err
-		}
-		return data, CompressionBr, nil
-	}
+// NewDefaultCache return a new cache middleware with brotli compress
+func NewDefaultCache(store CacheStore) elton.Handler {
+	compress := NewBrotliCompress(defaultBrQuality, DefaultCompressMinLength, DefaultCompressRegexp)
+	return NewCache(CacheConfig{
+		Store:    store,
+		Compress: compress,
+	})
 }
 
 // NewCache return a new cache middleware.
@@ -385,14 +379,23 @@ func NewCache(config CacheConfig) elton.Handler {
 			return store.Set(ctx, key, hitForPassData, hitForPassTTL)
 		}
 
-		// TODO 数据压缩
+		buffer := c.BodyBuffer
+		compressionType := CompressionNon
+		if config.Compress != nil {
+			buffer, compressionType, err = config.Compress(buffer, c.GetHeader(elton.HeaderContentType))
+			if err != nil {
+				return err
+			}
+		}
+
 		cacheResp = &CacheResponse{
 			// 状态设置为hit
-			Status:     StatusHit,
-			CreatedAt:  uint32(time.Now().Unix()),
-			StatusCode: c.StatusCode,
-			Header:     c.Header(),
-			Body:       c.BodyBuffer,
+			Status:      StatusHit,
+			Compression: compressionType,
+			CreatedAt:   uint32(time.Now().Unix()),
+			StatusCode:  c.StatusCode,
+			Header:      c.Header(),
+			Body:        buffer,
 		}
 		data = cacheResp.Bytes()
 		// 如果想忽略store的错误，则自定义store时，

@@ -140,6 +140,40 @@ func main() {
 }
 ```
 
+## cache
+
+缓存中间件，对于`GET`与`HEAD`的请求，根据其`Cache-Control`判断是否可缓存，若可缓存则将数据缓存至store中，下次相同的请求直接从缓存中读取。缓存数据可指定数据压缩处理，可将数据压缩后缓存，并响应时根据客户端自动返回压缩或未压缩数据。需要注意当前基本所有浏览器均支持br压缩，但是浏览器只在https模式下才会设置支持br，因此服务仅运行在http上，则建议使用gzip压缩。
+
+
+**Example**
+```go
+package main
+
+import (
+	"bytes"
+
+	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/middleware"
+)
+
+func main() {
+	e := elton.New()
+	// 使用redis实现的store
+	e.Use(middleware.NewDefaultCache(redisStore))
+
+	e.GET("/", func(c *elton.Context) (err error) {
+		c.CacheMaxAge(time.Minute)
+		c.BodyBuffer = bytes.NewBuffer(c.RequestBody)
+		return
+	})
+
+	err := e.ListenAndServe(":3000")
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
 ## compress
 
 响应数据压缩中间件，可对特定数据类型、数据长度的响应数据做压缩处理。默认支持`gzip`压缩，可扩展更多的压缩方式，如：brotli，zstd等。

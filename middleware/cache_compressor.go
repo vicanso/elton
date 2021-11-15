@@ -22,7 +22,10 @@
 
 package middleware
 
-import "bytes"
+import (
+	"bytes"
+	"regexp"
+)
 
 type CompressionType uint8
 
@@ -68,4 +71,58 @@ func (g *gzipDecompressor) GetEncoding() string {
 func init() {
 	RegisterCacheDecompressor(CompressionBr, &brDecompressor{})
 	RegisterCacheDecompressor(CompressionGzip, &gzipDecompressor{})
+}
+
+type newCompressParams struct {
+	quality         int
+	minLength       int
+	contentTypeReg  *regexp.Regexp
+	compress        func(buf []byte, level int) (*bytes.Buffer, error)
+	compressionType CompressionType
+}
+
+func newCompress(params newCompressParams) CacheBodyCompress {
+	minLength := params.minLength
+	quality := params.quality
+	contentTypeReg := params.contentTypeReg
+
+	return func(buffer *bytes.Buffer, contentType string) (*bytes.Buffer, CompressionType, error) {
+		// 如果buffer为空
+		if buffer == nil ||
+			// 数据长度少于最小压缩长度
+			buffer.Len() < minLength ||
+			// 未配置content type
+			contentTypeReg == nil ||
+			// 数据类型不匹配
+			!contentTypeReg.MatchString(contentType) {
+			return buffer, CompressionNon, nil
+		}
+		data, err := params.compress(buffer.Bytes(), quality)
+		if err != nil {
+			return nil, CompressionNon, err
+		}
+		return data, params.compressionType, nil
+	}
+}
+
+// NewBrotliCompress create a brotli compress function
+func NewBrotliCompress(quality, minLength int, contentTypeReg *regexp.Regexp) CacheBodyCompress {
+	return newCompress(newCompressParams{
+		quality:         quality,
+		minLength:       minLength,
+		contentTypeReg:  contentTypeReg,
+		compressionType: CompressionBr,
+		compress:        BrotliCompress,
+	})
+}
+
+// NewGzipCompress create a gzip compress function
+func NewGzipCompress(quality, minLength int, contentTypeReg *regexp.Regexp) CacheBodyCompress {
+	return newCompress(newCompressParams{
+		quality:         quality,
+		minLength:       minLength,
+		contentTypeReg:  contentTypeReg,
+		compressionType: CompressionGzip,
+		compress:        GzipCompress,
+	})
 }
