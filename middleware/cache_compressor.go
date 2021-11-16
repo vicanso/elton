@@ -73,18 +73,19 @@ func init() {
 	RegisterCacheDecompressor(CompressionGzip, &gzipDecompressor{})
 }
 
-type newCompressParams struct {
-	quality         int
-	minLength       int
-	contentTypeReg  *regexp.Regexp
-	compress        func(buf []byte, level int) (*bytes.Buffer, error)
-	compressionType CompressionType
+type CacheBodyCompressParams struct {
+	Quality         int
+	MinLength       int
+	ContentTypeReg  *regexp.Regexp
+	Compress        func(buf []byte, level int) (*bytes.Buffer, error)
+	CompressionType CompressionType
 }
 
-func newCompress(params newCompressParams) CacheBodyCompress {
-	minLength := params.minLength
-	quality := params.quality
-	contentTypeReg := params.contentTypeReg
+// NewCacheBodyCompress creates a new compress for cache body
+func NewCacheBodyCompress(params CacheBodyCompressParams) CacheBodyCompress {
+	minLength := params.MinLength
+	quality := params.Quality
+	contentTypeReg := params.ContentTypeReg
 
 	return func(buffer *bytes.Buffer, contentType string) (*bytes.Buffer, CompressionType, error) {
 		// 如果buffer为空
@@ -97,32 +98,32 @@ func newCompress(params newCompressParams) CacheBodyCompress {
 			!contentTypeReg.MatchString(contentType) {
 			return buffer, CompressionNon, nil
 		}
-		data, err := params.compress(buffer.Bytes(), quality)
+		data, err := params.Compress(buffer.Bytes(), quality)
 		if err != nil {
 			return nil, CompressionNon, err
 		}
-		return data, params.compressionType, nil
+		return data, params.CompressionType, nil
 	}
 }
 
-// NewBrotliCompress create a brotli compress function
+// NewBrotliCompress creates a brotli compress function
 func NewBrotliCompress(quality, minLength int, contentTypeReg *regexp.Regexp) CacheBodyCompress {
-	return newCompress(newCompressParams{
-		quality:         quality,
-		minLength:       minLength,
-		contentTypeReg:  contentTypeReg,
-		compressionType: CompressionBr,
-		compress:        BrotliCompress,
+	return NewCacheBodyCompress(CacheBodyCompressParams{
+		Quality:         quality,
+		MinLength:       minLength,
+		ContentTypeReg:  contentTypeReg,
+		CompressionType: CompressionBr,
+		Compress:        BrotliCompress,
 	})
 }
 
-// NewGzipCompress create a gzip compress function
+// NewGzipCompress creates a gzip compress function
 func NewGzipCompress(quality, minLength int, contentTypeReg *regexp.Regexp) CacheBodyCompress {
-	return newCompress(newCompressParams{
-		quality:         quality,
-		minLength:       minLength,
-		contentTypeReg:  contentTypeReg,
-		compressionType: CompressionGzip,
-		compress:        GzipCompress,
+	return NewCacheBodyCompress(CacheBodyCompressParams{
+		Quality:         quality,
+		MinLength:       minLength,
+		ContentTypeReg:  contentTypeReg,
+		CompressionType: CompressionGzip,
+		Compress:        GzipCompress,
 	})
 }

@@ -364,8 +364,7 @@ func NewCache(config CacheConfig) elton.Handler {
 			c.SetHeader(HeaderAge, strconv.Itoa(int(age)))
 			c.StatusCode = cacheResp.StatusCode
 			c.MergeHeader(cacheResp.Header)
-			cacheResp.SetBody(c)
-			return nil
+			return cacheResp.SetBody(c)
 		}
 		c.SetHeader(HeaderXCache, "fetch")
 		err = c.Next()
