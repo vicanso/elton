@@ -45,6 +45,8 @@ type CacheConfig struct {
 	HitForPassTTL time.Duration
 	// Compress compress function for data
 	Compress CacheBodyCompress
+	// GetKey get the key for request
+	GetKey func(*http.Request) string
 }
 
 type CacheStatus uint8
@@ -337,16 +339,22 @@ func NewCache(config CacheConfig) elton.Handler {
 	if config.HitForPassTTL > 0 {
 		hitForPassTTL = config.HitForPassTTL
 	}
+	getKey := config.GetKey
+	if getKey == nil {
+		getKey = func(r *http.Request) string {
+			// 默认处理不添加host
+			return r.Method + " " + r.RequestURI
+		}
+	}
 	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
 		}
-		method := c.Request.Method
-		if IsPassCacheMethod(method) {
+		if IsPassCacheMethod(c.Request.Method) {
 			return c.Next()
 		}
 		ctx := c.Context()
-		key := c.Request.Host + " " + method + " " + c.Request.RequestURI
+		key := getKey(c.Request)
 		data, err := store.Get(ctx, key)
 		if err != nil {
 			return err
