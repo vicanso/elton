@@ -165,6 +165,7 @@ func TestCacheResponseGetBody(t *testing.T) {
 		acceptEncoding string
 		encoding       string
 		body           *bytes.Buffer
+		compressor     CacheCompressor
 	}{
 		// 数据br, 客户端支持br
 		{
@@ -174,6 +175,7 @@ func TestCacheResponseGetBody(t *testing.T) {
 					Body:        brData,
 				}
 			},
+			compressor:     NewCacheBrCompressor(),
 			acceptEncoding: BrEncoding,
 			encoding:       BrEncoding,
 			body:           brData,
@@ -186,6 +188,7 @@ func TestCacheResponseGetBody(t *testing.T) {
 					Body:        brData,
 				}
 			},
+			compressor:     NewCacheBrCompressor(),
 			acceptEncoding: "",
 			encoding:       "",
 			body:           bytes.NewBuffer(data),
@@ -198,6 +201,7 @@ func TestCacheResponseGetBody(t *testing.T) {
 					Body:        gzipData,
 				}
 			},
+			compressor:     NewCacheGzipCompressor(),
 			acceptEncoding: GzipEncoding,
 			encoding:       GzipEncoding,
 			body:           gzipData,
@@ -210,6 +214,7 @@ func TestCacheResponseGetBody(t *testing.T) {
 					Body:        gzipData,
 				}
 			},
+			compressor:     NewCacheGzipCompressor(),
 			acceptEncoding: "",
 			encoding:       "",
 			body:           bytes.NewBuffer(data),
@@ -222,6 +227,7 @@ func TestCacheResponseGetBody(t *testing.T) {
 					Body:        bytes.NewBuffer(data),
 				}
 			},
+			compressor:     NewCacheGzipCompressor(),
 			acceptEncoding: "",
 			encoding:       "",
 			body:           bytes.NewBuffer(data),
@@ -229,7 +235,7 @@ func TestCacheResponseGetBody(t *testing.T) {
 	}
 	for _, tt := range tests {
 		cp := tt.newRespone()
-		body, encoding, err := cp.GetBody(tt.acceptEncoding)
+		body, encoding, err := cp.GetBody(tt.acceptEncoding, tt.compressor)
 		assert.Nil(err)
 		assert.Equal(tt.encoding, encoding)
 		assert.Equal(tt.body, body)
@@ -243,13 +249,13 @@ func TestCacheResponseSetBody(t *testing.T) {
 	c.SetRequestHeader(elton.HeaderAcceptEncoding, "br")
 
 	// 无数据
-	err := cp.SetBody(c)
+	err := cp.SetBody(c, NewCacheBrCompressor())
 	assert.Nil(err)
 	assert.Nil(c.BodyBuffer)
 
 	cp.Body = bytes.NewBufferString("hello world!")
 	cp.Compression = CompressionBr
-	err = cp.SetBody(c)
+	err = cp.SetBody(c, NewCacheBrCompressor())
 	assert.Nil(err)
 	assert.Equal(bytes.NewBufferString("hello world!"), c.BodyBuffer)
 	assert.Equal("br", c.GetHeader(elton.HeaderContentEncoding))

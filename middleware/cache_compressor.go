@@ -38,92 +38,94 @@ const (
 	CompressionBr
 )
 
-type CacheDecompressor interface {
+type CacheCompressor interface {
+	// decompress function
 	Decompress(buffer *bytes.Buffer) (data *bytes.Buffer, err error)
+	// get encoding of compressor
 	GetEncoding() (encoding string)
+	// is valid for compress
+	IsValid(contentType string, length int) (valid bool)
+	// compress function
+	Compress(buffer *bytes.Buffer) (data *bytes.Buffer, compressionType CompressionType, err error)
+	// get compression type
+	GetCompression() CompressionType
 }
 
-var cacheDecompressors = map[CompressionType]CacheDecompressor{}
-
-// RegisterCacheDecompressor register cache decompressor
-func RegisterCacheDecompressor(compressionType CompressionType, decompressor CacheDecompressor) {
-	cacheDecompressors[compressionType] = decompressor
+type CacheBrCompressor struct {
+	Level         int
+	MinLength     int
+	ContentRegexp *regexp.Regexp
 }
 
-type brDecompressor struct{}
-
-func (br *brDecompressor) Decompress(data *bytes.Buffer) (*bytes.Buffer, error) {
-	return BrotliDecompress(data.Bytes())
-}
-func (br *brDecompressor) GetEncoding() string {
-	return BrEncoding
-}
-
-type gzipDecompressor struct{}
-
-func (g *gzipDecompressor) Decompress(data *bytes.Buffer) (*bytes.Buffer, error) {
-	return GzipDecompress(data.Bytes())
-}
-func (g *gzipDecompressor) GetEncoding() string {
-	return GzipEncoding
+func isValidForCompress(reg *regexp.Regexp, minLength int, contentType string, length int) bool {
+	if minLength == 0 {
+		minLength = DefaultCompressMinLength
+	}
+	if length < minLength {
+		return false
+	}
+	if reg == nil {
+		reg = DefaultCompressRegexp
+	}
+	if !reg.MatchString(contentType) {
+		return false
+	}
+	return true
 }
 
-func init() {
-	RegisterCacheDecompressor(CompressionBr, &brDecompressor{})
-	RegisterCacheDecompressor(CompressionGzip, &gzipDecompressor{})
-}
-
-type CacheBodyCompressParams struct {
-	Quality         int
-	MinLength       int
-	ContentTypeReg  *regexp.Regexp
-	Compress        func(buf []byte, level int) (*bytes.Buffer, error)
-	CompressionType CompressionType
-}
-
-// NewCacheBodyCompress creates a new compress for cache body
-func NewCacheBodyCompress(params CacheBodyCompressParams) CacheBodyCompress {
-	minLength := params.MinLength
-	quality := params.Quality
-	contentTypeReg := params.ContentTypeReg
-
-	return func(buffer *bytes.Buffer, contentType string) (*bytes.Buffer, CompressionType, error) {
-		// 如果buffer为空
-		if buffer == nil ||
-			// 数据长度少于最小压缩长度
-			buffer.Len() < minLength ||
-			// 未配置content type
-			contentTypeReg == nil ||
-			// 数据类型不匹配
-			!contentTypeReg.MatchString(contentType) {
-			return buffer, CompressionNon, nil
-		}
-		data, err := params.Compress(buffer.Bytes(), quality)
-		if err != nil {
-			return nil, CompressionNon, err
-		}
-		return data, params.CompressionType, nil
+func NewCacheBrCompressor() *CacheBrCompressor {
+	return &CacheBrCompressor{
+		Level: defaultBrQuality,
 	}
 }
 
-// NewBrotliCompress creates a brotli compress function
-func NewBrotliCompress(quality, minLength int, contentTypeReg *regexp.Regexp) CacheBodyCompress {
-	return NewCacheBodyCompress(CacheBodyCompressParams{
-		Quality:         quality,
-		MinLength:       minLength,
-		ContentTypeReg:  contentTypeReg,
-		CompressionType: CompressionBr,
-		Compress:        BrotliCompress,
-	})
+func (br *CacheBrCompressor) Decompress(data *bytes.Buffer) (*bytes.Buffer, error) {
+	return BrotliDecompress(data.Bytes())
+}
+func (br *CacheBrCompressor) GetEncoding() string {
+	return BrEncoding
+}
+func (br *CacheBrCompressor) IsValid(contentType string, length int) bool {
+	return isValidForCompress(br.ContentRegexp, br.MinLength, contentType, length)
 }
 
-// NewGzipCompress creates a gzip compress function
-func NewGzipCompress(quality, minLength int, contentTypeReg *regexp.Regexp) CacheBodyCompress {
-	return NewCacheBodyCompress(CacheBodyCompressParams{
-		Quality:         quality,
-		MinLength:       minLength,
-		ContentTypeReg:  contentTypeReg,
-		CompressionType: CompressionGzip,
-		Compress:        GzipCompress,
-	})
+func (br *CacheBrCompressor) Compress(buffer *bytes.Buffer) (*bytes.Buffer, CompressionType, error) {
+	data, err := BrotliCompress(buffer.Bytes(), br.Level)
+	if err != nil {
+		return nil, CompressionNon, err
+	}
+	return data, CompressionBr, nil
+}
+func (br *CacheBrCompressor) GetCompression() CompressionType {
+	return CompressionBr
+}
+
+type CacheGzipCompressor struct {
+	Level         int
+	MinLength     int
+	ContentRegexp *regexp.Regexp
+}
+
+func NewCacheGzipCompressor() *CacheGzipCompressor {
+	return &CacheGzipCompressor{}
+}
+
+func (g *CacheGzipCompressor) Decompress(data *bytes.Buffer) (*bytes.Buffer, error) {
+	return GzipDecompress(data.Bytes())
+}
+func (g *CacheGzipCompressor) GetEncoding() string {
+	return GzipEncoding
+}
+func (g *CacheGzipCompressor) IsValid(contentType string, length int) bool {
+	return isValidForCompress(g.ContentRegexp, g.MinLength, contentType, length)
+}
+func (g *CacheGzipCompressor) Compress(buffer *bytes.Buffer) (*bytes.Buffer, CompressionType, error) {
+	data, err := GzipCompress(buffer.Bytes(), g.Level)
+	if err != nil {
+		return nil, CompressionNon, err
+	}
+	return data, CompressionGzip, nil
+}
+func (g *CacheGzipCompressor) GetCompression() CompressionType {
+	return CompressionGzip
 }

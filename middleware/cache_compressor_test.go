@@ -24,7 +24,6 @@ package middleware
 
 import (
 	"bytes"
-	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,38 +31,34 @@ import (
 
 func TestNewBrotliCompress(t *testing.T) {
 	assert := assert.New(t)
-	fn := NewBrotliCompress(1, 20, regexp.MustCompile("text"))
+	compressor := NewCacheBrCompressor()
+	compressor.MinLength = 20
 
-	data := bytes.NewBufferString("hello world!")
-	result, compressionType, err := fn(data, "text")
-	assert.Nil(err)
-	assert.Equal(data, result)
-	assert.Equal(CompressionNon, compressionType)
+	assert.False(compressor.IsValid("text", 1))
+	assert.True(compressor.IsValid("text", 100))
 
-	data = bytes.NewBufferString("hello world!hello world!hello world!")
-	result, compressionType, err = fn(data, "text")
+	data := bytes.NewBufferString("hello world!hello world!hello world!")
+	result, compressionType, err := compressor.Compress(data)
 	assert.Nil(err)
-	assert.NotEqual(data, result)
 	assert.Equal(CompressionBr, compressionType)
+	assert.NotEqual(data, result)
 	result, _ = BrotliDecompress(result.Bytes())
 	assert.Equal(data, result)
 }
 
 func TestNewGzipCompress(t *testing.T) {
 	assert := assert.New(t)
-	fn := NewGzipCompress(1, 20, regexp.MustCompile("text"))
+	compressor := NewCacheGzipCompressor()
+	compressor.MinLength = 20
 
-	data := bytes.NewBufferString("hello world!")
-	result, compressionType, err := fn(data, "text")
-	assert.Nil(err)
-	assert.Equal(data, result)
-	assert.Equal(CompressionNon, compressionType)
+	assert.False(compressor.IsValid("text", 1))
+	assert.True(compressor.IsValid("text", 100))
 
-	data = bytes.NewBufferString("hello world!hello world!hello world!")
-	result, compressionType, err = fn(data, "text")
+	data := bytes.NewBufferString("hello world!hello world!hello world!")
+	result, compressionType, err := compressor.Compress(data)
+	assert.Equal(CompressionGzip, compressionType)
 	assert.Nil(err)
 	assert.NotEqual(data, result)
-	assert.Equal(CompressionGzip, compressionType)
 	result, _ = GzipDecompress(result.Bytes())
 	assert.Equal(data, result)
 }

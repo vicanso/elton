@@ -6,6 +6,7 @@ description: 各类常用的中间件
 
 - [basic auth](#basic-auth) HTTP Basic Auth，建议只用于内部管理系统使用
 - [body parser](#body-parser) 请求数据的解析中间件，支持`application/json`以及`application/x-www-form-urlencoded`两种数据类型
+- [cache](#cache) HTTP缓存模块，基于响应头的`Cache-Control`缓存数据，并支持缓存时以br或gzip压缩后缓存 
 - [compress](#compress) 数据压缩中间件，默认仅支持gzip。如果需要支持更多的压缩方式，如brotli、snappy、zstd以及lz4，可以使用[elton-compress](https://github.com/vicanso/elton-compress)，也可根据需要增加相应的压缩处理
 - [concurrent limiter](#concurrent-limiter) 根据指定参数限制并发请求，可用于订单提交等防止重复提交或限制提交频率的场景
 - [error handler](#error-handler) 用于将处理函数的Error转换为对应的响应数据，如HTTP响应中的状态码(4xx, 5xx)，对应的出错类别等，建议在实际使用中根据项目自定义的Error对象生成相应的响应数据

@@ -43,8 +43,8 @@ type CacheConfig struct {
 	Store CacheStore
 	// HitForPassTTL hit for pass ttl
 	HitForPassTTL time.Duration
-	// Compress compress function for data
-	Compress CacheBodyCompress
+	// Compressor cache compressor
+	Compressor CacheCompressor
 	// GetKey get the key for request
 	GetKey func(*http.Request) string
 }
@@ -236,32 +236,28 @@ func (cp *CacheResponse) Bytes() []byte {
 }
 
 // GetBody returns the data match accept encoding
-func (cp *CacheResponse) GetBody(acceptEncoding string) (*bytes.Buffer, string, error) {
-
-	for compressType, decompressor := range cacheDecompressors {
-		// comporession match decompressor
-		if cp.Compression == compressType {
-			encoding := decompressor.GetEncoding()
-			// client acccept the encoding
-			if strings.Contains(acceptEncoding, encoding) {
-				return cp.Body, encoding, nil
-			}
-			// decompress
-			data, err := decompressor.Decompress(cp.Body)
-			if err != nil {
-				return nil, "", err
-			}
-			return data, "", nil
+func (cp *CacheResponse) GetBody(acceptEncoding string, compressor CacheCompressor) (*bytes.Buffer, string, error) {
+	if compressor != nil && cp.Compression == compressor.GetCompression() {
+		encoding := compressor.GetEncoding()
+		// client acccept the encoding
+		if strings.Contains(acceptEncoding, encoding) {
+			return cp.Body, encoding, nil
 		}
+		// decompress
+		data, err := compressor.Decompress(cp.Body)
+		if err != nil {
+			return nil, "", err
+		}
+		return data, "", nil
 	}
 	return cp.Body, "", nil
 }
 
 // SetBody sets body to context, it will be matched acccept-encoding
-func (cp *CacheResponse) SetBody(c *elton.Context) error {
+func (cp *CacheResponse) SetBody(c *elton.Context, compressor CacheCompressor) error {
 	// 如果body不为空
 	if cp.Body != nil && cp.Body.Len() != 0 {
-		body, encoding, err := cp.GetBody(c.GetRequestHeader(elton.HeaderAcceptEncoding))
+		body, encoding, err := cp.GetBody(c.GetRequestHeader(elton.HeaderAcceptEncoding), compressor)
 		if err != nil {
 			return err
 		}
@@ -318,10 +314,9 @@ func NewCacheResponse(data []byte) *CacheResponse {
 
 // NewDefaultCache return a new cache middleware with brotli compress
 func NewDefaultCache(store CacheStore) elton.Handler {
-	compress := NewBrotliCompress(defaultBrQuality, DefaultCompressMinLength, DefaultCompressRegexp)
 	return NewCache(CacheConfig{
-		Store:    store,
-		Compress: compress,
+		Store:      store,
+		Compressor: NewCacheBrCompressor(),
 	})
 }
 
@@ -346,6 +341,7 @@ func NewCache(config CacheConfig) elton.Handler {
 			return r.Method + " " + r.RequestURI
 		}
 	}
+	compressor := config.Compressor
 	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
@@ -372,7 +368,7 @@ func NewCache(config CacheConfig) elton.Handler {
 			c.SetHeader(HeaderAge, strconv.Itoa(int(age)))
 			c.StatusCode = cacheResp.StatusCode
 			c.MergeHeader(cacheResp.Header)
-			return cacheResp.SetBody(c)
+			return cacheResp.SetBody(c, compressor)
 		}
 		c.SetHeader(HeaderXCache, "fetch")
 		err = c.Next()
@@ -388,8 +384,10 @@ func NewCache(config CacheConfig) elton.Handler {
 
 		buffer := c.BodyBuffer
 		compressionType := CompressionNon
-		if config.Compress != nil {
-			buffer, compressionType, err = config.Compress(buffer, c.GetHeader(elton.HeaderContentType))
+		if compressor != nil &&
+			compressor.IsValid(c.GetHeader(elton.HeaderContentType), buffer.Len()) {
+			// 符合压缩条件
+			buffer, compressionType, err = compressor.Compress(buffer)
 			if err != nil {
 				return err
 			}
@@ -411,6 +409,6 @@ func NewCache(config CacheConfig) elton.Handler {
 		if err != nil {
 			return err
 		}
-		return cacheResp.SetBody(c)
+		return cacheResp.SetBody(c, compressor)
 	}
 }
