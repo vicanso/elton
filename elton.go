@@ -377,11 +377,14 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 			e.error(c, err)
 			return
 		}
+		// 需要在设置status code之前设置响应长度
+		if c.BodyBuffer != nil {
+			c.SetHeader(HeaderContentLength, strconv.Itoa(c.BodyBuffer.Len()))
+		}
 		if c.StatusCode != 0 {
 			c.Response.WriteHeader(c.StatusCode)
 		}
 		if c.BodyBuffer != nil {
-			c.SetHeader(HeaderContentLength, strconv.Itoa(c.BodyBuffer.Len()))
 			_, responseErr := c.Response.Write(c.BodyBuffer.Bytes())
 			if responseErr != nil {
 				e.EmitError(c, responseErr)
