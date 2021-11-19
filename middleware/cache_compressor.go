@@ -24,6 +24,7 @@ package middleware
 
 import (
 	"bytes"
+	"compress/gzip"
 	"regexp"
 )
 
@@ -107,7 +108,9 @@ type CacheGzipCompressor struct {
 }
 
 func NewCacheGzipCompressor() *CacheGzipCompressor {
-	return &CacheGzipCompressor{}
+	return &CacheGzipCompressor{
+		Level: gzip.DefaultCompression,
+	}
 }
 
 func (g *CacheGzipCompressor) Decompress(data *bytes.Buffer) (*bytes.Buffer, error) {

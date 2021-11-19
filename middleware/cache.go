@@ -35,7 +35,6 @@ import (
 	"github.com/vicanso/elton"
 )
 
-type CacheBodyCompress func(buffer *bytes.Buffer, contentType string) (data *bytes.Buffer, compressType CompressionType, err error)
 type CacheConfig struct {
 	// Skipper skipper function
 	Skipper elton.Skipper
@@ -192,6 +191,7 @@ func (cp *CacheResponse) Bytes() []byte {
 	}
 	headers := NewHTTPHeaders(cp.Header, ignoreHeaders...)
 	headersLength := len(headers)
+	// 1个字节保存状态
 	// 4个字节保存创建时间
 	// 2个字节保存status code
 	// 4个字节保存http header长度
@@ -253,7 +253,7 @@ func (cp *CacheResponse) GetBody(acceptEncoding string, compressor CacheCompress
 	return cp.Body, "", nil
 }
 
-// SetBody sets body to context, it will be matched acccept-encoding
+// SetBody sets body to http response, it will be matched acccept-encoding
 func (cp *CacheResponse) SetBody(c *elton.Context, compressor CacheCompressor) error {
 	// 如果body不为空
 	if cp.Body != nil && cp.Body.Len() != 0 {
@@ -320,6 +320,11 @@ func NewDefaultCache(store CacheStore) elton.Handler {
 	})
 }
 
+func cacheDefaultGetKey(r *http.Request) string {
+	// 默认处理不添加host
+	return r.Method + " " + r.RequestURI
+}
+
 // NewCache return a new cache middleware.
 func NewCache(config CacheConfig) elton.Handler {
 	skipper := config.Skipper
@@ -336,10 +341,7 @@ func NewCache(config CacheConfig) elton.Handler {
 	}
 	getKey := config.GetKey
 	if getKey == nil {
-		getKey = func(r *http.Request) string {
-			// 默认处理不添加host
-			return r.Method + " " + r.RequestURI
-		}
+		getKey = cacheDefaultGetKey
 	}
 	compressor := config.Compressor
 	return func(c *elton.Context) error {
@@ -357,11 +359,11 @@ func NewCache(config CacheConfig) elton.Handler {
 		}
 		cacheResp := NewCacheResponse(data)
 		switch cacheResp.Status {
-		// 如果是hit for pass，直接返回
+		// 如果是hit for pass，直接转至后续中间件
 		case StatusHitForPass:
 			c.SetHeader(HeaderXCache, "hit-for-pass")
 			return c.Next()
-		// 如果获取到数据，则直接响应，不需要next
+		// 如果获取到数据，则直接响应，不需要next转至后续中间件
 		case StatusHit:
 			c.SetHeader(HeaderXCache, "hit")
 			age := uint32(time.Now().Unix()) - cacheResp.CreatedAt
