@@ -116,6 +116,9 @@ func TestTracker(t *testing.T) {
 		assert.True(ok)
 		info, ok := v.(*TrackerInfo)
 		assert.True(ok)
+		assert.NotEmpty(info.Latency)
+		// 重置耗时
+		info.Latency = 0
 		assert.Equal(tt.info, info)
 	}
 }

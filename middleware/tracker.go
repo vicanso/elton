@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/vicanso/elton"
 )
@@ -46,12 +47,13 @@ var (
 type (
 	// TrackerInfo tracker info
 	TrackerInfo struct {
-		CID    string                 `json:"cid,omitempty"`
-		Query  map[string]string      `json:"query,omitempty"`
-		Params map[string]string      `json:"params,omitempty"`
-		Form   map[string]interface{} `json:"form,omitempty"`
-		Result int                    `json:"result,omitempty"`
-		Err    error                  `json:"err,omitempty"`
+		CID     string                 `json:"cid,omitempty"`
+		Query   map[string]string      `json:"query,omitempty"`
+		Params  map[string]string      `json:"params,omitempty"`
+		Form    map[string]interface{} `json:"form,omitempty"`
+		Latency time.Duration          `json:"latency,omitempty"`
+		Result  int                    `json:"result,omitempty"`
+		Err     error                  `json:"err,omitempty"`
 	}
 	// OnTrack on track function
 	OnTrack func(*TrackerInfo, *elton.Context)
@@ -107,6 +109,7 @@ func NewTracker(config TrackerConfig) elton.Handler {
 		if skipper(c) {
 			return c.Next()
 		}
+		startedAt := time.Now()
 		result := HandleSuccess
 		query := convertMap(c.Query(), mask, maxLength)
 		params := convertMap(c.Params.ToMap(), mask, maxLength)
@@ -131,12 +134,13 @@ func NewTracker(config TrackerConfig) elton.Handler {
 			result = HandleFail
 		}
 		config.OnTrack(&TrackerInfo{
-			CID:    c.ID,
-			Query:  query,
-			Params: params,
-			Form:   form,
-			Result: result,
-			Err:    err,
+			CID:     c.ID,
+			Query:   query,
+			Params:  params,
+			Form:    form,
+			Result:  result,
+			Err:     err,
+			Latency: time.Since(startedAt),
 		}, c)
 		return err
 	}

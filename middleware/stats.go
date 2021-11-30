@@ -53,7 +53,7 @@ type (
 		Route           string        `json:"route,omitempty"`
 		URI             string        `json:"uri,omitempty"`
 		Status          int           `json:"status,omitempty"`
-		Consuming       time.Duration `json:"consuming,omitempty"`
+		Latency         time.Duration `json:"latency,omitempty"`
 		Type            int           `json:"type,omitempty"`
 		RequestBodySize int           `json:"requestBodySize"`
 		Size            int           `json:"size,omitempty"`
@@ -98,7 +98,7 @@ func NewStats(config StatsConfig) elton.Handler {
 
 		err := c.Next()
 
-		info.Consuming = time.Since(startedAt)
+		info.Latency = time.Since(startedAt)
 		status := c.StatusCode
 		if err != nil {
 			he, ok := err.(*hes.Error)
