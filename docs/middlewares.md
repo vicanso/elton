@@ -71,12 +71,13 @@ func main() {
 
 ## body parser
 
-解析HTTP请求接收到的数据，默认支持`json`与`form`的提交，可以根据应用场景增加各类Decoder以支持更多的数据类型。
+解析HTTP请求接收到的数据，支持`json`与`form`的提交，可以根据应用场景增加各类Decoder以支持更多的数据类型，如提交数据的`gzip`解压等。
 
 
 ### NewDefaultBodyParser
 
-创建一个默认的body parser中间件，它包括gzip与json的处理。
+创建一个默认的body parser中间件，它包括`gzip`与`json`的处理。首先根据提交数据的`Content-Encoding`是否为`gzip`，如果是则先解压，再判断数据是否`json`。
+
 ```go
 e.Use(middleware.NewDefaultBodyParser())
 ```
@@ -143,7 +144,7 @@ func main() {
 
 ## cache
 
-缓存中间件，对于`GET`与`HEAD`的请求，根据其`Cache-Control`判断是否可缓存，若可缓存则将数据缓存至store中，下次相同的请求直接从缓存中读取。缓存数据可指定数据压缩处理，可将数据压缩后缓存，并响应时根据客户端自动返回压缩或未压缩数据。需要注意当前基本所有浏览器均支持br压缩，但是浏览器只在https模式下才会设置支持br，因此服务仅运行在http上，则建议使用gzip压缩。
+缓存中间件，对于`GET`与`HEAD`的请求，根据其`Cache-Control`判断是否可缓存，若可缓存则将数据缓存至store中，下次相同的请求直接从缓存中读取。缓存数据可指定数据压缩后缓存，并响应时根据客户端自动返回压缩或未压缩数据。需要注意当前基本所有浏览器均支持br压缩，但是浏览器只在https模式下才会设置支持br，因此服务仅运行在http上，则建议使用gzip压缩。
 
 
 **Example**

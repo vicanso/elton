@@ -74,7 +74,7 @@ func NewETag(config ETagConfig) elton.Handler {
 		}
 		bodyBuf := c.BodyBuffer
 		// 如果无内容或已设置 ETag ，则跳过
-		// 因为没有内容也不生成 ETag
+		// 因为没有内容生不生成ETag意义不大
 		if bodyBuf == nil || bodyBuf.Len() == 0 ||
 			c.GetHeader(elton.HeaderETag) != "" {
 			return nil

@@ -45,7 +45,7 @@ type CacheConfig struct {
 	// Compressor cache compressor
 	Compressor CacheCompressor
 	// GetKey get the key for request
-	GetKey func(*http.Request) string
+	GetKey func(*elton.Context) string
 }
 
 type CacheStatus uint8
@@ -103,6 +103,8 @@ func isCacheable(c *elton.Context) (bool, int) {
 	return cacheAge > 0, cacheAge
 }
 
+var cacheControlKeyLower = strings.ToLower(elton.HeaderCacheControl)
+
 // GetCacheMaxAge returns the age of cache,
 // get value from cache-control(s-maxage or max-age)
 func GetCacheMaxAge(header http.Header) int {
@@ -111,10 +113,9 @@ func GetCacheMaxAge(header http.Header) int {
 		return 0
 	}
 	// 如果没有设置cache-control，则不可缓存
-	cacheControlKey := strings.ToLower(elton.HeaderCacheControl)
 	var cc string
 	for k, v := range header {
-		if elton.HeaderCacheControl == k || strings.ToLower(k) == cacheControlKey {
+		if elton.HeaderCacheControl == k || strings.ToLower(k) == cacheControlKeyLower {
 			cc = strings.Join(v, ",")
 			break
 		}
@@ -320,9 +321,9 @@ func NewDefaultCache(store CacheStore) elton.Handler {
 	})
 }
 
-func cacheDefaultGetKey(r *http.Request) string {
+func cacheDefaultGetKey(c *elton.Context) string {
 	// 默认处理不添加host
-	return r.Method + " " + r.RequestURI
+	return c.Request.Method + " " + c.Request.RequestURI
 }
 
 // NewCache return a new cache middleware.
@@ -352,7 +353,7 @@ func NewCache(config CacheConfig) elton.Handler {
 			return c.Next()
 		}
 		ctx := c.Context()
-		key := getKey(c.Request)
+		key := getKey(c)
 		data, err := store.Get(ctx, key)
 		if err != nil {
 			return err

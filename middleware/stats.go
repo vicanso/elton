@@ -47,17 +47,27 @@ type (
 	}
 	// StatsInfo stats's info
 	StatsInfo struct {
-		CID             string        `json:"cid,omitempty"`
-		IP              string        `json:"ip,omitempty"`
-		Method          string        `json:"method,omitempty"`
-		Route           string        `json:"route,omitempty"`
-		URI             string        `json:"uri,omitempty"`
-		Status          int           `json:"status,omitempty"`
-		Latency         time.Duration `json:"latency,omitempty"`
-		Type            int           `json:"type,omitempty"`
-		RequestBodySize int           `json:"requestBodySize"`
-		Size            int           `json:"size,omitempty"`
-		Connecting      uint32        `json:"connecting,omitempty"`
+		// ctx id
+		CID string `json:"cid,omitempty"`
+		// real ip
+		IP string `json:"ip,omitempty"`
+		// http request method
+		Method string `json:"method,omitempty"`
+		// route of elton
+		Route string `json:"route,omitempty"`
+		// http request uri
+		URI string `json:"uri,omitempty"`
+		// http status code
+		Status int `json:"status,omitempty"`
+		// latency of processing
+		Latency time.Duration `json:"latency,omitempty"`
+		Type    int           `json:"type,omitempty"`
+		// bytes of request body
+		RequestBodySize int `json:"requestBodySize"`
+		// bytes of response body
+		Size int `json:"size,omitempty"`
+		// request connecting count of elton
+		Connecting uint32 `json:"connecting,omitempty"`
 	}
 )
 

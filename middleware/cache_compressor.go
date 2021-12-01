@@ -68,10 +68,7 @@ func isValidForCompress(reg *regexp.Regexp, minLength int, contentType string, l
 	if reg == nil {
 		reg = DefaultCompressRegexp
 	}
-	if !reg.MatchString(contentType) {
-		return false
-	}
-	return true
+	return reg.MatchString(contentType)
 }
 
 func NewCacheBrCompressor() *CacheBrCompressor {

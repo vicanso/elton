@@ -183,10 +183,13 @@ func NewCompress(config CompressConfig) elton.Handler {
 				break
 			}
 
-			levels := make([]int, 0)
+			var levels []int
+
 			// 如果获取压缩级别函数有设置
 			if dynamicLevel != nil {
-				levels = append(levels, dynamicLevel(c, len(body), encoding))
+				levels = []int{
+					dynamicLevel(c, len(body), encoding),
+				}
 			}
 
 			newBuf, e := compressor.Compress(body, levels...)
