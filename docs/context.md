@@ -42,11 +42,11 @@ HTTP响应数据，此属性为interface{}，因此可以设置不同的数据�
 
 ## BodyBuffer
 
-HTTP的响应数据（字节），此数据为真正返回的响应体，大部分应用场景使用responder中间件将Body转换为字节赋值(BodyBuffer)，并写入相应的`Content-Type`则可，少量应用场景需要可以直接将响应数据赋值而不通过中间件处理。
+HTTP的响应数据（字节），此数据为真正返回的响应体，大部分应用场景使用responder中间件将Body转换为字节(BodyBuffer)，并写入相应的`Content-Type`则可，少量应用场景需要可以直接将响应数据赋值而不通过中间件处理。
 
 ## RequestBody
 
-HTTP请求体，对于`POST`，`PUT`以及`PATCH`提交数据的请求，此字段用于保存请求体。注意：默认Elton中并未从请求中读取相应的请求体，需要使用`body_parser`中间件来获取或者自定义相应的中间件。
+HTTP请求体，对于`POST`，`PUT`以及`PATCH`提交数据的请求，此字段用于保存请求体。注意：默认Elton并未从请求中读取相应的请求体，需要使用`body_parser`中间件来获取或者自定义相应的中间件。
 
 ## RemoteAddr
 
@@ -82,7 +82,7 @@ func main() {
 
 ## RealIP
 
-获取客户端的真实IP，先判断请求头是否有`X-Forwarded-For`，如果没有再取`X-Real-Ip`，都没有则从连接IP中取。
+获取客户端的真实IP，先判断请求头是否有`X-Forwarded-For`，如果没有再取`X-Real-IP`，都没有则从连接IP中取。
 
 **Example**
 ```go
