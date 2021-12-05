@@ -3,6 +3,7 @@
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/vicanso/elton/blob/master/LICENSE)
 [![Build Status](https://github.com/vicanso/elton/workflows/Test/badge.svg)](https://github.com/vicanso/elton/actions)
 
+![Alt](https://repobeats.axiom.co/api/embed/4f64b99db39c6a75b6980ebb3c756244b246a718.svg "Repobeats analytics image")
 
 Elton的实现参考了[koa](https://github.com/koajs/koa)以及[echo](https://github.com/labstack/echo)，中间件的调用为洋葱模型：请求由外至内，响应由内至外。主要特性如下：
 
