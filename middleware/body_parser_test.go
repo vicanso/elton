@@ -31,6 +31,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -355,6 +356,7 @@ func TestBodyParserMiddleware(t *testing.T) {
 				body := `{"name": "tree.xie"}`
 				req := httptest.NewRequest("POST", "https://aslant.site/", strings.NewReader(body))
 				req.Header.Set(elton.HeaderContentType, "application/json")
+				req.Header.Set(elton.HeaderContentLength, strconv.Itoa(len(body)))
 				c := elton.NewContext(nil, req)
 				c.Next = next
 				return c

@@ -30,6 +30,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/vicanso/elton"
@@ -301,7 +302,13 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 		}
 		defer r.Close()
 		var body []byte
-		body, err := ioutil.ReadAll(r)
+		initCapSize := 0
+		contentLength := c.GetRequestHeader(elton.HeaderContentLength)
+		// 如果请求头有指定了content length，则根据content length来分配[]byte大小
+		if contentLength != "" {
+			initCapSize, _ = strconv.Atoi(contentLength)
+		}
+		body, err := elton.ReadAllInitCap(r, initCapSize)
 		if err != nil {
 			if hes.IsError(err) {
 				return err

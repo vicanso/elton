@@ -565,6 +565,42 @@ func TestGracefulClose(t *testing.T) {
 	})
 }
 
+func TestReadAllInitCap(t *testing.T) {
+	assert := assert.New(t)
+
+	buf := &bytes.Buffer{}
+	for i := 0; i < 1024*1024; i++ {
+		buf.Write([]byte("hello world!"))
+	}
+	result := buf.Bytes()
+
+	data, err := ReadAllInitCap(buf, 1024*100)
+	assert.Nil(err)
+	assert.Equal(result, data)
+
+	data, err = ReadAllInitCap(bytes.NewBufferString("hello world!"), 1024*100)
+	assert.Nil(err)
+	assert.Equal([]byte("hello world!"), data)
+}
+
+func BenchmarkReadAllInitCap(b *testing.B) {
+	buf := &bytes.Buffer{}
+	for i := 0; i < 1024*1024; i++ {
+		buf.Write([]byte("hello world!"))
+	}
+	result := buf.Bytes()
+	size := buf.Len()
+	for i := 0; i < b.N; i++ {
+		data, err := ReadAllInitCap(bytes.NewBuffer(result), 1024*1024)
+		if err != nil {
+			panic(err)
+		}
+		if len(data) != size {
+			panic(errors.New("data is invalid"))
+		}
+	}
+}
+
 // https://stackoverflow.com/questions/50120427/fail-unit-tests-if-coverage-is-below-certain-percentage
 func TestMain(m *testing.M) {
 	// call flag.Parse() here if TestMain uses flags
