@@ -123,3 +123,33 @@ func TestGetTrace(t *testing.T) {
 	t4 := GetTrace(ctx)
 	assert.Equal(t2, t4)
 }
+
+func TestTraceFilter(t *testing.T) {
+	assert := assert.New(t)
+
+	traceInfos := TraceInfos{
+		{
+			Name:     "a",
+			Duration: time.Millisecond,
+		},
+		{
+			Name:     "b",
+			Duration: 10 * time.Millisecond,
+		},
+	}
+	assert.Equal(TraceInfos{
+		{
+			Name:     "a",
+			Duration: time.Millisecond,
+		},
+	}, traceInfos.Filter(func(ti *TraceInfo) bool {
+		return ti.Name == "a"
+	}))
+
+	assert.Equal(TraceInfos{
+		{
+			Name:     "b",
+			Duration: 10 * time.Millisecond,
+		},
+	}, traceInfos.FilterDurationGT(5*time.Millisecond))
+}

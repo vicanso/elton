@@ -143,6 +143,24 @@ func (traceInfos TraceInfos) ServerTiming(prefix string) string {
 	return s.String()
 }
 
+// Filter filters the trace info, the new trace infos will be returned.
+func (traceInfos TraceInfos) Filter(fn func(*TraceInfo) bool) TraceInfos {
+	infos := make(TraceInfos, 0, len(traceInfos))
+	for _, info := range traceInfos {
+		if fn(info) {
+			infos = append(infos, info)
+		}
+	}
+	return infos
+}
+
+// FilterDurationGT flters the duration of trace is gt than d.
+func (traceInfos TraceInfos) FilterDurationGT(d time.Duration) TraceInfos {
+	return traceInfos.Filter(func(ti *TraceInfo) bool {
+		return ti.Duration > d
+	})
+}
+
 // GetTrace get trace from context, if context without trace, new trace will be created.
 func GetTrace(ctx context.Context) *Trace {
 	value := ctx.Value(ContextTraceKey)
