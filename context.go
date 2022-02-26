@@ -96,7 +96,7 @@ type (
 var _ http.ResponseWriter = (*Context)(nil)
 
 var (
-	errSignKeyIsNil = hes.New("keys for sign cookie can't be nil")
+	ErrSignKeyIsNil = hes.New("keys for sign cookie can't be nil")
 )
 
 const (
@@ -469,7 +469,7 @@ func (c *Context) GetSignedCookie(name string) (*http.Cookie, int, error) {
 	}
 	keys := c.getKeys()
 	if len(keys) == 0 {
-		return nil, -1, errSignKeyIsNil
+		return nil, -1, ErrSignKeyIsNil
 	}
 
 	sc, err := c.Cookie(name + SignedCookieSuffix)

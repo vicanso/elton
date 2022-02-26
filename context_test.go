@@ -449,7 +449,7 @@ func TestSignedCookie(t *testing.T) {
 		resp := httptest.NewRecorder()
 		c := NewContext(resp, req)
 		_, err := c.SignedCookie("a")
-		assert.Equal(errSignKeyIsNil, err)
+		assert.Equal(ErrSignKeyIsNil, err)
 
 		c.elton = elton
 		cookie, err := c.SignedCookie("a")
