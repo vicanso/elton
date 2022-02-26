@@ -64,6 +64,8 @@ type (
 		Decoders            []BodyDecoder
 		Skipper             elton.Skipper
 		ContentTypeValidate BodyContentTypeValidate
+		// OnBeforeDecode before decode event
+		OnBeforeDecode func(*elton.Context) error
 	}
 
 	// gzip decoder
@@ -94,6 +96,7 @@ func (gd *gzipDecoder) Validate(c *elton.Context) bool {
 
 func (gd *gzipDecoder) Decode(c *elton.Context, originalData []byte) (data []byte, err error) {
 	c.SetRequestHeader(elton.HeaderContentEncoding, "")
+	c.SetRequestHeader(elton.HeaderContentLength, "")
 	return doGunzip(originalData)
 }
 
@@ -323,6 +326,14 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 			}
 		}
 		c.RequestBody = body
+
+		// 是否有设置on before decode
+		if config.OnBeforeDecode != nil {
+			err := config.OnBeforeDecode(c)
+			if err != nil {
+				return err
+			}
+		}
 
 		matchDecoders := make([]BodyDecoder, 0)
 		for _, decoder := range config.Decoders {

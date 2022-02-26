@@ -33,6 +33,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -81,25 +82,41 @@ func TestGzipDecoder(t *testing.T) {
 	assert.True(gzipDecoder.Validate(c))
 
 	tests := []struct {
-		data   []byte
-		err    error
-		result []byte
+		newContext func() *elton.Context
+		data       []byte
+		err        error
+		result     []byte
 	}{
 		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+				c.SetRequestHeader(elton.HeaderContentEncoding, "gzip")
+				c.SetRequestHeader(elton.HeaderContentLength, "123")
+				return c
+			},
 			data:   b.Bytes(),
 			result: originalBuf,
 		},
 		// invalid gzip data
 		{
+			newContext: func() *elton.Context {
+				c := elton.NewContext(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+				return c
+			},
 			data: []byte("ab"),
 			err:  errors.New("unexpected EOF"),
 		},
 	}
 
 	for _, tt := range tests {
+		c := tt.newContext()
 		result, err := gzipDecoder.Decode(c, tt.data)
 		assert.Equal(tt.err, err)
 		assert.Equal(tt.result, result)
+		if err == nil {
+			assert.Empty(c.GetRequestHeader(elton.HeaderContentEncoding))
+			assert.Empty(c.GetRequestHeader(elton.HeaderContentLength))
+		}
 	}
 }
 
@@ -251,14 +268,22 @@ func TestBodyParserMiddleware(t *testing.T) {
 		return skipErr
 	}
 	defaultBodyParser := NewDefaultBodyParser()
+	beforeDecodeCount := int32(0)
+	onBeforeDecode := func(_ *elton.Context) error {
+		atomic.AddInt32(&beforeDecodeCount, 1)
+		return nil
+	}
 
 	formConf := BodyParserConfig{
 		ContentTypeValidate: DefaultJSONAndFormContentTypeValidate,
+		OnBeforeDecode:      onBeforeDecode,
 	}
 	formConf.AddDecoder(NewFormURLEncodedDecoder())
 	formParser := NewBodyParser(formConf)
 
-	customConf := BodyParserConfig{}
+	customConf := BodyParserConfig{
+		OnBeforeDecode: onBeforeDecode,
+	}
 	customConf.AddDecoder(&testDecoder{})
 	customParser := NewBodyParser(customConf)
 
@@ -422,4 +447,5 @@ func TestBodyParserMiddleware(t *testing.T) {
 		assert.Equal(tt.err, err)
 		assert.Equal(tt.requestBody, c.RequestBody)
 	}
+	assert.Equal(2, int(beforeDecodeCount))
 }
