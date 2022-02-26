@@ -63,6 +63,8 @@ type (
 		Skipper elton.Skipper
 		// DynamicLevel return dynamic level
 		DynamicLevel func(c *elton.Context, bodySize int, encoding string) int
+		// OnBeforeCompress before compress event
+		OnBeforeCompress func(c *elton.Context) error
 	}
 )
 
@@ -137,6 +139,12 @@ func NewCompress(config CompressConfig) elton.Handler {
 		// 数据类型为非可压缩，则返回
 		if !checker.MatchString(contentType) {
 			return nil
+		}
+		if config.OnBeforeCompress != nil {
+			err = config.OnBeforeCompress(c)
+			if err != nil {
+				return err
+			}
 		}
 
 		var body []byte

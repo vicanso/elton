@@ -27,6 +27,7 @@ import (
 	"errors"
 	"math/rand"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -95,6 +96,8 @@ func TestCompressMiddleware(t *testing.T) {
 	htmlData := "<html><body>" + randomString(8192) + "</body></html>"
 	htmlGzip, _ := (&GzipCompressor{}).Compress([]byte(htmlData))
 
+	compressCount := int32(0)
+
 	customCompress := NewCompress(CompressConfig{
 		Compressors: []Compressor{
 			new(testCompressor),
@@ -102,6 +105,10 @@ func TestCompressMiddleware(t *testing.T) {
 		DynamicLevel: func(c *elton.Context, bodySize int, encoding string) int {
 			// 不指定压缩级别
 			return IgnoreCompression
+		},
+		OnBeforeCompress: func(c *elton.Context) error {
+			atomic.AddInt32(&compressCount, 1)
+			return nil
 		},
 	})
 
@@ -295,4 +302,5 @@ func TestCompressMiddleware(t *testing.T) {
 			assert.Equal(tt.result, c.BodyBuffer.Bytes())
 		}
 	}
+	assert.Equal(int32(1), compressCount)
 }
