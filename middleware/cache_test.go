@@ -25,6 +25,7 @@ package middleware
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -305,6 +306,25 @@ func (ts *testStore) Get(ctx context.Context, key string) ([]byte, error) {
 func (ts *testStore) Set(ctx context.Context, key string, data []byte, ttl time.Duration) error {
 	ts.data.Store(key, data)
 	return nil
+}
+
+func TestGetBodyBuffer(t *testing.T) {
+	assert := assert.New(t)
+
+	c := elton.NewContext(nil, nil)
+	c.BodyBuffer = bytes.NewBufferString("abc")
+
+	buffer, err := getBodyBuffer(c, nil)
+	assert.Nil(err)
+	assert.Equal(bytes.NewBufferString("abc"), buffer)
+
+	c = elton.NewContext(nil, nil)
+	c.Body = map[string]string{
+		"name": "abc",
+	}
+	buffer, err = getBodyBuffer(c, json.Marshal)
+	assert.Nil(err)
+	assert.Equal(bytes.NewBufferString(`{"name":"abc"}`), buffer)
 }
 
 func TestNewCache(t *testing.T) {

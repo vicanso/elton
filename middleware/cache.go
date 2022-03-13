@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -46,6 +47,9 @@ type CacheConfig struct {
 	Compressor CacheCompressor
 	// GetKey get the key for request
 	GetKey func(*elton.Context) string
+	// Marshal marshal function for cache, if BodyBuffer is nil,
+	// the body will be marshaled to body buffer. The default marshal function will be json.Marshal
+	Marshal func(interface{}) ([]byte, error)
 }
 
 type CacheStatus uint8
@@ -95,7 +99,9 @@ func isCacheable(c *elton.Context) (bool, int) {
 		return false, -2
 	}
 	// 如果未设置数据
-	if c.StatusCode == 0 && c.BodyBuffer == nil {
+	if c.StatusCode == 0 &&
+		c.BodyBuffer == nil &&
+		c.Body == nil {
 		return false, -1
 	}
 	// 不可缓存
@@ -326,6 +332,17 @@ func cacheDefaultGetKey(c *elton.Context) string {
 	return c.Request.Method + " " + c.Request.RequestURI
 }
 
+func getBodyBuffer(c *elton.Context, marshal func(interface{}) ([]byte, error)) (*bytes.Buffer, error) {
+	if c.BodyBuffer != nil {
+		return c.BodyBuffer, nil
+	}
+	buf, err := marshal(c.Body)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewBuffer(buf), nil
+}
+
 // NewCache return a new cache middleware.
 func NewCache(config CacheConfig) elton.Handler {
 	skipper := config.Skipper
@@ -343,6 +360,10 @@ func NewCache(config CacheConfig) elton.Handler {
 	getKey := config.GetKey
 	if getKey == nil {
 		getKey = cacheDefaultGetKey
+	}
+	marshal := config.Marshal
+	if marshal == nil {
+		marshal = json.Marshal
 	}
 	compressor := config.Compressor
 	return func(c *elton.Context) error {
@@ -385,7 +406,10 @@ func NewCache(config CacheConfig) elton.Handler {
 			return store.Set(ctx, key, hitForPassData, hitForPassTTL)
 		}
 
-		buffer := c.BodyBuffer
+		buffer, err := getBodyBuffer(c, marshal)
+		if err != nil {
+			return err
+		}
 		compressionType := CompressionNon
 		if compressor != nil &&
 			compressor.IsValid(c.GetHeader(elton.HeaderContentType), buffer.Len()) {
