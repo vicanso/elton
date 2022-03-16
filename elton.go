@@ -89,6 +89,7 @@ type (
 		// functionInfos the function address:name map
 		functionInfos map[uintptr]string
 		ctxPool       sync.Pool
+		onDone        func(*Context)
 	}
 
 	// Router router
@@ -311,6 +312,9 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 		Route:  path,
 	})
 	e.tree.InsertRoute(methodTypeMap[method], path, func(c *Context) {
+		if e.onDone != nil {
+			defer e.onDone(c)
+		}
 		c.Route = path
 		mids := e.middlewares
 		maxMid := len(mids)
@@ -577,6 +581,12 @@ func (e *Elton) OnTrace(ln TraceListener) *Elton {
 		e.traceListeners = make([]TraceListener, 0)
 	}
 	e.traceListeners = append(e.traceListeners, ln)
+	return e
+}
+
+// OnDone adds listen to request done
+func (e *Elton) OnDone(fn func(*Context)) *Elton {
+	e.onDone = fn
 	return e
 }
 
