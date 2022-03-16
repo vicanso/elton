@@ -66,6 +66,9 @@ type (
 		ContentTypeValidate BodyContentTypeValidate
 		// OnBeforeDecode before decode event
 		OnBeforeDecode func(*elton.Context) error
+		// BufferPool is an interface for getting and
+		// returning temporary buffer
+		BufferPool elton.BufferPool
 	}
 
 	// gzip decoder
@@ -304,14 +307,26 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 			r = MaxBytesReader(r, int64(limit))
 		}
 		defer r.Close()
-		var body []byte
 		initCapSize := 0
 		contentLength := c.GetRequestHeader(elton.HeaderContentLength)
 		// 如果请求头有指定了content length，则根据content length来分配[]byte大小
 		if contentLength != "" {
 			initCapSize, _ = strconv.Atoi(contentLength)
 		}
-		body, err := elton.ReadAllInitCap(r, initCapSize)
+		var body []byte
+		var err error
+		if config.BufferPool != nil {
+			b := config.BufferPool.Get()
+			// 当使用完时，buffer重新放入pool中
+			// 不直接使用defer，因为request body有可能在其它中间件使用
+			c.OnDone(func() {
+				config.BufferPool.Put(b)
+			})
+			err = elton.ReadAllToBuffer(r, b)
+			body = b.Bytes()
+		} else {
+			body, err = elton.ReadAllInitCap(r, initCapSize)
+		}
 		if err != nil {
 			if hes.IsError(err) {
 				return err

@@ -65,7 +65,7 @@ func getBasicAuthError(err error, statusCode int) *hes.Error {
 // it will check the account and password, it will returns an error if check failed
 func NewDefaultBasicAuth(account, password string) elton.Handler {
 	return NewBasicAuth(BasicAuthConfig{
-		Validate: func(acc, pwd string, c *elton.Context) (bool, error) {
+		Validate: func(acc, pwd string, _ *elton.Context) (bool, error) {
 			if acc == account && pwd == password {
 				return true, nil
 			}
