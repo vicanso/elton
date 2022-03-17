@@ -724,7 +724,7 @@ func (c *Context) OnDone(handle func()) {
 	c.finishHandlers = append(c.finishHandlers, handle)
 }
 
-func (c *Context) emitDone() {
+func (c *Context) EmitDone() {
 	for _, fn := range c.finishHandlers {
 		fn()
 	}

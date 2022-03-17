@@ -449,3 +449,46 @@ func TestBodyParserMiddleware(t *testing.T) {
 	}
 	assert.Equal(2, int(beforeDecodeCount))
 }
+
+func BenchmarkBodyParserNormal(b *testing.B) {
+	fn := NewBodyParser(BodyParserConfig{})
+	size := 5 * 1024
+	for i := 0; i < b.N; i++ {
+		body := bytes.NewReader([]byte(randomString(size)))
+		req := httptest.NewRequest("POST", "/", body)
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+		c := elton.NewContext(resp, req)
+		c.Next = func() error {
+			return nil
+		}
+		fn(c)
+		if len(c.RequestBody) != size {
+			panic("get request body fail")
+		}
+	}
+}
+
+func BenchmarkBodyParserBufferPool(b *testing.B) {
+	size := 5 * 1024
+	pool := elton.NewBufferPool(size)
+	fn := NewBodyParser(BodyParserConfig{
+		BufferPool: pool,
+	})
+	for i := 0; i < b.N; i++ {
+		body := bytes.NewReader([]byte(randomString(size)))
+		req := httptest.NewRequest("POST", "/", body)
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+		c := elton.NewContext(resp, req)
+		c.Next = func() error {
+			// 由于buffer的复用需要依赖于路由的完整处理，因此测试时手工将buffer put pool
+			c.EmitDone()
+			return nil
+		}
+		fn(c)
+		if len(c.RequestBody) != size {
+			panic("get request body fail")
+		}
+	}
+}

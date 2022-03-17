@@ -53,9 +53,7 @@ func NewBufferPool(initCap int) BufferPool {
 }
 
 func (sp *simpleBufferPool) Get() *bytes.Buffer {
-	buf := sp.pool.Get().(*bytes.Buffer)
-	buf.Reset()
-	return buf
+	return sp.pool.Get().(*bytes.Buffer)
 }
 
 func (sp *simpleBufferPool) Put(buf *bytes.Buffer) {

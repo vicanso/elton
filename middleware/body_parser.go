@@ -317,6 +317,7 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 		var err error
 		if config.BufferPool != nil {
 			b := config.BufferPool.Get()
+			b.Reset()
 			// 当使用完时，buffer重新放入pool中
 			// 不直接使用defer，因为request body有可能在其它中间件使用
 			c.OnDone(func() {

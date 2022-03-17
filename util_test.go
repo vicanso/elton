@@ -43,7 +43,6 @@ func TestBufferPool(t *testing.T) {
 
 	buf = bp.Get()
 	assert.NotNil(buf)
-	assert.Equal(0, buf.Len())
 }
 
 func TestReadAllInitCap(t *testing.T) {

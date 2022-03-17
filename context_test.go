@@ -841,6 +841,6 @@ func TestContextOnDone(t *testing.T) {
 	c.OnDone(func() {
 		count++
 	})
-	c.emitDone()
+	c.EmitDone()
 	assert.Equal(2, count)
 }
