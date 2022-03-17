@@ -426,6 +426,42 @@ func TestOnTrace(t *testing.T) {
 	assert.Equal(true, done, "on trace should be called")
 }
 
+func TestOnBefore(t *testing.T) {
+	assert := assert.New(t)
+	e := New()
+
+	onBefore := false
+	e.OnBefore(func(ctx *Context) {
+		onBefore = true
+	})
+	e.GET("/", func(ctx *Context) error {
+		assert.True(onBefore)
+
+		return nil
+	})
+	req := httptest.NewRequest("GET", "/", nil)
+	resp := httptest.NewRecorder()
+	e.ServeHTTP(resp, req)
+	assert.True(onBefore)
+}
+
+func TestOnDone(t *testing.T) {
+	assert := assert.New(t)
+	e := New()
+
+	done := false
+	e.OnDone(func(ctx *Context) {
+		done = true
+	})
+	e.GET("/", func(ctx *Context) error {
+		return nil
+	})
+	req := httptest.NewRequest("GET", "/", nil)
+	resp := httptest.NewRecorder()
+	e.ServeHTTP(resp, req)
+	assert.True(done)
+}
+
 func TestGenerateID(t *testing.T) {
 	assert := assert.New(t)
 	e := New()

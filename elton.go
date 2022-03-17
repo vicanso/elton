@@ -86,10 +86,13 @@ type (
 		preMiddlewares []PreHandler
 		errorListeners []ErrorListener
 		traceListeners []TraceListener
+		// doneListeners request done
+		doneListeners []DoneListener
+		// beforeListeners before request handle
+		beforeListeners []BeforeListener
 		// functionInfos the function address:name map
 		functionInfos map[uintptr]string
 		ctxPool       sync.Pool
-		onDone        func(*Context)
 	}
 
 	// Router router
@@ -114,6 +117,10 @@ type (
 	ErrorListener func(*Context, error)
 	// TraceListener trace listener
 	TraceListener func(*Context, TraceInfos)
+	// DoneListener request done listener
+	DoneListener func(*Context)
+	// BeforeListener before request handle listener
+	BeforeListener func(*Context)
 	// PreHandler pre handler
 	PreHandler func(*http.Request)
 )
@@ -312,8 +319,11 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 		Route:  path,
 	})
 	e.tree.InsertRoute(methodTypeMap[method], path, func(c *Context) {
-		if e.onDone != nil {
-			defer e.onDone(c)
+		if e.beforeListeners != nil {
+			e.emitBefore(c)
+		}
+		if e.doneListeners != nil {
+			defer e.emitDone(c)
 		}
 		c.Route = path
 		mids := e.middlewares
@@ -584,10 +594,35 @@ func (e *Elton) OnTrace(ln TraceListener) *Elton {
 	return e
 }
 
-// OnDone adds listen to request done
-func (e *Elton) OnDone(fn func(*Context)) *Elton {
-	e.onDone = fn
+// OnDone adds listen to request done, it will be triggered
+// when the request handle is done
+func (e *Elton) OnDone(ln DoneListener) *Elton {
+	if e.doneListeners == nil {
+		e.doneListeners = make([]DoneListener, 0)
+	}
+	e.doneListeners = append(e.doneListeners, ln)
 	return e
+}
+
+func (e *Elton) emitDone(c *Context) {
+	for _, ln := range e.doneListeners {
+		ln(c)
+	}
+}
+
+// OnBefore adds listen to before request done(after pre middlewares, before middlewares)
+func (e *Elton) OnBefore(ln BeforeListener) *Elton {
+	if e.beforeListeners == nil {
+		e.beforeListeners = make([]BeforeListener, 0)
+	}
+	e.beforeListeners = append(e.beforeListeners, ln)
+	return e
+}
+
+func (e *Elton) emitBefore(c *Context) {
+	for _, ln := range e.beforeListeners {
+		ln(c)
+	}
 }
 
 // AddGroup adds the group to elton
