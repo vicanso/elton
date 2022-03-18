@@ -462,8 +462,8 @@ func BenchmarkBodyParserNormal(b *testing.B) {
 		c.Next = func() error {
 			return nil
 		}
-		fn(c)
-		if len(c.RequestBody) != size {
+		err := fn(c)
+		if err != nil || len(c.RequestBody) != size {
 			panic("get request body fail")
 		}
 	}
@@ -486,8 +486,8 @@ func BenchmarkBodyParserBufferPool(b *testing.B) {
 			c.EmitDone()
 			return nil
 		}
-		fn(c)
-		if len(c.RequestBody) != size {
+		err := fn(c)
+		if err != nil || len(c.RequestBody) != size {
 			panic("get request body fail")
 		}
 	}
