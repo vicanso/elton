@@ -391,6 +391,8 @@ func NewCache(config CacheConfig) elton.Handler {
 			age := uint32(time.Now().Unix()) - cacheResp.CreatedAt
 			c.SetHeader(HeaderAge, strconv.Itoa(int(age)))
 			c.StatusCode = cacheResp.StatusCode
+			// 要先清除原有的响应头中的Cache-Control
+			c.SetHeader(elton.HeaderCacheControl, "")
 			c.MergeHeader(cacheResp.Header)
 			return cacheResp.SetBody(c, compressor)
 		}

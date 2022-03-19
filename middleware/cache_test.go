@@ -387,6 +387,8 @@ func TestNewCache(t *testing.T) {
 
 	// hit
 	c = elton.NewContext(httptest.NewRecorder(), cacheableReq)
+	// 设置了不缓存，在后续的缓存中间件会被清除
+	c.NoCache()
 	c.Next = func() error {
 		// 直接读取缓存，不再调用next
 		return errors.New("abc")
@@ -395,6 +397,9 @@ func TestNewCache(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal("\x1b\xdf.\x00\xa4@Br\x90E\x1e\xcbe\xf2<\x9d\xda\xd1\x04 ", c.BodyBuffer.String())
 	assert.Equal("hit", c.GetHeader(HeaderXCache))
+	assert.Equal([]string{
+		"public, max-age=60",
+	}, c.Header()["Cache-Control"])
 
 	// hit（不支持压缩）
 	c = elton.NewContext(httptest.NewRecorder(), cacheableReq)
