@@ -57,11 +57,6 @@ func TestReset(t *testing.T) {
 		realIP:      "abcd",
 		clientIP:    "abcd",
 		reuseStatus: ReuseContextEnabled,
-		finishHandlers: []func(){
-			func() {
-
-			},
-		},
 	}
 	c.Reset()
 	assert.Nil(c.Request)
@@ -80,7 +75,6 @@ func TestReset(t *testing.T) {
 	assert.Equal("", c.realIP)
 	assert.Equal("", c.clientIP)
 	assert.Equal(int32(ReuseContextEnabled), c.reuseStatus)
-	assert.Empty(c.finishHandlers)
 }
 
 func TestContext(t *testing.T) {
@@ -828,19 +822,4 @@ func TestPipe(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal(int64(len(data)), written)
 	assert.Equal(data, resp.Body.Bytes())
-}
-
-func TestContextOnDone(t *testing.T) {
-	assert := assert.New(t)
-
-	c := NewContext(nil, nil)
-	count := 0
-	c.OnDone(func() {
-		count++
-	})
-	c.OnDone(func() {
-		count++
-	})
-	c.EmitDone()
-	assert.Equal(2, count)
 }

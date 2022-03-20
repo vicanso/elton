@@ -318,13 +318,10 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 		if config.BufferPool != nil {
 			b := config.BufferPool.Get()
 			b.Reset()
-			// 当使用完时，buffer重新放入pool中
-			// 不直接使用defer，因为request body有可能在其它中间件使用
-			c.OnDone(func() {
-				config.BufferPool.Put(b)
-			})
 			err = elton.ReadAllToBuffer(r, b)
-			body = b.Bytes()
+			body = append([]byte(nil), b.Bytes()...)
+			// 当使用完时，buffer重新放入pool中
+			config.BufferPool.Put(b)
 		} else {
 			body, err = elton.ReadAllInitCap(r, initCapSize)
 		}

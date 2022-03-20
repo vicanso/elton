@@ -289,7 +289,6 @@ func (e *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	rn.endpoints[methodType].handler(c)
-	c.EmitDone()
 	if c.isReuse() {
 		e.ctxPool.Put(c)
 	}

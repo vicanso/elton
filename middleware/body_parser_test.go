@@ -482,8 +482,6 @@ func BenchmarkBodyParserBufferPool(b *testing.B) {
 		resp := httptest.NewRecorder()
 		c := elton.NewContext(resp, req)
 		c.Next = func() error {
-			// 由于buffer的复用需要依赖于路由的完整处理，因此测试时手工将buffer put pool
-			c.EmitDone()
 			return nil
 		}
 		err := fn(c)

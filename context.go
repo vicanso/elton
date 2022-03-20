@@ -90,8 +90,6 @@ type (
 		reuseStatus int32
 		// cacheQuery the cache query
 		cacheQuery url.Values
-		// finishHandlers finish handler function list
-		finishHandlers []func()
 	}
 )
 
@@ -124,7 +122,6 @@ func (c *Context) Reset() {
 	c.clientIP = ""
 	c.reuseStatus = ReuseContextEnabled
 	c.cacheQuery = nil
-	c.finishHandlers = nil
 }
 
 // GetRemoteAddr returns the remote addr of request
@@ -714,22 +711,6 @@ func (c *Context) ServerTiming(traceInfos TraceInfos, prefix string) {
 	if value != "" {
 		c.SetHeader(HeaderServerTiming, value)
 	}
-}
-
-// OnDone adds a handle function for done event
-func (c *Context) OnDone(handle func()) {
-	if c.finishHandlers == nil {
-		c.finishHandlers = make([]func(), 0)
-	}
-	c.finishHandlers = append(c.finishHandlers, handle)
-}
-
-func (c *Context) EmitDone() {
-	for _, fn := range c.finishHandlers {
-		fn()
-	}
-	// 清空
-	c.finishHandlers = nil
 }
 
 // NewContext return a new context
