@@ -457,11 +457,11 @@ func TestRequestBodyReader(t *testing.T) {
 		limit:      5 * 1024,
 		bufferPool: elton.NewBufferPool(1024),
 	}
-	req := httptest.NewRequest("POST", "/", bytes.NewBufferString("abc"))
+	req := httptest.NewRequest("POST", "/", bytes.NewBufferString(randomString(2048)))
 	c := elton.NewContext(httptest.NewRecorder(), req)
 	buf, err := rr.ReadAll(c)
 	assert.Nil(err)
-	assert.Equal("abc", string(buf))
+	assert.Equal(2048, len(buf))
 }
 
 func BenchmarkBodyParserBufferPool(b *testing.B) {
