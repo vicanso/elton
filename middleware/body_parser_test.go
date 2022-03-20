@@ -29,6 +29,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -470,7 +471,8 @@ func BenchmarkBodyParserBufferPool(b *testing.B) {
 		InitCap: size,
 	})
 	for i := 0; i < b.N; i++ {
-		body := bytes.NewReader([]byte(randomString(size)))
+		bodySize := rand.Intn(size)
+		body := bytes.NewReader([]byte(randomString(bodySize)))
 		req := httptest.NewRequest("POST", "/", body)
 		req.Header.Set("Content-Type", "application/json")
 		resp := httptest.NewRecorder()
@@ -479,7 +481,7 @@ func BenchmarkBodyParserBufferPool(b *testing.B) {
 			return nil
 		}
 		err := fn(c)
-		if err != nil || len(c.RequestBody) != size {
+		if err != nil || len(c.RequestBody) != bodySize {
 			panic("get request body fail")
 		}
 	}
