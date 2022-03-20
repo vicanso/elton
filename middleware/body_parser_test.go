@@ -450,30 +450,24 @@ func TestBodyParserMiddleware(t *testing.T) {
 	assert.Equal(2, int(beforeDecodeCount))
 }
 
-func BenchmarkBodyParserNormal(b *testing.B) {
-	fn := NewBodyParser(BodyParserConfig{})
-	size := 5 * 1024
-	for i := 0; i < b.N; i++ {
-		body := bytes.NewReader([]byte(randomString(size)))
-		req := httptest.NewRequest("POST", "/", body)
-		req.Header.Set("Content-Type", "application/json")
-		resp := httptest.NewRecorder()
-		c := elton.NewContext(resp, req)
-		c.Next = func() error {
-			return nil
-		}
-		err := fn(c)
-		if err != nil || len(c.RequestBody) != size {
-			panic("get request body fail")
-		}
+func TestRequestBodyReader(t *testing.T) {
+	assert := assert.New(t)
+
+	rr := requestBodyReader{
+		limit:      5 * 1024,
+		bufferPool: elton.NewBufferPool(1024),
 	}
+	req := httptest.NewRequest("POST", "/", bytes.NewBufferString("abc"))
+	c := elton.NewContext(httptest.NewRecorder(), req)
+	buf, err := rr.ReadAll(c)
+	assert.Nil(err)
+	assert.Equal("abc", string(buf))
 }
 
 func BenchmarkBodyParserBufferPool(b *testing.B) {
 	size := 5 * 1024
-	pool := elton.NewBufferPool(size)
 	fn := NewBodyParser(BodyParserConfig{
-		BufferPool: pool,
+		InitCap: size,
 	})
 	for i := 0; i < b.N; i++ {
 		body := bytes.NewReader([]byte(randomString(size)))

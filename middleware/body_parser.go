@@ -30,8 +30,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/vicanso/elton"
 	"github.com/vicanso/hes"
@@ -60,15 +60,14 @@ type (
 	BodyParserConfig struct {
 		// Limit the limit size of body
 		Limit int
+		// InitCap the initial capacity of buffer
+		InitCap int
 		// Decoders decode list
 		Decoders            []BodyDecoder
 		Skipper             elton.Skipper
 		ContentTypeValidate BodyContentTypeValidate
 		// OnBeforeDecode before decode event
 		OnBeforeDecode func(*elton.Context) error
-		// BufferPool is an interface for getting and
-		// returning temporary buffer
-		BufferPool elton.BufferPool
 	}
 
 	// gzip decoder
@@ -268,6 +267,43 @@ func MaxBytesReader(r io.ReadCloser, n int64) *maxBytesReader {
 	}
 }
 
+type requestBodyReader struct {
+	bufferPool elton.BufferPool
+	limit      int
+}
+
+func (rr *requestBodyReader) ReadAll(c *elton.Context) ([]byte, error) {
+	r := c.Request.Body
+	limit := rr.limit
+	if limit > 0 {
+		r = MaxBytesReader(r, int64(limit))
+	}
+	defer r.Close()
+	b := rr.bufferPool.Get()
+	b.Reset()
+	err := elton.ReadAllToBuffer(r, b)
+	if err != nil {
+		if hes.IsError(err) {
+			return nil, err
+		}
+		// IO 读取失败的认为是 exception
+		return nil, &hes.Error{
+			Exception:  true,
+			StatusCode: http.StatusInternalServerError,
+			Message:    err.Error(),
+			Category:   ErrBodyParserCategory,
+			Err:        err,
+		}
+	}
+	// 复制数据，因为buffer会继续复用
+	body := append([]byte(nil), b.Bytes()...)
+	// 当使用完时，buffer重新放入pool中
+	// 成功的则重新放回pool，失败的忽略（失败概率较少，不影响)
+	rr.bufferPool.Put(b)
+	return body, nil
+
+}
+
 // NewBodyParser returns a new body parser middleware.
 // If limit < 0, it will be no limit for the body data.
 // If limit = 0, it will use the defalt limit(50KB) for the body data.
@@ -277,6 +313,10 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 	if config.Limit != 0 {
 		limit = config.Limit
 	}
+	initCap := 512
+	if config.InitCap != 0 {
+		initCap = config.InitCap
+	}
 	skipper := config.Skipper
 	if skipper == nil {
 		skipper = elton.DefaultSkipper
@@ -284,6 +324,14 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 	contentTypeValidate := config.ContentTypeValidate
 	if contentTypeValidate == nil {
 		contentTypeValidate = DefaultJSONContentTypeValidate
+	}
+	rrPool := &sync.Pool{}
+	bufferPool := elton.NewBufferPool(initCap)
+	rrPool.New = func() interface{} {
+		return &requestBodyReader{
+			bufferPool: bufferPool,
+			limit:      limit,
+		}
 	}
 	return func(c *elton.Context) error {
 		if skipper(c) || c.RequestBody != nil || !contentTypeValidate(c) {
@@ -302,42 +350,13 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 		if !valid {
 			return c.Next()
 		}
-		r := c.Request.Body
-		if limit > 0 {
-			r = MaxBytesReader(r, int64(limit))
-		}
-		defer r.Close()
-		initCapSize := 0
-		contentLength := c.GetRequestHeader(elton.HeaderContentLength)
-		// 如果请求头有指定了content length，则根据content length来分配[]byte大小
-		if contentLength != "" {
-			initCapSize, _ = strconv.Atoi(contentLength)
-		}
-		var body []byte
-		var err error
-		if config.BufferPool != nil {
-			b := config.BufferPool.Get()
-			b.Reset()
-			err = elton.ReadAllToBuffer(r, b)
-			body = append([]byte(nil), b.Bytes()...)
-			// 当使用完时，buffer重新放入pool中
-			config.BufferPool.Put(b)
-		} else {
-			body, err = elton.ReadAllInitCap(r, initCapSize)
-		}
+		rr := rrPool.Get().(*requestBodyReader)
+		body, err := rr.ReadAll(c)
 		if err != nil {
-			if hes.IsError(err) {
-				return err
-			}
-			// IO 读取失败的认为是 exception
-			return &hes.Error{
-				Exception:  true,
-				StatusCode: http.StatusInternalServerError,
-				Message:    err.Error(),
-				Category:   ErrBodyParserCategory,
-				Err:        err,
-			}
+			return err
 		}
+		// 复用rr
+		rrPool.Put(rr)
 		c.RequestBody = body
 
 		// 是否有设置on before decode
