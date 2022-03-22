@@ -30,6 +30,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -279,9 +280,23 @@ func (rr *requestBodyReader) ReadAll(c *elton.Context) ([]byte, error) {
 		r = MaxBytesReader(r, int64(limit))
 	}
 	defer r.Close()
-	b := rr.bufferPool.Get()
-	b.Reset()
-	err := elton.ReadAllToBuffer(r, b)
+	var body []byte
+	var err error
+	contentLength := c.GetRequestHeader(elton.HeaderContentLength)
+	// 如果有设置数据长度，直接初始化相应的容量读取
+	if contentLength != "" {
+		initCap, _ := strconv.Atoi(contentLength)
+		body, err = elton.ReadAllInitCap(r, initCap)
+	} else {
+		b := rr.bufferPool.Get()
+		b.Reset()
+		err = elton.ReadAllToBuffer(r, b)
+		// 复制数据，因为buffer会继续复用
+		body = append([]byte(nil), b.Bytes()...)
+		// 当使用完时，buffer重新放入pool中
+		// 成功的则重新放回pool，失败的忽略（失败概率较少，不影响)
+		rr.bufferPool.Put(b)
+	}
 	if err != nil {
 		if hes.IsError(err) {
 			return nil, err
@@ -295,13 +310,7 @@ func (rr *requestBodyReader) ReadAll(c *elton.Context) ([]byte, error) {
 			Err:        err,
 		}
 	}
-	// 复制数据，因为buffer会继续复用
-	body := append([]byte(nil), b.Bytes()...)
-	// 当使用完时，buffer重新放入pool中
-	// 成功的则重新放回pool，失败的忽略（失败概率较少，不影响)
-	rr.bufferPool.Put(b)
 	return body, nil
-
 }
 
 // NewBodyParser returns a new body parser middleware.

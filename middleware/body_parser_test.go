@@ -454,15 +454,24 @@ func TestBodyParserMiddleware(t *testing.T) {
 func TestRequestBodyReader(t *testing.T) {
 	assert := assert.New(t)
 
+	bodySize := 2048
 	rr := requestBodyReader{
 		limit:      5 * 1024,
 		bufferPool: elton.NewBufferPool(1024),
 	}
-	req := httptest.NewRequest("POST", "/", bytes.NewBufferString(randomString(2048)))
+	req := httptest.NewRequest("POST", "/", bytes.NewBufferString(randomString(bodySize)))
 	c := elton.NewContext(httptest.NewRecorder(), req)
 	buf, err := rr.ReadAll(c)
 	assert.Nil(err)
-	assert.Equal(2048, len(buf))
+	assert.Equal(bodySize, len(buf))
+
+	bodySize = 4096
+	req = httptest.NewRequest("POST", "/", bytes.NewBufferString(randomString(bodySize)))
+	req.Header.Set(elton.HeaderContentLength, strconv.Itoa(bodySize))
+	c = elton.NewContext(httptest.NewRecorder(), req)
+	buf, err = rr.ReadAll(c)
+	assert.Nil(err)
+	assert.Equal(bodySize, len(buf))
 }
 
 func BenchmarkBodyParserBufferPool(b *testing.B) {
