@@ -9,6 +9,7 @@ Elton的实现参考了[koa](https://github.com/koajs/koa)以及[echo](https://g
 
 - 处理函数（中间件）均以返回error的形式响应出错，方便使用统一的出错处理中间件将出错统一转换为对应的输出（JSON），并根据出错的类型等生成各类统计分析
 - 成功响应数据直接赋值至Context.Body（interface{})，由统一的响应中间件将其转换为对应的输出（JSON，XML）
+- 支持不同种类的事件，如`OnBefore`、`OnDone`、`OnError`等，方便添加各类统计行为
 
 如何使用`elton`开发WEB后端程序，可以参考[一步一步学习如何使用elton](https://treexie.gitbook.io/elton-beginner/)
 
