@@ -298,6 +298,7 @@ func (rr *requestBodyReader) ReadAll(c *elton.Context) ([]byte, error) {
 		rr.bufferPool.Put(b)
 	}
 	if err != nil {
+		// 如果已经是http error
 		if hes.IsError(err) {
 			return nil, err
 		}

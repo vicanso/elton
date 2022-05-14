@@ -157,15 +157,15 @@ func GetCacheMaxAge(header http.Header) int {
 }
 
 const (
-	// 状态字节数
+	// 缓存状态字节数
 	statusByteSize = 1
-	// 创建时间保存的字节数
+	// 创建时间保存的字节数(单位秒)
 	createAtByteSize = 4
 	// 状态码保存的字节数
 	statusCodeByteSize = 2
 	// 保存请求头长度的字节数
 	headerBytesSize = 4
-	// 压缩类型的字节数
+	// 响应数据压缩类型的字节数
 	compressionBytesSize = 1
 )
 
@@ -178,7 +178,7 @@ type CacheResponse struct {
 	StatusCode int
 	// 响应头
 	Header http.Header
-	// 压缩类型
+	// 响应数据压缩类型
 	Compression CompressionType
 	// 响应数据
 	Body *bytes.Buffer
