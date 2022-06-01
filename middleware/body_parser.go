@@ -294,7 +294,6 @@ func (rr *requestBodyReader) ReadAll(c *elton.Context) ([]byte, error) {
 		// 复制数据，因为buffer会继续复用
 		body = append([]byte(nil), b.Bytes()...)
 		// 当使用完时，buffer重新放入pool中
-		// 成功的则重新放回pool，失败的忽略（失败概率较少，不影响)
 		rr.bufferPool.Put(b)
 	}
 	if err != nil {
