@@ -94,6 +94,10 @@ func IsPassCacheMethod(reqMethod string) bool {
 }
 
 func isCacheable(c *elton.Context) (bool, int) {
+	// 如果是流，则不缓存
+	if c.IsReaderBody() {
+		return false, -2
+	}
 	// 如果有content-encoding，不缓存
 	if c.GetHeader(elton.HeaderContentEncoding) != "" {
 		return false, -2
