@@ -272,12 +272,18 @@ func formatLog(c *elton.Context, tags []*LoggerTag, startedAt time.Time, default
 		case payloadSizeHuman:
 			return getHumanReadableSize(len(c.RequestBody))
 		case size:
+			if c.IsReaderBody() {
+				return "-"
+			}
 			bodyBuf := c.BodyBuffer
 			if bodyBuf == nil {
 				return "0"
 			}
 			return strconv.Itoa(bodyBuf.Len())
 		case sizeHuman:
+			if c.IsReaderBody() {
+				return "-"
+			}
 			bodyBuf := c.BodyBuffer
 			if bodyBuf == nil {
 				return "0B"
