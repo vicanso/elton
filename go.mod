@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/andybalholm/brotli v1.0.4
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.7.5
 	github.com/tidwall/gjson v1.14.1
 	github.com/vicanso/hes v0.6.0
 	github.com/vicanso/intranet-ip v0.1.0

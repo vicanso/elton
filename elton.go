@@ -456,6 +456,11 @@ func (e *Elton) TRACE(path string, handlerList ...Handler) *Elton {
 
 // ALL adds http all method handle
 func (e *Elton) ALL(path string, handlerList ...Handler) *Elton {
+	return e.Multi(methods, path, handlerList...)
+}
+
+// Multi adds multi method
+func (e *Elton) Multi(methods []string, path string, handlerList ...Handler) *Elton {
 	for _, method := range methods {
 		e.Handle(method, path, handlerList...)
 	}
@@ -711,6 +716,11 @@ func (g *Group) TRACE(path string, handlerList ...Handler) {
 
 // ALL adds http all methods handler to group
 func (g *Group) ALL(path string, handlerList ...Handler) {
+	g.Multi(methods, path, handlerList...)
+}
+
+// ALL adds http all methods handler to group
+func (g *Group) Multi(methods []string, path string, handlerList ...Handler) {
 	p := g.Path + path
 	fns := g.merge(handlerList)
 	for _, method := range methods {
