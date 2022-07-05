@@ -144,7 +144,7 @@ func (fd *formURLEncodedDecoder) Decode(c *elton.Context, originalData []byte) (
 
 	arr := make([]string, 0, len(urlValues))
 	for key, values := range urlValues {
-		// 此处有可能导致如果一次该值只有一个，一次有两个，会导致数据不匹配
+		// 此处有可能导致如果一次该值只有一个，一次有两个，会导致数据类型不匹配
 		// 后续再确认是否调整（不建议使用form url encode）
 		if len(values) < 2 {
 			arr = append(arr, fmt.Sprintf(`"%s":"%s"`, key, values[0]))
@@ -178,7 +178,7 @@ func NewJSONDecoder() BodyDecoder {
 	return &jsonDecoder{}
 }
 
-// NewFormURLEncodedDecoder retruns a new url encoded decoder, it only support application/x-www-form-urlencoded
+// NewFormURLEncodedDecoder returns a new url encoded decoder, it only support application/x-www-form-urlencoded
 func NewFormURLEncodedDecoder() BodyDecoder {
 	return &formURLEncodedDecoder{}
 }
@@ -315,7 +315,7 @@ func (rr *requestBodyReader) ReadAll(c *elton.Context) ([]byte, error) {
 
 // NewBodyParser returns a new body parser middleware.
 // If limit < 0, it will be no limit for the body data.
-// If limit = 0, it will use the defalt limit(50KB) for the body data.
+// If limit = 0, it will use the default limit(50KB) for the body data.
 // JSON content type validate is the default content validate function.
 func NewBodyParser(config BodyParserConfig) elton.Handler {
 	limit := defaultRequestBodyLimit
@@ -380,7 +380,6 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 		for _, decoder := range config.Decoders {
 			if decoder.Validate(c) {
 				matchDecoders = append(matchDecoders, decoder)
-				break
 			}
 		}
 		// 没有符合条件的解码
