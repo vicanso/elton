@@ -32,7 +32,7 @@ type CompressionType uint8
 
 const (
 	// not compress
-	CompressionNon CompressionType = iota
+	CompressionNone CompressionType = iota
 	// gzip compress
 	CompressionGzip
 	// br compress
@@ -90,7 +90,7 @@ func (br *CacheBrCompressor) IsValid(contentType string, length int) bool {
 func (br *CacheBrCompressor) Compress(buffer *bytes.Buffer) (*bytes.Buffer, CompressionType, error) {
 	data, err := BrotliCompress(buffer.Bytes(), br.Level)
 	if err != nil {
-		return nil, CompressionNon, err
+		return nil, CompressionNone, err
 	}
 	return data, CompressionBr, nil
 }
@@ -122,7 +122,7 @@ func (g *CacheGzipCompressor) IsValid(contentType string, length int) bool {
 func (g *CacheGzipCompressor) Compress(buffer *bytes.Buffer) (*bytes.Buffer, CompressionType, error) {
 	data, err := GzipCompress(buffer.Bytes(), g.Level)
 	if err != nil {
-		return nil, CompressionNon, err
+		return nil, CompressionNone, err
 	}
 	return data, CompressionGzip, nil
 }

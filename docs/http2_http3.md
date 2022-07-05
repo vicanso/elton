@@ -180,7 +180,7 @@ curl -v --http2-prior-knowledge http://127.0.0.1:3000/
 
 ## http3
 
-http3现在支持的浏览器只有chrome canary以及firefox最新版本，golang的http模块也未支持http3，http3的前景虽然并不确定，但是还是可以先尝尝鲜，需要注意http3还是试验性质，不要在正式环境中大规模使用。下面是使用[quic-go](https://github.com/lucas-clemente/quic-go)使用http3的示例：
+http3现在支持的浏览器只有chrome canary以及firefox最新版本，虽然http3的标准方案已确定，但是需要注意http3模块的使用范围并不广泛，建议不要在正式环境中大规模使用。下面是使用[quic-go](https://github.com/lucas-clemente/quic-go)使用http3的示例：
 
 ```go
 package main

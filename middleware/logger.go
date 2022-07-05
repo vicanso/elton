@@ -310,7 +310,7 @@ func formatLog(c *elton.Context, tags []*LoggerTag, startedAt time.Time, default
 	return strings.Join(arr, "")
 }
 
-// NewLogger returns a new logger middleware, it can log the field of querystring, header, cookie and context.
+// NewLogger returns a new logger middleware, it can log the field of query string, header, cookie and context.
 // It will throw a panic if the Format is empty.
 // It will throw a panic if the OnLog function is nil.
 func NewLogger(config LoggerConfig) elton.Handler {

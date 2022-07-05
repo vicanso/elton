@@ -250,7 +250,7 @@ func (cp *CacheResponse) Bytes() []byte {
 func (cp *CacheResponse) GetBody(acceptEncoding string, compressor CacheCompressor) (*bytes.Buffer, string, error) {
 	if compressor != nil && cp.Compression == compressor.GetCompression() {
 		encoding := compressor.GetEncoding()
-		// client acccept the encoding
+		// client accept the encoding
 		if strings.Contains(acceptEncoding, encoding) {
 			return cp.Body, encoding, nil
 		}
@@ -264,7 +264,7 @@ func (cp *CacheResponse) GetBody(acceptEncoding string, compressor CacheCompress
 	return cp.Body, "", nil
 }
 
-// SetBody sets body to http response, it will be matched acccept-encoding
+// SetBody sets body to http response, it will be matched accept-encoding
 func (cp *CacheResponse) SetBody(c *elton.Context, compressor CacheCompressor) error {
 	// 如果body不为空
 	if cp.Body != nil && cp.Body.Len() != 0 {
@@ -308,7 +308,7 @@ func NewCacheResponse(data []byte) *CacheResponse {
 	hs := HTTPHeaders(data[offset : offset+size])
 	offset += size
 
-	commpression := data[offset]
+	compression := data[offset]
 	offset += compressionBytesSize
 
 	body := data[offset:]
@@ -318,7 +318,7 @@ func NewCacheResponse(data []byte) *CacheResponse {
 		CreatedAt:   createdAt,
 		StatusCode:  int(statusCode),
 		Header:      hs.Header(),
-		Compression: CompressionType(commpression),
+		Compression: CompressionType(compression),
 		Body:        bytes.NewBuffer(body),
 	}
 }
@@ -416,7 +416,7 @@ func NewCache(config CacheConfig) elton.Handler {
 		if err != nil {
 			return err
 		}
-		compressionType := CompressionNon
+		compressionType := CompressionNone
 		if compressor != nil &&
 			compressor.IsValid(c.GetHeader(elton.HeaderContentType), buffer.Len()) {
 			// 符合压缩条件

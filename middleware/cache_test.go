@@ -224,7 +224,7 @@ func TestCacheResponseGetBody(t *testing.T) {
 		{
 			newRespone: func() *CacheResponse {
 				return &CacheResponse{
-					Compression: CompressionNon,
+					Compression: CompressionNone,
 					Body:        bytes.NewBuffer(data),
 				}
 			},

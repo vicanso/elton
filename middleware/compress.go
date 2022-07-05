@@ -202,7 +202,7 @@ func NewCompress(config CompressConfig) elton.Handler {
 
 			newBuf, e := compressor.Compress(body, levels...)
 			// 如果压缩成功，则使用压缩数据
-			// 失败则忽略
+			// 失败则忽略(不修改原数据，仅触发error)
 			if e != nil {
 				c.Elton().EmitError(c, e)
 			} else {
