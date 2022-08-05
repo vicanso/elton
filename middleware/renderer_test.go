@@ -23,7 +23,6 @@
 package middleware
 
 import (
-	"io/ioutil"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -113,7 +112,7 @@ func TestRenderer(t *testing.T) {
 
 	t.Run("render html from file", func(t *testing.T) {
 		// render file
-		f, err := ioutil.TempFile("", "")
+		f, err := os.CreateTemp("", "")
 		assert.Nil(err)
 		filename := f.Name()
 		defer os.Remove(filename)

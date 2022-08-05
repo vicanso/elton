@@ -28,7 +28,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -246,7 +245,7 @@ func TestMaxBytesReader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		r := MaxBytesReader(tt.reader, tt.max)
-		result, err := ioutil.ReadAll(r)
+		result, err := io.ReadAll(r)
 		assert.Equal(tt.err, err)
 		assert.Equal(tt.result, result)
 	}

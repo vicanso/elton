@@ -27,7 +27,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -217,7 +216,7 @@ func doGunzip(buf []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer r.Close()
-	return ioutil.ReadAll(r)
+	return io.ReadAll(r)
 }
 
 type maxBytesReader struct {

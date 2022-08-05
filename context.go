@@ -27,7 +27,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"mime/multipart"
 	"net"
@@ -627,7 +626,7 @@ func (c *Context) ReadFile(key string) ([]byte, *multipart.FileHeader, error) {
 		return nil, nil, err
 	}
 	defer file.Close()
-	buf, err := ioutil.ReadAll(file)
+	buf, err := io.ReadAll(file)
 	if err != nil {
 		return nil, nil, err
 	}

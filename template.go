@@ -26,7 +26,7 @@ import (
 	"bytes"
 	"context"
 	"html/template"
-	"io/ioutil"
+	"os"
 )
 
 type TemplateParser interface {
@@ -94,7 +94,7 @@ func (ht *HTMLTemplate) Render(ctx context.Context, text string, data interface{
 func (ht *HTMLTemplate) RenderFile(ctx context.Context, filename string, data interface{}) (string, error) {
 	read := ht.readFile
 	if read == nil {
-		read = ioutil.ReadFile
+		read = os.ReadFile
 	}
 	buf, err := read(filename)
 	if err != nil {

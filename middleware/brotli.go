@@ -25,7 +25,6 @@ package middleware
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 
 	"github.com/andybalholm/brotli"
 	"github.com/vicanso/elton"
@@ -92,7 +91,7 @@ func BrotliCompress(buf []byte, level int) (*bytes.Buffer, error) {
 // BrotliDecompress decompress data of brotli
 func BrotliDecompress(buf []byte) (*bytes.Buffer, error) {
 	r := brotli.NewReader(bytes.NewBuffer(buf))
-	data, err := ioutil.ReadAll(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}

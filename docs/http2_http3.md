@@ -52,7 +52,8 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
-	"io/ioutil"
+	"io"
+	"os"
 
 	"github.com/vicanso/elton"
 )
@@ -60,11 +61,11 @@ import (
 // 获取证书内容
 func getCert() (cert []byte, key []byte, err error) {
 	// 此处仅简单从文件中读取，在实际使用，是从数据库中读取
-	cert, err = ioutil.ReadFile("/tmp/me.dev+3.pem")
+	cert, err = os.ReadFile("/tmp/me.dev+3.pem")
 	if err != nil {
 		return
 	}
-	key, err = ioutil.ReadFile("/tmp/me.dev+3-key.pem")
+	key, err = os.ReadFile("/tmp/me.dev+3-key.pem")
 	if err != nil {
 		return
 	}
@@ -188,7 +189,6 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -202,11 +202,11 @@ const listenAddr = ":4000"
 // 获取证书内容
 func getCert() (cert []byte, key []byte, err error) {
 	// 此处仅简单从文件中读取，在实际使用，是从数据库中读取
-	cert, err = ioutil.ReadFile("/tmp/me.dev+3.pem")
+	cert, err = os.ReadFile("/tmp/me.dev+3.pem")
 	if err != nil {
 		return
 	}
-	key, err = ioutil.ReadFile("/tmp/me.dev+3-key.pem")
+	key, err = os.ReadFile("/tmp/me.dev+3-key.pem")
 	if err != nil {
 		return
 	}

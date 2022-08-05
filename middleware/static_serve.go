@@ -28,7 +28,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -111,7 +110,7 @@ func (fs *FS) Stat(file string) os.FileInfo {
 
 // Get get the file's content
 func (fs *FS) Get(file string) ([]byte, error) {
-	return ioutil.ReadFile(file)
+	return os.ReadFile(file)
 }
 
 // NewReader new a reader for file

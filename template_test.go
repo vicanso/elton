@@ -24,7 +24,6 @@ package elton
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -54,7 +53,7 @@ func TestHTMLTemplate(t *testing.T) {
 
 	t.Run("render file", func(t *testing.T) {
 		// render file
-		f, err := ioutil.TempFile("", "")
+		f, err := os.CreateTemp("", "")
 		assert.Nil(err)
 		filename := f.Name()
 		defer os.Remove(filename)

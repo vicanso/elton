@@ -12,7 +12,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -42,7 +42,7 @@ func post() {
 	if err != nil {
 		panic(err)
 	}
-	result, _ := ioutil.ReadAll(resp.Body)
+	result, _ := io.ReadAll(resp.Body)
 	fmt.Println(string(result))
 }
 
@@ -59,7 +59,7 @@ func NewInfluxParser() elton.Handler {
 			c.GetRequestHeader(elton.HeaderContentType) != ContentTypeIfx {
 			return c.Next()
 		}
-		body, err := ioutil.ReadAll(c.Request.Body)
+		body, err := io.ReadAll(c.Request.Body)
 		// 如果读取数据时出错，直接返回
 		if err != nil {
 			return
@@ -109,7 +109,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -141,7 +141,7 @@ func post() {
 	if err != nil {
 		panic(err)
 	}
-	result, _ := ioutil.ReadAll(resp.Body)
+	result, _ := io.ReadAll(resp.Body)
 	fmt.Println(string(result))
 }
 

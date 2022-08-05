@@ -26,7 +26,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
-	"io/ioutil"
 	"net/http/httptest"
 	"testing"
 
@@ -105,13 +104,13 @@ func TestCompressorPipe(t *testing.T) {
 					return nil, err
 				}
 				defer gzipReader.Close()
-				return ioutil.ReadAll(gzipReader)
+				return io.ReadAll(gzipReader)
 			},
 		},
 		{
 			compressor: new(BrCompressor),
 			uncompress: func(r io.Reader) ([]byte, error) {
-				return ioutil.ReadAll(brotli.NewReader(r))
+				return io.ReadAll(brotli.NewReader(r))
 			},
 		},
 	}

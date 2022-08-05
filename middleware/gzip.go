@@ -26,7 +26,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
-	"io/ioutil"
 
 	"github.com/vicanso/elton"
 )
@@ -79,7 +78,7 @@ func GzipDecompress(buf []byte) (*bytes.Buffer, error) {
 		return nil, err
 	}
 	defer r.Close()
-	data, err := ioutil.ReadAll(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
