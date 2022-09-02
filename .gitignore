@@ -3,3 +3,4 @@ tmp
 *.out
 examples/*/go.sum
 _book
+.vscode

@@ -103,6 +103,22 @@ const (
 	SignedCookieSuffix = ".sig"
 )
 
+func (c *Context) Deadline() (deadline time.Time, ok bool) {
+	return c.Context().Deadline()
+}
+
+func (c *Context) Done() <-chan struct{} {
+	return c.Context().Done()
+}
+
+func (c *Context) Err() error {
+	return c.Context().Err()
+}
+
+func (c *Context) Value(key interface{}) interface{} {
+	return c.Context().Value(key)
+}
+
 // Reset all fields of context
 func (c *Context) Reset() {
 	c.Request = nil

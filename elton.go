@@ -126,6 +126,7 @@ type (
 )
 
 var _ http.Handler = (*Elton)(nil)
+var _ context.Context = (*Context)(nil)
 
 // DefaultSkipper default skipper function
 func DefaultSkipper(c *Context) bool {
