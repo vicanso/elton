@@ -166,7 +166,7 @@ func NewGroup(path string, handlerList ...Handler) *Group {
 	}
 }
 
-// IsIntranet judgets whether the ip is intranet
+// IsIntranet judges whether the ip is intranet
 func IsIntranet(ip string) bool {
 	return intranetip.Is(net.ParseIP(ip))
 }

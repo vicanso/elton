@@ -41,7 +41,6 @@ import (
 	"time"
 
 	"github.com/vicanso/hes"
-	intranetip "github.com/vicanso/intranet-ip"
 	"github.com/vicanso/keygrip"
 )
 
@@ -151,7 +150,7 @@ func (c *Context) RemoteAddr() string {
 }
 
 // GetRealIP returns the real ip of request,
-// it will get ip from x-forwared-for from request header,
+// it will get ip from x-forwarded-for from request header,
 // if not exists then it will get ip from x-real-ip from request header,
 // if not exists then it will use remote addr.
 func GetRealIP(req *http.Request) string {
@@ -168,7 +167,7 @@ func GetRealIP(req *http.Request) string {
 }
 
 // RealIP returns the real ip of request,
-// it will get ip from x-forwared-for from request header,
+// it will get ip from x-forwarded-for from request header,
 // if not exists then it will get ip from x-real-ip from request header,
 // if not exists then it will use remote addr.
 func (c *Context) RealIP() string {
@@ -179,7 +178,7 @@ func (c *Context) RealIP() string {
 }
 
 // GetClientIP returns the client ip of request,
-// it will get ip from x-forwared-for from request header and get the first public ip,
+// it will get ip from x-forwarded-for from request header and get the first public ip,
 // if not exists then it will get ip from x-real-ip from request header,
 // if not exists then it will use remote addr.
 func GetClientIP(req *http.Request) string {
@@ -190,7 +189,7 @@ func GetClientIP(req *http.Request) string {
 		// 从后往前找第一个非内网IP的则为客户IP
 		for i := len(arr) - 1; i >= 0; i-- {
 			v := strings.TrimSpace(arr[i])
-			if !intranetip.Is(net.ParseIP(v)) {
+			if !IsIntranet(v) {
 				return v
 			}
 		}

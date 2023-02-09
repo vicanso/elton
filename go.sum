@@ -21,8 +21,8 @@ github.com/tidwall/match v1.1.1/go.mod h1:eRSPERbgtNPcGhD8UCthc6PmLEQXEWd3PRB5JT
 github.com/tidwall/pretty v1.2.0/go.mod h1:ITEVvHYasfjBbM0u2Pg8T2nJnzm8xPwvNhhsoaGGjNU=
 github.com/tidwall/pretty v1.2.1 h1:qjsOFOWWQl+N3RsoF5/ssm1pHmJJwhjlSbZ51I6wMl4=
 github.com/tidwall/pretty v1.2.1/go.mod h1:ITEVvHYasfjBbM0u2Pg8T2nJnzm8xPwvNhhsoaGGjNU=
-github.com/vicanso/hes v0.6.0 h1:rmLhJw1PkZ+BTlJXt91i12mr7vpIC65S5KRCD4uF9HU=
-github.com/vicanso/hes v0.6.0/go.mod h1:bO1pAVgzuwBJAv76LXx8YN6jXLWcCYVyNx4qzPw9h6Y=
+github.com/vicanso/hes v0.6.1 h1:BRGUDhV2sJYMieJf4dgxFXjvuhDgUWBsINELcti0Z8M=
+github.com/vicanso/hes v0.6.1/go.mod h1:awwBbvcDTk8APxRmiV7Hxrir89/iCxgB6RMeLc5toh0=
 github.com/vicanso/intranet-ip v0.1.0 h1:UeoxilO2VDIkeZZxmu6aT+f5o79mfGdsSdwoEv75nYo=
 github.com/vicanso/intranet-ip v0.1.0/go.mod h1:N1yrHdDYWNsOs5V374DuAJHba+d2dxUDcjVALgIlfOg=
 github.com/vicanso/keygrip v1.2.1 h1:876fXDwGJqxdi4JxZ1lNGBxYswyLZotrs7AA2QWcLeY=
@@ -30,6 +30,5 @@ github.com/vicanso/keygrip v1.2.1/go.mod h1:tfB5az1yqold78zotkzNugk3sV+QW5m71CFz
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
-gopkg.in/yaml.v3 v3.0.0-20220512140231-539c8e751b99/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
