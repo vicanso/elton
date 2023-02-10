@@ -44,6 +44,10 @@ func TestMultipartForm(t *testing.T) {
 	err = form.AddFile("file", "test.txt", bytes.NewBufferString("Hello world!"))
 	assert.Nil(err)
 
+	err = form.AddFile("source", "./multipart_form_test.go")
+	assert.Nil(err)
+
+	assert.True(strings.HasPrefix(form.ContentType(), "multipart/form-data; boundary="))
 	r, err := form.Reader()
 	assert.Nil(err)
 	buf, err := io.ReadAll(r)
@@ -53,4 +57,14 @@ func TestMultipartForm(t *testing.T) {
 	assert.True(strings.Contains(str, `Content-Disposition: form-data; name="file"; filename="test.txt"`))
 	assert.True(strings.Contains(str, `Content-Type: application/octet-stream`))
 	assert.True(strings.Contains(str, `Content-Disposition: form-data; name="a"`))
+}
+
+func TestTestMultipartFormDestroy(t *testing.T) {
+	assert := assert.New(t)
+	form := NewMultipartForm()
+	err := form.AddField("a", "1")
+	assert.Nil(err)
+
+	err = form.Destroy()
+	assert.Nil(err)
 }

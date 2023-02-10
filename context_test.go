@@ -823,3 +823,26 @@ func TestPipe(t *testing.T) {
 	assert.Equal(int64(len(data)), written)
 	assert.Equal(data, resp.Body.Bytes())
 }
+
+func TestContextGetTrace(t *testing.T) {
+	assert := assert.New(t)
+	req, err := http.NewRequest("GET", "/", nil)
+	assert.Nil(err)
+	c := NewContext(nil, req)
+	assert.NotNil(c.GetTrace())
+}
+
+func TestContextIsContext(t *testing.T) {
+	assert := assert.New(t)
+	req, err := http.NewRequest("GET", "/", nil)
+	assert.Nil(err)
+	c := NewContext(nil, req)
+
+	_, ok := c.Deadline()
+	assert.False(ok)
+
+	assert.Nil(c.Done())
+	assert.Nil(c.Err())
+
+	assert.Nil(c.Value("abc"))
+}

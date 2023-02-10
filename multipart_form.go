@@ -36,7 +36,8 @@ type multipartForm struct {
 	contentType string
 }
 
-// NewMultipartForm returns a new multipart form
+// NewMultipartForm returns a new multipart form,
+// the form data will be saved as tmp file for less memory.
 func NewMultipartForm() *multipartForm {
 	return &multipartForm{}
 }

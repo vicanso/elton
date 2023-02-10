@@ -397,6 +397,10 @@ func TestOnError(t *testing.T) {
 		assert.Equal(customErr, err)
 	})
 	e.EmitError(c, customErr)
+	req, err := http.NewRequest("GET", "/", nil)
+	assert.Nil(err)
+
+	e.emitError(httptest.NewRecorder(), req, customErr)
 }
 
 func TestOnTrace(t *testing.T) {

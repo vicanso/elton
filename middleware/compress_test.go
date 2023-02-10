@@ -29,7 +29,6 @@ import (
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vicanso/elton"
@@ -54,7 +53,6 @@ func (t *testCompressor) Pipe(c *elton.Context) error {
 // randomString get random string
 func randomString(n int) string {
 	b := make([]rune, n)
-	rand.Seed(time.Now().UnixNano())
 	for i := range b {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
