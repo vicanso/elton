@@ -24,8 +24,9 @@ package middleware
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
-	"math/rand"
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
@@ -33,8 +34,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/vicanso/elton"
 )
-
-var letterRunes = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
 
 type testCompressor struct{}
 
@@ -52,11 +51,12 @@ func (t *testCompressor) Pipe(c *elton.Context) error {
 
 // randomString get random string
 func randomString(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err)
 	}
-	return string(b)
+	return base64.StdEncoding.EncodeToString(b)
 }
 
 func TestAcceptEncoding(t *testing.T) {
