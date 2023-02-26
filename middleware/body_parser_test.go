@@ -487,7 +487,11 @@ func BenchmarkBodyParserBufferPool(b *testing.B) {
 			return nil
 		}
 		err := fn(c)
-		if err != nil || len(c.RequestBody) != bodySize {
+		realBodySize := bodySize / 3 * 4
+		if bodySize%3 != 0 {
+			realBodySize += 4
+		}
+		if err != nil || len(c.RequestBody) != realBodySize {
 			panic("get request body fail")
 		}
 	}
