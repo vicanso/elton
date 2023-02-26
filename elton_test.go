@@ -31,7 +31,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -608,18 +607,15 @@ func TestGracefulClose(t *testing.T) {
 
 // https://stackoverflow.com/questions/50120427/fail-unit-tests-if-coverage-is-below-certain-percentage
 func TestMain(m *testing.M) {
-	// call flag.Parse() here if TestMain uses flags
-	// go 1.20获取到Coverage为0
-	if runtime.Version() == "go1.20" {
-		return
-	}
 	rc := m.Run()
 
 	// rc 0 means we've passed,
 	// and CoverMode will be non empty if run with -cover
 	if rc == 0 && testing.CoverMode() != "" {
 		c := testing.Coverage()
-		if c < 0.9 {
+		// TODO 后续处理
+		// go 1.20获取到Coverage为0
+		if c != 0 && c < 0.9 {
 			fmt.Println("Tests passed but coverage failed at", c)
 			rc = -1
 		}
