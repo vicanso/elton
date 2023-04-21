@@ -31,6 +31,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -71,7 +72,9 @@ type (
 		DisableLastModified bool
 		// 如果404，是否调用next执行后续的中间件（默认为不执行，返回404错误）
 		NotFoundNext bool
-		Skipper      elton.Skipper
+		// 符合该正则则设置为no cache
+		NoCacheRegexp *regexp.Regexp
+		Skipper       elton.Skipper
 	}
 	// FS file system
 	FS struct {
@@ -177,6 +180,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 	}
 	// convert different os file path
 	basePath := filepath.Join(config.Path, "")
+	noCacheRegexp := config.NoCacheRegexp
 	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
@@ -263,10 +267,13 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 		for k, v := range config.Header {
 			c.SetHeader(k, v)
 		}
-		if cacheControl != "" {
-			c.SetHeader(elton.HeaderCacheControl, cacheControl)
-		} else {
+		// 未设置cache control
+		// 或文件符合正则
+		if cacheControl == "" ||
+			(noCacheRegexp != nil && noCacheRegexp.MatchString(file)) {
 			c.NoCache()
+		} else {
+			c.SetHeader(elton.HeaderCacheControl, cacheControl)
 		}
 		if fileBuf != nil {
 			c.StatusCode = http.StatusOK
