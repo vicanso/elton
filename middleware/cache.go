@@ -50,6 +50,8 @@ type CacheConfig struct {
 	// Marshal marshal function for cache, if BodyBuffer is nil,
 	// the body will be marshaled to body buffer. The default marshal function will be json.Marshal
 	Marshal func(interface{}) ([]byte, error)
+	// IgnoreHeaders ignore the headers for cache
+	IgnoreHeaders []string
 }
 
 type CacheStatus uint8
@@ -71,7 +73,7 @@ type CacheStore interface {
 const HeaderAge = "Age"
 const HeaderXCache = "X-Cache"
 
-var ignoreHeaders = []string{
+var defaultIgnoreHeaders = []string{
 	"Content-Encoding",
 	"Content-Length",
 	"Connection",
@@ -193,13 +195,14 @@ var hitForPassData = (&CacheResponse{
 }).Bytes()
 
 // Bytes converts the cache response to bytes
-func (cp *CacheResponse) Bytes() []byte {
+func (cp *CacheResponse) Bytes(ignoreHeaders ...string) []byte {
 	// 只有hit的才需要保存后续的数据
 	if cp.Status != StatusHit {
 		return []byte{
 			byte(cp.Status),
 		}
 	}
+	ignoreHeaders = append(ignoreHeaders, defaultIgnoreHeaders...)
 	headers := NewHTTPHeaders(cp.Header, ignoreHeaders...)
 	headersLength := len(headers)
 	// 1个字节保存状态
@@ -369,6 +372,7 @@ func NewCache(config CacheConfig) elton.Handler {
 	if marshal == nil {
 		marshal = json.Marshal
 	}
+	ignoreHeaders := config.IgnoreHeaders
 	compressor := config.Compressor
 	return func(c *elton.Context) error {
 		if skipper(c) {
@@ -435,7 +439,7 @@ func NewCache(config CacheConfig) elton.Handler {
 			Header:      c.Header(),
 			Body:        buffer,
 		}
-		data = cacheResp.Bytes()
+		data = cacheResp.Bytes(ignoreHeaders...)
 		// 如果想忽略store的错误，则自定义store时，
 		// 不要返回出错则可
 		err = store.Set(ctx, key, data, time.Duration(cacheAge)*time.Second)
