@@ -74,7 +74,9 @@ type (
 		NotFoundNext bool
 		// 符合该正则则设置为no cache
 		NoCacheRegexp *regexp.Regexp
-		Skipper       elton.Skipper
+		// 响应前的处理(只针对读取到buffer的文件)
+		BeforeResponse func(string, []byte) ([]byte, error)
+		Skipper        elton.Skipper
 	}
 	// FS file system
 	FS struct {
@@ -265,7 +267,7 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 		}
 
 		for k, v := range config.Header {
-			c.SetHeader(k, v)
+			c.AddHeader(k, v)
 		}
 		// 未设置cache control
 		// 或文件符合正则
@@ -274,6 +276,14 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 			c.NoCache()
 		} else {
 			c.SetHeader(elton.HeaderCacheControl, cacheControl)
+		}
+		// 如果有设置before response
+		if config.BeforeResponse != nil && fileBuf != nil {
+			buf, err := config.BeforeResponse(file, fileBuf)
+			if err != nil {
+				return err
+			}
+			fileBuf = buf
 		}
 		if fileBuf != nil {
 			c.StatusCode = http.StatusOK
