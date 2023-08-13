@@ -48,3 +48,12 @@ func TestLruStore(t *testing.T) {
 	buf, _ = store.Get(ctx, key1)
 	assert.Empty(buf)
 }
+
+func BenchmarkLruStore(b *testing.B) {
+	store := NewLruStore(128)
+	ctx := context.Background()
+	for i := 0; i < b.N; i++ {
+		_ = store.Set(ctx, "key", []byte("Hello world!"), time.Second)
+		_, _ = store.Get(ctx, "key")
+	}
+}
