@@ -1,9 +1,10 @@
 module github.com/vicanso/elton
 
-go 1.17
+go 1.18
 
 require (
 	github.com/andybalholm/brotli v1.0.5
+	github.com/hashicorp/golang-lru/v2 v2.0.5
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/gjson v1.15.0
 	github.com/vicanso/hes v0.6.2
