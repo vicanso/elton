@@ -76,7 +76,9 @@ type (
 		NoCacheRegexp *regexp.Regexp
 		// 响应前的处理(只针对读取到buffer的文件)
 		BeforeResponse func(string, []byte) ([]byte, error)
-		Skipper        elton.Skipper
+		// 目录默认文件
+		IndexFile string
+		Skipper   elton.Skipper
 	}
 	// FS file system
 	FS struct {
@@ -219,6 +221,13 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 		if config.DenyQueryString && url.RawQuery != "" {
 			return ErrStaticServeNotAllowQueryString
 		}
+		if config.IndexFile != "" {
+			fileInfo := staticFile.Stat(file)
+			if fileInfo != nil && fileInfo.IsDir() {
+				file = filepath.Join(config.Path, config.IndexFile)
+			}
+		}
+
 		exists := staticFile.Exists(file)
 		if !exists {
 			if config.NotFoundNext {
