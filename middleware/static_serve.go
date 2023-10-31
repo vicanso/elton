@@ -221,10 +221,11 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 		if config.DenyQueryString && url.RawQuery != "" {
 			return ErrStaticServeNotAllowQueryString
 		}
+		// 如果有配置目录的index文件
 		if config.IndexFile != "" {
 			fileInfo := staticFile.Stat(file)
 			if fileInfo != nil && fileInfo.IsDir() {
-				file = filepath.Join(config.Path, config.IndexFile)
+				file = filepath.Join(file, config.IndexFile)
 			}
 		}
 
