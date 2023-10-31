@@ -279,14 +279,6 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 		for k, v := range config.Header {
 			c.AddHeader(k, v)
 		}
-		// 未设置cache control
-		// 或文件符合正则
-		if cacheControl == "" ||
-			(noCacheRegexp != nil && noCacheRegexp.MatchString(file)) {
-			c.NoCache()
-		} else {
-			c.SetHeader(elton.HeaderCacheControl, cacheControl)
-		}
 		// 如果有设置before response
 		if config.BeforeResponse != nil && fileBuf != nil {
 			buf, err := config.BeforeResponse(file, fileBuf)
@@ -294,6 +286,14 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 				return err
 			}
 			fileBuf = buf
+		}
+		// 未设置cache control
+		// 或文件符合正则
+		if cacheControl == "" ||
+			(noCacheRegexp != nil && noCacheRegexp.MatchString(file)) {
+			c.NoCache()
+		} else {
+			c.SetHeader(elton.HeaderCacheControl, cacheControl)
 		}
 		if fileBuf != nil {
 			c.StatusCode = http.StatusOK
