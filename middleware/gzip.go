@@ -30,11 +30,6 @@ import (
 	"github.com/vicanso/elton"
 )
 
-const (
-	// GzipEncoding gzip encoding
-	GzipEncoding = "gzip"
-)
-
 type (
 	// GzipCompressor gzip compress
 	GzipCompressor struct {
@@ -49,7 +44,7 @@ func (g *GzipCompressor) Accept(c *elton.Context, bodySize int) (bool, string) {
 	if bodySize >= 0 && bodySize < g.getMinLength() {
 		return false, ""
 	}
-	return AcceptEncoding(c, GzipEncoding)
+	return AcceptEncoding(c, elton.Gzip)
 }
 
 // GzipCompress compress data by gzip

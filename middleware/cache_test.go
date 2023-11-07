@@ -177,8 +177,8 @@ func TestCacheResponseGetBody(t *testing.T) {
 				}
 			},
 			compressor:     NewCacheBrCompressor(),
-			acceptEncoding: BrEncoding,
-			encoding:       BrEncoding,
+			acceptEncoding: elton.Br,
+			encoding:       elton.Br,
 			body:           brData,
 		},
 		// 数据br, 客户端不支持br
@@ -203,8 +203,8 @@ func TestCacheResponseGetBody(t *testing.T) {
 				}
 			},
 			compressor:     NewCacheGzipCompressor(),
-			acceptEncoding: GzipEncoding,
-			encoding:       GzipEncoding,
+			acceptEncoding: elton.Gzip,
+			encoding:       elton.Gzip,
 			body:           gzipData,
 		},
 		// 数据gzip，客户端不支持gzip

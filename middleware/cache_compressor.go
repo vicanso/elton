@@ -26,6 +26,9 @@ import (
 	"bytes"
 	"compress/gzip"
 	"regexp"
+
+	"github.com/klauspost/compress/zstd"
+	"github.com/vicanso/elton"
 )
 
 type CompressionType uint8
@@ -37,6 +40,8 @@ const (
 	CompressionGzip
 	// br compress
 	CompressionBr
+	// zstd compress
+	CompressionZstd
 )
 
 type CacheCompressor interface {
@@ -81,18 +86,17 @@ func (br *CacheBrCompressor) Decompress(data *bytes.Buffer) (*bytes.Buffer, erro
 	return BrotliDecompress(data.Bytes())
 }
 func (br *CacheBrCompressor) GetEncoding() string {
-	return BrEncoding
+	return elton.Br
 }
 func (br *CacheBrCompressor) IsValid(contentType string, length int) bool {
 	return isValidForCompress(br.ContentRegexp, br.MinLength, contentType, length)
 }
-
 func (br *CacheBrCompressor) Compress(buffer *bytes.Buffer) (*bytes.Buffer, CompressionType, error) {
 	data, err := BrotliCompress(buffer.Bytes(), br.Level)
 	if err != nil {
 		return nil, CompressionNone, err
 	}
-	return data, CompressionBr, nil
+	return data, br.GetCompression(), nil
 }
 func (br *CacheBrCompressor) GetCompression() CompressionType {
 	return CompressionBr
@@ -114,7 +118,7 @@ func (g *CacheGzipCompressor) Decompress(data *bytes.Buffer) (*bytes.Buffer, err
 	return GzipDecompress(data.Bytes())
 }
 func (g *CacheGzipCompressor) GetEncoding() string {
-	return GzipEncoding
+	return elton.Gzip
 }
 func (g *CacheGzipCompressor) IsValid(contentType string, length int) bool {
 	return isValidForCompress(g.ContentRegexp, g.MinLength, contentType, length)
@@ -124,8 +128,39 @@ func (g *CacheGzipCompressor) Compress(buffer *bytes.Buffer) (*bytes.Buffer, Com
 	if err != nil {
 		return nil, CompressionNone, err
 	}
-	return data, CompressionGzip, nil
+	return data, g.GetCompression(), nil
 }
 func (g *CacheGzipCompressor) GetCompression() CompressionType {
 	return CompressionGzip
+}
+
+type CacheZstdCompressor struct {
+	Level         int
+	MinLength     int
+	ContentRegexp *regexp.Regexp
+}
+
+func NewCacheZstdCompressor() *CacheZstdCompressor {
+	return &CacheZstdCompressor{
+		Level: int(zstd.SpeedBetterCompression),
+	}
+}
+func (z *CacheZstdCompressor) Decompress(data *bytes.Buffer) (*bytes.Buffer, error) {
+	return ZstdDecompress(data.Bytes())
+}
+func (z *CacheZstdCompressor) GetEncoding() string {
+	return elton.Zstd
+}
+func (z *CacheZstdCompressor) IsValid(contentType string, length int) bool {
+	return isValidForCompress(z.ContentRegexp, z.MinLength, contentType, length)
+}
+func (z *CacheZstdCompressor) Compress(buffer *bytes.Buffer) (*bytes.Buffer, CompressionType, error) {
+	data, err := ZstdCompress(buffer.Bytes(), z.Level)
+	if err != nil {
+		return nil, CompressionNone, err
+	}
+	return data, z.GetCompression(), nil
+}
+func (z *CacheZstdCompressor) GetCompression() CompressionType {
+	return CompressionZstd
 }

@@ -42,7 +42,7 @@ func TestCompressor(t *testing.T) {
 	}{
 		{
 			compressor: new(GzipCompressor),
-			encoding:   GzipEncoding,
+			encoding:   elton.Gzip,
 			uncompress: func(b []byte) ([]byte, error) {
 				buffer, err := GzipDecompress(b)
 				if err != nil {
@@ -53,7 +53,7 @@ func TestCompressor(t *testing.T) {
 		},
 		{
 			compressor: new(BrCompressor),
-			encoding:   BrEncoding,
+			encoding:   elton.Br,
 			uncompress: func(b []byte) ([]byte, error) {
 				buffer, err := BrotliDecompress(b)
 				if err != nil {

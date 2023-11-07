@@ -128,6 +128,8 @@ const (
 	Gzip = "gzip"
 	// Br brotli compress
 	Br = "br"
+	// Zstd zstd compress
+	Zstd = "zstd"
 )
 
 var (

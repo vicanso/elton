@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/andybalholm/brotli v1.0.6
 	github.com/hashicorp/golang-lru/v2 v2.0.7
+	github.com/klauspost/compress v1.17.2
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/gjson v1.17.0
 	github.com/vicanso/hes v0.6.2

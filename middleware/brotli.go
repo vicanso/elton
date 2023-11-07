@@ -32,7 +32,6 @@ import (
 
 const (
 	// BrEncoding br encoding
-	BrEncoding       = "br"
 	maxBrQuality     = 11
 	defaultBrQuality = 6
 )
@@ -69,7 +68,7 @@ func (b *BrCompressor) Accept(c *elton.Context, bodySize int) (acceptable bool, 
 	if bodySize >= 0 && bodySize < b.getMinLength() {
 		return
 	}
-	return AcceptEncoding(c, BrEncoding)
+	return AcceptEncoding(c, elton.Br)
 }
 
 // BrotliCompress compress data by brotli
