@@ -72,7 +72,7 @@ func (z *ZstdCompressor) Compress(buf []byte, levels ...int) (*bytes.Buffer, err
 	if len(levels) != 0 && levels[0] != IgnoreCompression {
 		level = levels[0]
 	}
-	return GzipCompress(buf, level)
+	return ZstdCompress(buf, level)
 }
 
 // Pipe compress by pipe

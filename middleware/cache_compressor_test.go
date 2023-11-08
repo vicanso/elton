@@ -62,3 +62,20 @@ func TestNewGzipCompress(t *testing.T) {
 	result, _ = GzipDecompress(result.Bytes())
 	assert.Equal(data, result)
 }
+
+func TestNewZstdCompress(t *testing.T) {
+	assert := assert.New(t)
+	compressor := NewCacheZstdCompressor()
+	compressor.MinLength = 20
+
+	assert.False(compressor.IsValid("text", 1))
+	assert.True(compressor.IsValid("text", 100))
+
+	data := bytes.NewBufferString("hello world!hello world!hello world!")
+	result, compressionType, err := compressor.Compress(data)
+	assert.Equal(CompressionZstd, compressionType)
+	assert.Nil(err)
+	assert.NotEqual(data, result)
+	result, _ = ZstdDecompress(result.Bytes())
+	assert.Equal(data, result)
+}

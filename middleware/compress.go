@@ -209,6 +209,8 @@ func NewCompress(config CompressConfig) elton.Handler {
 				fillHeader(encoding)
 				c.BodyBuffer = newBuf
 			}
+			// 已有符合的压缩，处理完成跳出当前循环
+			break
 		}
 		return nil
 	}

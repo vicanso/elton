@@ -249,7 +249,7 @@ func TestCompressMiddleware(t *testing.T) {
 			encoding: "gzip",
 			etag:     "W/123",
 		},
-		// reader pike
+		// reader pipe
 		{
 			newContext: func() *elton.Context {
 				req := httptest.NewRequest("GET", "/users/me", nil)
