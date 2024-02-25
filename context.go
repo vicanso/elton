@@ -682,7 +682,7 @@ func (c *Context) Elton() *Elton {
 
 // Pass request to another elton instance and set the context is committed
 func (c *Context) Pass(another *Elton) {
-	// 设置为已commit，避免当前cod继续处理
+	// 设置为已commit，避免当前实例继续处理
 	c.Committed = true
 	another.ServeHTTP(c.Response, c.Request)
 }

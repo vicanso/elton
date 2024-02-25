@@ -90,7 +90,7 @@ func TestErrorHandler(t *testing.T) {
 				return c
 			},
 			fn:           defaultErrorHandler,
-			result:       bytes.NewBufferString(`{"statusCode":500,"category":"elton-error","subCategory":"","message":"abcd","exception":true}`),
+			result:       bytes.NewBufferString(`{"statusCode":500,"category":"elton-error","message":"abcd","exception":true}`),
 			cacheControl: "public, max-age=300",
 			contentType:  "application/json; charset=utf-8",
 		},
