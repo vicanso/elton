@@ -42,6 +42,8 @@ type embedStaticFS struct {
 	FS     embed.FS
 }
 
+var _ StaticFile = (*embedStaticFS)(nil)
+
 // NewEmbedStaticFS returns a new embed static fs
 func NewEmbedStaticFS(fs embed.FS, prefix string) *embedStaticFS {
 	return &embedStaticFS{
@@ -108,6 +110,8 @@ type tarFS struct {
 	// tar file
 	File string
 }
+
+var _ StaticFile = (*tarFS)(nil)
 
 // NewTarFS returns a new tar static fs
 func NewTarFS(file string, prefix string) *tarFS {
