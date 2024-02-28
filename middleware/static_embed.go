@@ -28,6 +28,7 @@ import (
 	"bytes"
 	"embed"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -109,20 +110,27 @@ type tarFS struct {
 	Prefix string
 	// tar file
 	File string
+	// embed fs
+	Embed *embed.FS
 }
 
 var _ StaticFile = (*tarFS)(nil)
 
 // NewTarFS returns a new tar static fs
-func NewTarFS(file string, prefix string) *tarFS {
+func NewTarFS(file string) *tarFS {
 	return &tarFS{
-		Prefix: prefix,
-		File:   file,
+		File: file,
 	}
 }
 
 func (t *tarFS) get(file string, includeContent bool) (bool, []byte, error) {
-	f, err := os.Open(t.File)
+	var f fs.File
+	var err error
+	if t.Embed != nil {
+		f, err = t.Embed.Open(t.File)
+	} else {
+		f, err = os.Open(t.File)
+	}
 	if err != nil {
 		return false, nil, err
 	}

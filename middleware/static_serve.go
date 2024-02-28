@@ -85,6 +85,8 @@ type (
 	}
 )
 
+type EncodingFsSelector func(*elton.Context) (string, StaticFile)
+
 const (
 	// ErrStaticServeCategory static serve error category
 	ErrStaticServeCategory = "elton-static-serve"
@@ -93,6 +95,8 @@ const (
 var (
 	// ErrStaticServeNotAllowQueryString not all query string
 	ErrStaticServeNotAllowQueryString = getStaticServeError("static serve not allow query string", http.StatusBadRequest)
+	// ErrStaticServeFsIsNil static fs is nil
+	ErrStaticServeFsIsNil = getStaticServeError("static fs is nil", http.StatusBadRequest)
 	// ErrStaticServeNotFound static file not found
 	ErrStaticServeNotFound = getStaticServeError("static file not found", http.StatusNotFound)
 	// ErrStaticServeOutOfPath file out of path
@@ -149,7 +153,7 @@ func generateETag(buf []byte) string {
 	return fmt.Sprintf(`"%x-%s"`, size, hash)
 }
 
-// NewDefaultStaticServe returns a new default static server milldeware using FS
+// NewDefaultStaticServe returns a new default static server middleware using FS
 func NewDefaultStaticServe(config StaticServeConfig) elton.Handler {
 	return NewStaticServe(&FS{}, config)
 }
@@ -158,10 +162,7 @@ func toSeconds(d time.Duration) string {
 	return strconv.Itoa(int(d.Seconds()))
 }
 
-// NewStaticServe returns a new static serve middleware, suggest to set the MaxAge and SMaxAge for cache control for better performance.
-// It will return an error if DenyDot is true and filename is start with '.'.
-// It will return an error if DenyQueryString is true and the querystring is not empty.
-func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handler {
+func NewEncodingStaticServe(config StaticServeConfig, selector EncodingFsSelector) elton.Handler {
 	cacheArr := []string{
 		"public",
 	}
@@ -220,6 +221,10 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 		// 禁止 querystring
 		if config.DenyQueryString && url.RawQuery != "" {
 			return ErrStaticServeNotAllowQueryString
+		}
+		encoding, staticFile := selector(c)
+		if staticFile == nil {
+			return ErrStaticServeFsIsNil
 		}
 		// 如果有配置目录的index文件
 		if config.IndexFile != "" {
@@ -284,11 +289,15 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 			}
 			fileBuf = buf
 		}
+		// set content encoding
+		if encoding != "" {
+			c.SetHeader(elton.HeaderContentEncoding, encoding)
+		}
 		for k, v := range config.Header {
 			c.AddHeader(k, v)
 		}
-		// 未设置cache control
-		// 或文件符合正则
+		// not set cache control
+		// or the file match no cache
 		if cacheControl == "" ||
 			(noCacheRegexp != nil && noCacheRegexp.MatchString(file)) {
 			c.NoCache()
@@ -308,4 +317,13 @@ func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handl
 		}
 		return c.Next()
 	}
+}
+
+// NewStaticServe returns a new static serve middleware, suggest to set the MaxAge and SMaxAge for cache control for better performance.
+// It will return an error if DenyDot is true and filename is start with '.'.
+// It will return an error if DenyQueryString is true and the query string is not empty.
+func NewStaticServe(staticFile StaticFile, config StaticServeConfig) elton.Handler {
+	return NewEncodingStaticServe(config, func(ctx *elton.Context) (string, StaticFile) {
+		return "", staticFile
+	})
 }
