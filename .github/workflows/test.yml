@@ -17,8 +17,6 @@ jobs:
         - '1.23'
         - '1.22'
         - '1.21'
-        - '1.20'
-        - '1.19'
     steps:
 
     - name: Check out code into the Go module directory
