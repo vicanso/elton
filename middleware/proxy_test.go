@@ -99,7 +99,9 @@ func newServer() (net.Listener, *url.URL) {
 func TestProxy(t *testing.T) {
 	// 使用target picker方法来获取target
 	l, target := newServer()
-	defer l.Close()
+	defer func() {
+		_ = l.Close()
+	}()
 	assert := assert.New(t)
 
 	skipErr := errors.New("skip error")
@@ -266,7 +268,9 @@ func TestProxy(t *testing.T) {
 func BenchmarkProxy(b *testing.B) {
 	// 使用target picker方法来获取target
 	l, target := newServer()
-	defer l.Close()
+	defer func() {
+		_ = l.Close()
+	}()
 
 	next := func() error {
 		return nil

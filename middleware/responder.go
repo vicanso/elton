@@ -103,11 +103,8 @@ func NewResponder(config ResponderConfig) elton.Handler {
 			return nil
 		}
 
-		hadContentType := false
 		// 判断是否已设置响应头的Content-Type
-		if c.GetHeader(elton.HeaderContentType) != "" {
-			hadContentType = true
-		}
+		hadContentType := c.GetHeader(elton.HeaderContentType) != ""
 
 		var body []byte
 		if c.Body != nil {

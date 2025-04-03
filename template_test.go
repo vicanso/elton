@@ -56,7 +56,9 @@ func TestHTMLTemplate(t *testing.T) {
 		f, err := os.CreateTemp("", "")
 		assert.Nil(err)
 		filename := f.Name()
-		defer os.Remove(filename)
+		defer func() {
+			_ = os.Remove(filename)
+		}()
 		_, err = f.WriteString(text)
 		assert.Nil(err)
 		err = f.Close()

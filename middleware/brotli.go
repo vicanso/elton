@@ -111,11 +111,15 @@ func (b *BrCompressor) Pipe(c *elton.Context) (err error) {
 	r := c.Body.(io.Reader)
 	closer, ok := c.Body.(io.Closer)
 	if ok {
-		defer closer.Close()
+		defer func() {
+			_ = closer.Close()
+		}()
 	}
 	w := brotli.NewWriterLevel(c.Response, b.getLevel())
 
-	defer w.Close()
+	defer func() {
+		_ = w.Close()
+	}()
 	_, err = io.Copy(w, r)
 	return
 }

@@ -103,7 +103,9 @@ func TestCompressorPipe(t *testing.T) {
 				if err != nil {
 					return nil, err
 				}
-				defer gzipReader.Close()
+				defer func() {
+					_ = gzipReader.Close()
+				}()
 				return io.ReadAll(gzipReader)
 			},
 		},

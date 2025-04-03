@@ -80,7 +80,9 @@ func (z *ZstdCompressor) Pipe(c *elton.Context) error {
 	r := c.Body.(io.Reader)
 	closer, ok := c.Body.(io.Closer)
 	if ok {
-		defer closer.Close()
+		defer func() {
+			_ = closer.Close()
+		}()
 	}
 	enc, err := zstd.NewWriter(c.Response, zstd.WithEncoderLevel(zstd.EncoderLevel(z.getLevel())))
 	if err != nil {
@@ -89,7 +91,7 @@ func (z *ZstdCompressor) Pipe(c *elton.Context) error {
 
 	_, err = io.Copy(enc, r)
 	if err != nil {
-		enc.Close()
+		_ = enc.Close()
 		return err
 	}
 	return enc.Close()

@@ -215,7 +215,9 @@ func doGunzip(buf []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	defer func() {
+		_ = r.Close()
+	}()
 	return io.ReadAll(r)
 }
 
@@ -278,7 +280,9 @@ func (rr *requestBodyReader) ReadAll(c *elton.Context) ([]byte, error) {
 	if limit > 0 {
 		r = MaxBytesReader(r, int64(limit))
 	}
-	defer r.Close()
+	defer func() {
+		_ = r.Close()
+	}()
 	var body []byte
 	var err error
 	contentLength := c.GetRequestHeader(elton.HeaderContentLength)

@@ -239,7 +239,7 @@ func NewEncodingStaticServe(config StaticServeConfig, selector EncodingFsSelecto
 
 		// 检查文件（路径）是否包括.
 		if config.DenyDot {
-			arr := strings.SplitN(file, string(filepath.Separator), -1)
+			arr := strings.Split(file, string(filepath.Separator))
 			for _, item := range arr {
 				if item != "" && item[0] == '.' {
 					return ErrStaticServeNotAllowAccessDot

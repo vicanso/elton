@@ -640,7 +640,9 @@ func (c *Context) ReadFile(key string) ([]byte, *multipart.FileHeader, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 	buf, err := io.ReadAll(file)
 	if err != nil {
 		return nil, nil, err
@@ -693,7 +695,9 @@ func (c *Context) Pipe(r io.Reader) (int64, error) {
 	// 如果是 closer，则需要调用close函数
 	closer, ok := r.(io.Closer)
 	if ok {
-		defer closer.Close()
+		defer func() {
+			_ = closer.Close()
+		}()
 	}
 	return io.Copy(c.Response, r)
 }

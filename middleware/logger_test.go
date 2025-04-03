@@ -47,7 +47,7 @@ func TestGetHumanReadableSize(t *testing.T) {
 func TestLogger(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("normal", func(t *testing.T) {
-		os.Setenv("__LOGGER__", "LOGGER")
+		_ = os.Setenv("__LOGGER__", "LOGGER")
 		config := LoggerConfig{
 			DefaultFill: "-",
 			Format:      "{host} {remote} {real-ip} {client-ip} {method} {path} {proto} {query} {scheme} {uri} {referer} {userAgent} {size} {size-human} {status} {payload-size} {payload-size-human} {<x-empty} {$__LOGGER__}",

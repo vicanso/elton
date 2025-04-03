@@ -257,7 +257,7 @@ func (e *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	// 非运行中的状态
 	if status != StatusRunning {
 		resp.WriteHeader(http.StatusServiceUnavailable)
-		_, err := resp.Write([]byte(fmt.Sprintf("service is not available, status is %d", status)))
+		_, err := fmt.Fprintf(resp, "service is not available, status is %d", status)
 		if err != nil {
 			e.emitError(resp, req, err)
 		}

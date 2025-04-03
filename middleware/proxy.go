@@ -137,7 +137,7 @@ func generateRewrites(arr []string) (rewrites []*rewriteRegexp, err error) {
 		}
 		k := arr[0]
 		v := arr[1]
-		k = strings.Replace(k, "*", "(\\S*)", -1)
+		k = strings.ReplaceAll(k, "*", "(\\S*)")
 		reg, e := regexp.Compile(k)
 		if e != nil {
 			err = e

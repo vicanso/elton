@@ -73,7 +73,7 @@ func TestGzipDecoder(t *testing.T) {
 	w, _ := gzip.NewWriterLevel(&b, 9)
 	_, err := w.Write(originalBuf)
 	assert.Nil(err)
-	w.Close()
+	_ = w.Close()
 
 	c := elton.NewContext(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
 	assert.False(gzipDecoder.Validate(c))
@@ -398,7 +398,7 @@ func TestBodyParserMiddleware(t *testing.T) {
 				w, _ := gzip.NewWriterLevel(&b, 9)
 				_, err := w.Write(originalBuf)
 				assert.Nil(err)
-				w.Close()
+				_ = w.Close()
 
 				req := httptest.NewRequest("POST", "https://aslant.site/", bytes.NewReader(b.Bytes()))
 				req.Header.Set(elton.HeaderContentType, "application/json")

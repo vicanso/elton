@@ -81,7 +81,9 @@ func (f *multipartForm) AddFile(name, filename string, reader ...io.Reader) erro
 		}
 		// 调整filename
 		filename = filepath.Base(filename)
-		defer file.Close()
+		defer func() {
+			_ = file.Close()
+		}()
 		r = file
 	}
 

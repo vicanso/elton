@@ -72,7 +72,9 @@ func GzipDecompress(buf []byte) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	defer func() {
+		_ = r.Close()
+	}()
 	data, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -112,10 +114,14 @@ func (g *GzipCompressor) Pipe(c *elton.Context) error {
 	r := c.Body.(io.Reader)
 	closer, ok := c.Body.(io.Closer)
 	if ok {
-		defer closer.Close()
+		defer func() {
+			_ = closer.Close()
+		}()
 	}
 	w, _ := gzip.NewWriterLevel(c.Response, g.getLevel())
-	defer w.Close()
+	defer func() {
+		_ = w.Close()
+	}()
 	_, err := io.Copy(w, r)
 	return err
 }

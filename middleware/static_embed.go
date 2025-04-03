@@ -68,7 +68,9 @@ func (es *embedStaticFS) Exists(file string) bool {
 	if err != nil {
 		return false
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	return true
 }
 
@@ -134,7 +136,9 @@ func (t *tarFS) get(file string, includeContent bool) (bool, []byte, error) {
 	if err != nil {
 		return false, nil, err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	tr := tar.NewReader(f)
 	var data []byte
 	found := false
