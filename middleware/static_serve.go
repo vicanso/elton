@@ -25,6 +25,7 @@ package middleware
 import (
 	"bytes"
 	"crypto/sha1"
+	"embed"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -83,7 +84,13 @@ type (
 	// FS file system
 	FS struct {
 	}
+	EmbedFs struct {
+		fs embed.FS
+	}
 )
+
+var _ StaticFile = (*EmbedFs)(nil)
+var _ StaticFile = (*FS)(nil)
 
 type EncodingFsSelector func(*elton.Context) (string, StaticFile)
 
@@ -129,6 +136,23 @@ func (fs *FS) NewReader(file string) (io.Reader, error) {
 	return os.Open(file)
 }
 
+func (fs *EmbedFs) Exists(file string) bool {
+	_, err := fs.fs.Open(file)
+	return err == nil
+}
+
+func (fs *EmbedFs) Stat(file string) os.FileInfo {
+	return nil
+}
+
+func (fs *EmbedFs) Get(file string) ([]byte, error) {
+	return fs.fs.ReadFile(file)
+}
+
+func (fs *EmbedFs) NewReader(file string) (io.Reader, error) {
+	return fs.fs.Open(file)
+}
+
 // getStaticServeError 获取static serve的出错
 func getStaticServeError(message string, statusCode int) *hes.Error {
 	return &hes.Error{
@@ -156,6 +180,11 @@ func generateETag(buf []byte) string {
 // NewDefaultStaticServe returns a new default static server middleware using FS
 func NewDefaultStaticServe(config StaticServeConfig) elton.Handler {
 	return NewStaticServe(&FS{}, config)
+}
+
+// NewEmbedStaticServe returns a new static server middleware using embed.FS
+func NewEmbedStaticServe(fs embed.FS, config StaticServeConfig) elton.Handler {
+	return NewStaticServe(&EmbedFs{fs: fs}, config)
 }
 
 func toSeconds(d time.Duration) string {
