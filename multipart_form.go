@@ -24,10 +24,14 @@ package elton
 
 import (
 	"errors"
+	"fmt"
 	"io"
+	"mime"
 	"mime/multipart"
+	"net/textproto"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type multipartForm struct {
@@ -65,6 +69,12 @@ func (f *multipartForm) AddField(name, value string) error {
 	return f.w.WriteField(name, value)
 }
 
+var quoteEscaper = strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
+
+func escapeQuotes(s string) string {
+	return quoteEscaper.Replace(s)
+}
+
 // AddFile add a file to form, if the reader is nil, the filename will be used to open as reader
 func (f *multipartForm) AddFile(name, filename string, reader ...io.Reader) error {
 	err := f.newFileBuffer()
@@ -86,8 +96,17 @@ func (f *multipartForm) AddFile(name, filename string, reader ...io.Reader) erro
 		}()
 		r = file
 	}
-
-	fw, err := f.w.CreateFormFile(name, filename)
+	h := make(textproto.MIMEHeader)
+	h.Set("Content-Disposition",
+		fmt.Sprintf(`form-data; name="%s"; filename="%s"`,
+			escapeQuotes(name), escapeQuotes(filename)))
+	ext := filepath.Ext(filename)
+	contentType := mime.TypeByExtension(ext)
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	h.Set("Content-Type", contentType)
+	fw, err := f.w.CreatePart(h)
 	if err != nil {
 		return err
 	}
