@@ -322,6 +322,12 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 		if e.beforeListeners != nil {
 			e.emitBefore(c)
 		}
+		// remove all multipart form data
+		defer func() {
+			if c.Request.MultipartForm != nil {
+				c.Request.MultipartForm.RemoveAll()
+			}
+		}()
 		if e.doneListeners != nil {
 			defer e.emitDone(c)
 		}
