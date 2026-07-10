@@ -28,20 +28,35 @@ import (
 	"math"
 	"net/http"
 	"strings"
+	"sync/atomic"
 )
 
-// 响应头类型
-// name配置数据字典
-// name-value全匹配数据字典
-// 均不匹配
+// 本文件实现http header的紧凑二进制编码，用于减少缓存中间件的存储空间。
+//
+// 单个header的编码格式（HTTPHeader）:
+//   - 短头（名称在short header字典中）: [索引字节(1..127)][值]
+//   - 非短头: [255][名称][":"][值]
+//
+// 多个值以 "\n" 连接为单个值段；多个header之间以字节0（headersJoinSep）连接为HTTPHeaders。
+// 因此索引0保留作分隔符，短头索引从1开始，最多127个。
+// 编码假定header的名称与值不含字节0与"\n"（Go的http库会拒绝此类非法值）。
 
+// MaxShortHeader 短头索引的上限（不含），编码首字节小于该值表示短头索引
 const MaxShortHeader = uint8(128)
+
+// NoneMatchHeader 表示名称不在短头字典中的标记字节
 const NoneMatchHeader = math.MaxUint8
 
 const valueSep = "\n"
 const headerValueSep = ":"
 
-var shortHeaderIndexes *headerIndexes
+// headersJoinSep headers拼接的分隔符
+var headersJoinSep = []byte{0}
+
+// shortHeaderIndexes 短头字典，使用atomic保证运行期调用SetShortHeaders的并发安全。
+// 注意：短头索引会被持久化至缓存数据中，运行期修改字典会导致
+// 旧缓存条目解码出错误的header名称，建议仅在启动期调用SetShortHeaders。
+var shortHeaderIndexes atomic.Pointer[headerIndexes]
 var DefaultShortHeaders = []string{
 	"accept-charset",
 	"accept-encoding",
@@ -133,11 +148,11 @@ func SetShortHeaders(names []string) {
 		arr[index] = value
 		indexes[value] = uint8(index)
 	}
-	shortHeaderIndexes = &headerIndexes{
+	shortHeaderIndexes.Store(&headerIndexes{
 		values:  arr,
 		indexes: indexes,
 		max:     len(arr),
-	}
+	})
 }
 
 // http头，[type, data]
@@ -167,7 +182,7 @@ func (h HTTPHeader) Header() (string, []string) {
 	headerType := h[0]
 	data := h[1:]
 	if headerType < MaxShortHeader {
-		name := shortHeaderIndexes.getName(int(headerType))
+		name := shortHeaderIndexes.Load().getName(int(headerType))
 		return name, toValues(data)
 	}
 	index := bytes.IndexByte(data, byte(headerValueSep[0]))
@@ -183,7 +198,7 @@ func (h HTTPHeader) Header() (string, []string) {
 func NewHTTPHeader(name string, values []string) HTTPHeader {
 	buffer := bytes.Buffer{}
 	buffer.Grow(64)
-	index, ok := shortHeaderIndexes.getIndex(name)
+	index, ok := shortHeaderIndexes.Load().getIndex(name)
 	value := strings.Join(values, valueSep)
 	if ok {
 		buffer.WriteByte(index)
@@ -204,23 +219,24 @@ func NewHTTPHeaders(header http.Header, ignoreHeaders ...string) HTTPHeaders {
 		return nil
 	}
 	arr := make([][]byte, 0, size)
-	ignore := strings.ToLower(strings.Join(ignoreHeaders, ","))
+	// 按小写精确匹配，避免子串误伤（如自定义的Encoding头）
+	ignore := make(map[string]bool, len(ignoreHeaders))
+	for _, name := range ignoreHeaders {
+		ignore[strings.ToLower(name)] = true
+	}
 	for name, values := range header {
-		if ignore != "" &&
-			strings.Contains(ignore, strings.ToLower(name)) {
+		if ignore[strings.ToLower(name)] {
 			continue
 		}
 		arr = append(arr, NewHTTPHeader(name, values))
 	}
-	sep := make([]byte, 1)
-	return bytes.Join(arr, sep)
+	return bytes.Join(arr, headersJoinSep)
 }
 
 // Header convert to http.Header
 func (hs HTTPHeaders) Header() http.Header {
 	h := make(http.Header)
-	sep := make([]byte, 1)
-	for _, item := range bytes.Split(hs, sep) {
+	for _, item := range bytes.Split(hs, headersJoinSep) {
 		name, values := HTTPHeader(item).Header()
 		if name == "" {
 			continue

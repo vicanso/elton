@@ -27,7 +27,7 @@ import (
 	"io"
 
 	"github.com/andybalholm/brotli"
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 const (
@@ -44,15 +44,17 @@ type (
 	}
 )
 
+// NewBrCompressor returns a new brotli compressor
+func NewBrCompressor() *BrCompressor {
+	return &BrCompressor{}
+}
+
 func (b *BrCompressor) getLevel() int {
 	level := b.Level
 	if level <= 0 {
 		level = defaultBrQuality
 	}
-	if level > maxBrQuality {
-		level = maxBrQuality
-	}
-	return level
+	return min(level, maxBrQuality)
 }
 
 func (b *BrCompressor) getMinLength() int {

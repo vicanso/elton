@@ -29,11 +29,11 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
-	"sync"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
 )
 
@@ -103,9 +103,8 @@ func (gd *gzipDecoder) Decode(c *elton.Context, originalData []byte) (data []byt
 }
 
 func (jd *jsonDecoder) Validate(c *elton.Context) bool {
-	ct := c.GetRequestHeader(elton.HeaderContentType)
-	ctFields := strings.Split(ct, ";")
-	return ctFields[0] == jsonContentType
+	mimeType, _, _ := strings.Cut(c.GetRequestHeader(elton.HeaderContentType), ";")
+	return mimeType == jsonContentType
 }
 func (jd *jsonDecoder) Decode(c *elton.Context, originalData []byte) ([]byte, error) {
 	originalData = bytes.TrimSpace(originalData)
@@ -128,9 +127,8 @@ func (jd *jsonDecoder) Decode(c *elton.Context, originalData []byte) ([]byte, er
 }
 
 func (fd *formURLEncodedDecoder) Validate(c *elton.Context) bool {
-	ct := c.GetRequestHeader(elton.HeaderContentType)
-	ctFields := strings.Split(ct, ";")
-	return ctFields[0] == formURLEncodedContentType
+	mimeType, _, _ := strings.Cut(c.GetRequestHeader(elton.HeaderContentType), ";")
+	return mimeType == formURLEncodedContentType
 }
 
 func (fd *formURLEncodedDecoder) Decode(c *elton.Context, originalData []byte) ([]byte, error) {
@@ -161,9 +159,6 @@ func (fd *formURLEncodedDecoder) Decode(c *elton.Context, originalData []byte) (
 
 // AddDecoder to body parser config
 func (conf *BodyParserConfig) AddDecoder(decoder BodyDecoder) {
-	if len(conf.Decoders) == 0 {
-		conf.Decoders = make([]BodyDecoder, 0)
-	}
 	conf.Decoders = append(conf.Decoders, decoder)
 }
 
@@ -261,7 +256,9 @@ func (l *maxBytesReader) Close() error {
 	return l.r.Close()
 }
 
-func MaxBytesReader(r io.ReadCloser, n int64) *maxBytesReader {
+// MaxBytesReader returns a reader which limits the max size of the data,
+// it works like http.MaxBytesReader
+func MaxBytesReader(r io.ReadCloser, n int64) io.ReadCloser {
 	return &maxBytesReader{
 		max: n,
 		n:   n,
@@ -329,46 +326,28 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 	if config.InitCap != 0 {
 		initCap = config.InitCap
 	}
-	skipper := config.Skipper
-	if skipper == nil {
-		skipper = elton.DefaultSkipper
-	}
+	skipper := getSkipper(config.Skipper)
 	contentTypeValidate := config.ContentTypeValidate
 	if contentTypeValidate == nil {
 		contentTypeValidate = DefaultJSONContentTypeValidate
 	}
-	rrPool := &sync.Pool{}
-	bufferPool := elton.NewBufferPool(initCap)
-	rrPool.New = func() interface{} {
-		return &requestBodyReader{
-			bufferPool: bufferPool,
-			limit:      limit,
-		}
+	// requestBodyReader无可变状态，可安全并发复用
+	bodyReader := &requestBodyReader{
+		bufferPool: elton.NewBufferPool(initCap),
+		limit:      limit,
 	}
 	return func(c *elton.Context) error {
 		if skipper(c) || c.RequestBody != nil || !contentTypeValidate(c) {
 			return c.Next()
 		}
-		method := c.Request.Method
-
 		// 对于非提交数据的method跳过
-		valid := false
-		for _, item := range validMethods {
-			if item == method {
-				valid = true
-				break
-			}
-		}
-		if !valid {
+		if !slices.Contains(validMethods, c.Request.Method) {
 			return c.Next()
 		}
-		rr := rrPool.Get().(*requestBodyReader)
-		body, err := rr.ReadAll(c)
+		body, err := bodyReader.ReadAll(c)
 		if err != nil {
 			return err
 		}
-		// 复用rr
-		rrPool.Put(rr)
 		c.RequestBody = body
 
 		// 是否有设置on before decode

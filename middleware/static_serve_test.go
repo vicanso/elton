@@ -33,7 +33,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 const (
@@ -65,13 +65,13 @@ func (m *MockStaticFile) Stat(file string) os.FileInfo {
 	return &MockFileStat{}
 }
 
-func (m *MockStaticFile) NewReader(file string) (io.Reader, error) {
+func (m *MockStaticFile) NewReader(file string) (io.ReadCloser, error) {
 	buf, err := m.Get(file)
 	if err != nil {
 		return nil, err
 	}
 
-	return bytes.NewReader(buf), nil
+	return io.NopCloser(bytes.NewReader(buf)), nil
 }
 
 func (mf *MockFileStat) Name() string {
@@ -95,14 +95,14 @@ func (mf *MockFileStat) IsDir() bool {
 	return false
 }
 
-func (mf *MockFileStat) Sys() interface{} {
+func (mf *MockFileStat) Sys() any {
 	return nil
 }
 
 func TestGenerateETag(t *testing.T) {
 	assert := assert.New(t)
-	assert.Equal(`"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="`, generateETag([]byte("")))
-	assert.Equal(`"3-qZk-NkcGgWq6PiVxeFDCbJzQ2J0="`, generateETag([]byte("abc")))
+	assert.Equal(`"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="`, genETag([]byte("")))
+	assert.Equal(`"3-qZk-NkcGgWq6PiVxeFDCbJzQ2J0="`, genETag([]byte("abc")))
 }
 
 func TestFSOutOfPath(t *testing.T) {
@@ -116,7 +116,7 @@ func TestFS(t *testing.T) {
 	assert := assert.New(t)
 	file := os.Args[0]
 	fs := FS{}
-	assert.NotNil(NewDefaultStaticServe(StaticServeConfig{}))
+	assert.NotNil(NewFSStaticServe(StaticServeConfig{}))
 	assert.True(fs.Exists(file), "file should be exists")
 
 	fileInfo := fs.Stat(file)

@@ -30,7 +30,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 func TestFresh(t *testing.T) {
@@ -45,7 +45,7 @@ func TestFresh(t *testing.T) {
 		newContext func() *elton.Context
 		err        error
 		statusCode int
-		body       interface{}
+		body       any
 		result     *bytes.Buffer
 	}{
 		// skip

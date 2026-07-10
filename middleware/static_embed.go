@@ -33,21 +33,21 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
 )
 
-type embedStaticFS struct {
+type EmbedStaticFS struct {
 	// prefix of file
 	Prefix string
 	FS     embed.FS
 }
 
-var _ StaticFile = (*embedStaticFS)(nil)
+var _ StaticFile = (*EmbedStaticFS)(nil)
 
 // NewEmbedStaticFS returns a new embed static fs
-func NewEmbedStaticFS(fs embed.FS, prefix string) *embedStaticFS {
-	return &embedStaticFS{
+func NewEmbedStaticFS(fs embed.FS, prefix string) *EmbedStaticFS {
+	return &EmbedStaticFS{
 		Prefix: prefix,
 		FS:     fs,
 	}
@@ -58,12 +58,12 @@ func getFile(prefix string, file string) string {
 	return strings.ReplaceAll(filepath.Join(prefix, file), windowsPathSeparator, "/")
 }
 
-func (es *embedStaticFS) getFile(file string) string {
+func (es *EmbedStaticFS) getFile(file string) string {
 	return getFile(es.Prefix, file)
 }
 
 // Exists check the file exists
-func (es *embedStaticFS) Exists(file string) bool {
+func (es *EmbedStaticFS) Exists(file string) bool {
 	f, err := es.FS.Open(es.getFile(file))
 	if err != nil {
 		return false
@@ -75,27 +75,27 @@ func (es *embedStaticFS) Exists(file string) bool {
 }
 
 // Get returns content of file
-func (es *embedStaticFS) Get(file string) ([]byte, error) {
+func (es *EmbedStaticFS) Get(file string) ([]byte, error) {
 	return es.FS.ReadFile(es.getFile(file))
 }
 
 // Stat return nil for file stat
-func (es *embedStaticFS) Stat(file string) os.FileInfo {
+func (es *EmbedStaticFS) Stat(file string) os.FileInfo {
 	// 文件打包至程序中，因此无file info
 	return nil
 }
 
 // NewReader returns a reader of file
-func (es *embedStaticFS) NewReader(file string) (io.Reader, error) {
+func (es *EmbedStaticFS) NewReader(file string) (io.ReadCloser, error) {
 	buf, err := es.Get(file)
 	if err != nil {
 		return nil, err
 	}
-	return bytes.NewReader(buf), nil
+	return io.NopCloser(bytes.NewReader(buf)), nil
 }
 
 // SendFile sends file to http response and set content type
-func (es *embedStaticFS) SendFile(c *elton.Context, file string) error {
+func (es *EmbedStaticFS) SendFile(c *elton.Context, file string) error {
 	// 因为静态文件打包至程序中，直接读取
 	buf, err := es.Get(file)
 	if err != nil {
@@ -107,7 +107,7 @@ func (es *embedStaticFS) SendFile(c *elton.Context, file string) error {
 	return nil
 }
 
-type tarFS struct {
+type TarFS struct {
 	// prefix of file
 	Prefix string
 	// tar file
@@ -116,16 +116,16 @@ type tarFS struct {
 	Embed *embed.FS
 }
 
-var _ StaticFile = (*tarFS)(nil)
+var _ StaticFile = (*TarFS)(nil)
 
 // NewTarFS returns a new tar static fs
-func NewTarFS(file string) *tarFS {
-	return &tarFS{
+func NewTarFS(file string) *TarFS {
+	return &TarFS{
 		File: file,
 	}
 }
 
-func (t *tarFS) get(file string, includeContent bool) (bool, []byte, error) {
+func (t *TarFS) get(file string, includeContent bool) (bool, []byte, error) {
 	var f fs.File
 	var err error
 	if t.Embed != nil {
@@ -167,13 +167,13 @@ func (t *tarFS) get(file string, includeContent bool) (bool, []byte, error) {
 }
 
 // Exists check the file exists
-func (t *tarFS) Exists(file string) bool {
+func (t *TarFS) Exists(file string) bool {
 	found, _, _ := t.get(file, false)
 	return found
 }
 
 // Get returns content of file
-func (t *tarFS) Get(file string) ([]byte, error) {
+func (t *TarFS) Get(file string) ([]byte, error) {
 	found, data, err := t.get(file, true)
 	if err != nil {
 		return nil, err
@@ -185,15 +185,15 @@ func (t *tarFS) Get(file string) ([]byte, error) {
 }
 
 // Stat return nil for file stat
-func (t *tarFS) Stat(file string) os.FileInfo {
+func (t *TarFS) Stat(file string) os.FileInfo {
 	return nil
 }
 
 // NewReader returns a reader of file
-func (t *tarFS) NewReader(file string) (io.Reader, error) {
+func (t *TarFS) NewReader(file string) (io.ReadCloser, error) {
 	buf, err := t.Get(file)
 	if err != nil {
 		return nil, err
 	}
-	return bytes.NewReader(buf), nil
+	return io.NopCloser(bytes.NewReader(buf)), nil
 }

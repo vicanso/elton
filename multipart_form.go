@@ -34,7 +34,7 @@ import (
 	"strings"
 )
 
-type multipartForm struct {
+type MultipartForm struct {
 	w           *multipart.Writer
 	tmpfile     string
 	contentType string
@@ -42,11 +42,11 @@ type multipartForm struct {
 
 // NewMultipartForm returns a new multipart form,
 // the form data will be saved as tmp file for less memory.
-func NewMultipartForm() *multipartForm {
-	return &multipartForm{}
+func NewMultipartForm() *MultipartForm {
+	return &MultipartForm{}
 }
 
-func (f *multipartForm) newFileBuffer() error {
+func (f *MultipartForm) newFileBuffer() error {
 	if f.w != nil {
 		return nil
 	}
@@ -61,7 +61,7 @@ func (f *multipartForm) newFileBuffer() error {
 }
 
 // AddField adds a field to form
-func (f *multipartForm) AddField(name, value string) error {
+func (f *MultipartForm) AddField(name, value string) error {
 	err := f.newFileBuffer()
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func escapeQuotes(s string) string {
 }
 
 // AddFile add a file to form, if the reader is nil, the filename will be used to open as reader
-func (f *multipartForm) AddFile(name, filename string, reader ...io.Reader) error {
+func (f *MultipartForm) AddFile(name, filename string, reader ...io.Reader) error {
 	err := f.newFileBuffer()
 	if err != nil {
 		return err
@@ -118,7 +118,7 @@ func (f *multipartForm) AddFile(name, filename string, reader ...io.Reader) erro
 }
 
 // Reader returns a render of form
-func (f *multipartForm) Reader() (io.Reader, error) {
+func (f *MultipartForm) Reader() (io.Reader, error) {
 	if f.w == nil {
 		return nil, errors.New("multi part is nil")
 	}
@@ -130,8 +130,8 @@ func (f *multipartForm) Reader() (io.Reader, error) {
 	return os.Open(f.tmpfile)
 }
 
-// Destroy closes the writer and removes the tmpfile
-func (f *multipartForm) Destroy() error {
+// Close closes the writer and removes the tmpfile
+func (f *MultipartForm) Close() error {
 	if f.w != nil {
 		err := f.w.Close()
 		if err != nil {
@@ -145,6 +145,6 @@ func (f *multipartForm) Destroy() error {
 }
 
 // ContentType returns the content type of form
-func (f *multipartForm) ContentType() string {
+func (f *MultipartForm) ContentType() string {
 	return f.contentType
 }

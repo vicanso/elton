@@ -24,9 +24,8 @@ package middleware
 
 import (
 	"bytes"
-	"crypto/sha1"
 	"embed"
-	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -37,7 +36,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
 )
 
@@ -47,7 +46,10 @@ type (
 		Exists(string) bool
 		Get(string) ([]byte, error)
 		Stat(string) os.FileInfo
-		NewReader(string) (io.Reader, error)
+		// NewReader 返回文件的reader，reader由框架负责关闭：
+		// 正常流式输出时经Pipe关闭；未被输出（出错或被BodyBuffer覆盖）
+		// 时由框架兜底关闭。内存型实现可用io.NopCloser包装
+		NewReader(string) (io.ReadCloser, error)
 	}
 	// StaticServeConfig static serve config
 	StaticServeConfig struct {
@@ -84,12 +86,12 @@ type (
 	// FS file system
 	FS struct {
 	}
-	EmbedFs struct {
+	EmbedFS struct {
 		fs embed.FS
 	}
 )
 
-var _ StaticFile = (*EmbedFs)(nil)
+var _ StaticFile = (*EmbedFS)(nil)
 var _ StaticFile = (*FS)(nil)
 
 type EncodingFsSelector func(*elton.Context) (string, StaticFile)
@@ -132,24 +134,24 @@ func (fs *FS) Get(file string) ([]byte, error) {
 }
 
 // NewReader new a reader for file
-func (fs *FS) NewReader(file string) (io.Reader, error) {
+func (fs *FS) NewReader(file string) (io.ReadCloser, error) {
 	return os.Open(file)
 }
 
-func (fs *EmbedFs) Exists(file string) bool {
+func (fs *EmbedFS) Exists(file string) bool {
 	_, err := fs.fs.Open(file)
 	return err == nil
 }
 
-func (fs *EmbedFs) Stat(file string) os.FileInfo {
+func (fs *EmbedFS) Stat(file string) os.FileInfo {
 	return nil
 }
 
-func (fs *EmbedFs) Get(file string) ([]byte, error) {
+func (fs *EmbedFS) Get(file string) ([]byte, error) {
 	return fs.fs.ReadFile(file)
 }
 
-func (fs *EmbedFs) NewReader(file string) (io.Reader, error) {
+func (fs *EmbedFS) NewReader(file string) (io.ReadCloser, error) {
 	return fs.fs.Open(file)
 }
 
@@ -162,29 +164,14 @@ func getStaticServeError(message string, statusCode int) *hes.Error {
 	}
 }
 
-// generateETag generate eTag
-func generateETag(buf []byte) string {
-	size := len(buf)
-	if size == 0 {
-		return `"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="`
-	}
-	h := sha1.New()
-	_, err := h.Write(buf)
-	if err != nil {
-		return ""
-	}
-	hash := base64.URLEncoding.EncodeToString(h.Sum(nil))
-	return fmt.Sprintf(`"%x-%s"`, size, hash)
-}
-
-// NewDefaultStaticServe returns a new default static server middleware using FS
-func NewDefaultStaticServe(config StaticServeConfig) elton.Handler {
+// NewFSStaticServe returns a new default static server middleware using FS
+func NewFSStaticServe(config StaticServeConfig) elton.Handler {
 	return NewStaticServe(&FS{}, config)
 }
 
 // NewEmbedStaticServe returns a new static server middleware using embed.FS
 func NewEmbedStaticServe(fs embed.FS, config StaticServeConfig) elton.Handler {
-	return NewStaticServe(&EmbedFs{fs: fs}, config)
+	return NewStaticServe(&EmbedFS{fs: fs}, config)
 }
 
 func toSeconds(d time.Duration) string {
@@ -208,10 +195,7 @@ func NewEncodingStaticServe(config StaticServeConfig, selector EncodingFsSelecto
 	if cacheControl != "" && config.Immutable {
 		cacheControl += ", immutable"
 	}
-	skipper := config.Skipper
-	if skipper == nil {
-		skipper = elton.DefaultSkipper
-	}
+	skipper := getSkipper(config.Skipper)
 	// convert different os file path
 	basePath := filepath.Join(config.Path, "")
 	noCacheRegexp := config.NoCacheRegexp
@@ -232,8 +216,10 @@ func NewEncodingStaticServe(config StaticServeConfig, selector EncodingFsSelecto
 		}
 
 		file = filepath.Join(config.Path, file)
-		// 避免文件名是有 .. 等导致最终文件路径越过配置的路径
-		if !strings.HasPrefix(file, basePath) {
+		// 避免文件名有 .. 等导致最终文件路径越过配置的路径，
+		// 按分隔符边界比较，避免同前缀的兄弟目录绕过（如 public 与 publicsecret）
+		if file != basePath &&
+			!strings.HasPrefix(file, basePath+string(filepath.Separator)) {
 			return ErrStaticServeOutOfPath
 		}
 
@@ -277,8 +263,8 @@ func NewEncodingStaticServe(config StaticServeConfig, selector EncodingFsSelecto
 		if !config.DisableETag && config.EnableStrongETag {
 			buf, e := staticFile.Get(file)
 			if e != nil {
-				he, ok := e.(*hes.Error)
-				if !ok {
+				he := &hes.Error{}
+				if !errors.As(e, &he) {
 					he = hes.NewWithErrorStatusCode(e, http.StatusInternalServerError)
 					he.Category = ErrStaticServeCategory
 				}
@@ -287,27 +273,26 @@ func NewEncodingStaticServe(config StaticServeConfig, selector EncodingFsSelecto
 			fileBuf = buf
 		}
 
+		// 弱eTag与last-modified均依赖file info，只读取一次
+		var fileInfo os.FileInfo
+		if (!config.DisableETag && !config.EnableStrongETag) || !config.DisableLastModified {
+			fileInfo = staticFile.Stat(file)
+		}
+
 		if !config.DisableETag {
 			if config.EnableStrongETag {
-				eTag := generateETag(fileBuf)
-				if eTag != "" {
+				if eTag := genETag(fileBuf); eTag != "" {
 					c.SetHeader(elton.HeaderETag, eTag)
 				}
-			} else {
-				fileInfo := staticFile.Stat(file)
-				if fileInfo != nil {
-					eTag := fmt.Sprintf(`W/"%x-%x"`, fileInfo.Size(), fileInfo.ModTime().Unix())
-					c.SetHeader(elton.HeaderETag, eTag)
-				}
+			} else if fileInfo != nil {
+				eTag := fmt.Sprintf(`W/"%x-%x"`, fileInfo.Size(), fileInfo.ModTime().Unix())
+				c.SetHeader(elton.HeaderETag, eTag)
 			}
 		}
 
-		if !config.DisableLastModified {
-			fileInfo := staticFile.Stat(file)
-			if fileInfo != nil {
-				lmd := fileInfo.ModTime().UTC().Format(time.RFC1123)
-				c.SetHeader(elton.HeaderLastModified, lmd)
-			}
+		if !config.DisableLastModified && fileInfo != nil {
+			lmd := fileInfo.ModTime().UTC().Format(time.RFC1123)
+			c.SetHeader(elton.HeaderLastModified, lmd)
 		}
 
 		// 如果有设置before response

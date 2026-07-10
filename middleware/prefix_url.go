@@ -28,10 +28,14 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
-// NewPrefixURL returns a new prefix url handler, it will replace the prefix of url as ""
+// NewPrefixURL returns a new prefix url handler,
+// it removes the matched prefix from the url path.
+// 注意：前缀按正则表达式处理（如 `/\d{2,5}` 可匹配数字前缀），
+// 字面前缀中如含正则元字符（. ( [ 等）需自行转义，
+// 非法正则会在构造期panic。
 func NewPrefixURL(prefix ...string) elton.PreHandler {
 	var reg *regexp.Regexp
 	if len(prefix) != 0 {

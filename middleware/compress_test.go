@@ -32,7 +32,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 type testCompressor struct{}

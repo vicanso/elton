@@ -30,10 +30,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLruStore(t *testing.T) {
+func TestLRUStore(t *testing.T) {
 	assert := assert.New(t)
 
-	store := NewLruStore(128)
+	store := NewLRUStore(128)
 
 	ctx := context.Background()
 	key1 := "1"
@@ -49,8 +49,8 @@ func TestLruStore(t *testing.T) {
 	assert.Empty(buf)
 }
 
-func BenchmarkLruStore(b *testing.B) {
-	store := NewLruStore(128)
+func BenchmarkLRUStore(b *testing.B) {
+	store := NewLRUStore(128)
 	ctx := context.Background()
 	for i := 0; i < b.N; i++ {
 		_ = store.Set(ctx, "key", []byte("Hello world!"), time.Second)

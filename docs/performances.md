@@ -10,7 +10,7 @@ package main
 import (
 	"bytes"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 func main() {
@@ -55,8 +55,8 @@ package main
 import (
 	"strings"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 	"github.com/vicanso/hes"
 )
 

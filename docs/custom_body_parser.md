@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/golang/snappy"
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 // 仅示例，对于出错直接panic
@@ -117,8 +117,8 @@ import (
 	"time"
 
 	"github.com/golang/snappy"
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 // 仅示例，对于出错直接panic

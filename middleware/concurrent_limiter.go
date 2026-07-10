@@ -29,7 +29,7 @@ import (
 	"sync/atomic"
 
 	"github.com/tidwall/gjson"
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
 )
 
@@ -73,7 +73,12 @@ type (
 	ConcurrentLimiterConfig struct {
 		// KeyGenerator generate custom key
 		KeyGenerator KeyGenerator
-		// Keys keys for generate lock id
+		// Keys 用于生成锁ID的字段列表，各字段值以英文逗号拼接，语法如下：
+		//   - ":ip"    : 客户端真实IP
+		//   - "h:name" : 请求头name的值
+		//   - "q:name" : query参数name的值
+		//   - "p:name" : 路由参数name的值
+		//   - 其它     : 视为JSON请求体的gjson路径，从RequestBody中取值
 		Keys []string
 		// Lock lock function
 		Lock    ConcurrentLimiterLock
@@ -93,7 +98,9 @@ type (
 	// GlobalConcurrentLimiterConfig
 	GlobalConcurrentLimiterConfig struct {
 		Skipper elton.Skipper
-		Max     uint32
+		// Max 在途请求数达到Max时拒绝请求，
+		// 即实际允许的最大并发为 Max - 1
+		Max uint32
 	}
 )
 
@@ -139,10 +146,7 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 			Body: true,
 		})
 	}
-	skipper := config.Skipper
-	if skipper == nil {
-		skipper = elton.DefaultSkipper
-	}
+	skipper := getSkipper(config.Skipper)
 	keyLength := len(keys)
 	return func(c *elton.Context) error {
 		if skipper(c) {
@@ -171,7 +175,7 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 			}
 			sb.WriteString(v)
 			if i < keyLength-1 {
-				sb.WriteRune(',')
+				sb.WriteByte(',')
 			}
 		}
 		// 如果有指定key的生成函数
@@ -181,7 +185,7 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 				return err
 			}
 			if sb.Len() != 0 {
-				sb.WriteRune(',')
+				sb.WriteByte(',')
 			}
 			sb.WriteString(customKey)
 		}
@@ -206,10 +210,15 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 // NewGlobalConcurrentLimiter returns a new global concurrent limiter,
 // it use for global processing request limit.
 func NewGlobalConcurrentLimiter(config GlobalConcurrentLimiterConfig) elton.Handler {
-	var count uint32
+	count := atomic.Uint32{}
+	skipper := getSkipper(config.Skipper)
 	return func(c *elton.Context) error {
-		value := atomic.AddUint32(&count, 1)
-		defer atomic.AddUint32(&count, ^uint32(0))
+		if skipper(c) {
+			return c.Next()
+		}
+		value := count.Add(1)
+		// add ^uint32(0) means decrease 1
+		defer count.Add(^uint32(0))
 		if value >= config.Max {
 			return ErrTooManyRequests
 		}

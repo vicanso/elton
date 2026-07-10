@@ -101,26 +101,26 @@ func TestConvertToServerTiming(t *testing.T) {
 	})
 }
 
-func TestGetTrace(t *testing.T) {
+func TestTraceFromContext(t *testing.T) {
 	assert := assert.New(t)
 	ctx := context.Background()
 
 	// 第一次无则创建
-	t1 := GetTrace(ctx)
+	t1 := TraceFromContext(ctx)
 	assert.NotNil(t1)
 	t1.Add(&TraceInfo{})
 
 	// 第二次创建时与第一次非同一个值
-	t2 := GetTrace(ctx)
+	t2 := TraceFromContext(ctx)
 	assert.NotNil(t2)
 	assert.NotEqual(t1, t2)
 
 	ctx = context.WithValue(ctx, ContextTraceKey, "a")
-	t3 := GetTrace(ctx)
+	t3 := TraceFromContext(ctx)
 	assert.NotNil(t3)
 
 	ctx = context.WithValue(ctx, ContextTraceKey, t2)
-	t4 := GetTrace(ctx)
+	t4 := TraceFromContext(ctx)
 	assert.Equal(t2, t4)
 }
 
@@ -151,5 +151,5 @@ func TestTraceFilter(t *testing.T) {
 			Name:     "b",
 			Duration: 10 * time.Millisecond,
 		},
-	}, traceInfos.FilterDurationGT(5*time.Millisecond))
+	}, traceInfos.FilterDurationGreaterThan(5*time.Millisecond))
 }

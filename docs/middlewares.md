@@ -37,8 +37,8 @@ package main
 import (
 	"bytes"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 	"github.com/vicanso/hes"
 )
 
@@ -121,8 +121,8 @@ package main
 import (
 	"bytes"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -160,8 +160,8 @@ package main
 import (
 	"bytes"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -201,8 +201,8 @@ package main
 import (
 	"bytes"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -247,8 +247,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -290,8 +290,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -343,8 +343,8 @@ package main
 import (
 	"errors"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -375,8 +375,8 @@ package main
 import (
 	"bytes"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -407,8 +407,8 @@ package main
 import (
 	"bytes"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -478,8 +478,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -524,8 +524,8 @@ package main
 import (
 	"net/url"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -565,8 +565,8 @@ package main
 import (
 	"errors"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -595,8 +595,8 @@ package main
 import (
 	"errors"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -629,8 +629,8 @@ func main() {
 package main
 
 import (
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -669,8 +669,8 @@ import (
 	"bytes"
 	"time"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -708,15 +708,15 @@ import (
 	"bytes"
 	"time"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
 	e := elton.New()
 
-	e.Use(middleware.NewRCL(middleware.RCLConfig{
-		Limiter: middleware.NewLocalLimiter(map[string]uint32{
+	e.Use(middleware.NewRouterConcurrentLimiter(middleware.RouterConcurrentLimiterConfig{
+		Limiter: middleware.NewLocalRouterConcurrencyLimiter(map[string]uint32{
 			"GET /users/me": 2,
 		}),
 	}))
@@ -749,8 +749,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -785,8 +785,8 @@ package main
 import (
 	"time"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -826,8 +826,8 @@ import (
 	"os"
 
 	packr "github.com/gobuffalo/packr/v2"
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 var (
@@ -894,8 +894,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {

@@ -31,7 +31,7 @@ import (
 
 	"github.com/andybalholm/brotli"
 	"github.com/stretchr/testify/assert"
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 func TestCompressor(t *testing.T) {

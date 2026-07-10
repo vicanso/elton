@@ -51,18 +51,6 @@ var (
 		Category:   ErrCategory,
 	}
 
-	// ErrNilResponse nil response
-	ErrNilResponse = &hes.Error{
-		StatusCode: 500,
-		Message:    "nil response",
-		Category:   ErrCategory,
-	}
-	// ErrNotSupportPush not support http push
-	ErrNotSupportPush = &hes.Error{
-		StatusCode: 500,
-		Message:    "not support http push",
-		Category:   ErrCategory,
-	}
 	// ErrFileNotFound file not found
 	ErrFileNotFound = &hes.Error{
 		StatusCode: 404,

@@ -36,7 +36,7 @@ func TestMultipartForm(t *testing.T) {
 
 	form := NewMultipartForm()
 	defer func() {
-		_ = form.Destroy()
+		_ = form.Close()
 	}()
 	err := form.AddField("a", "b")
 	assert.Nil(err)
@@ -59,12 +59,12 @@ func TestMultipartForm(t *testing.T) {
 	assert.True(strings.Contains(str, `Content-Disposition: form-data; name="a"`))
 }
 
-func TestTestMultipartFormDestroy(t *testing.T) {
+func TestTestMultipartFormClose(t *testing.T) {
 	assert := assert.New(t)
 	form := NewMultipartForm()
 	err := form.AddField("a", "1")
 	assert.Nil(err)
 
-	err = form.Destroy()
+	err = form.Close()
 	assert.Nil(err)
 }

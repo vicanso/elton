@@ -13,7 +13,7 @@ description: elton实例的相关方法说明
 package main
 
 import (
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 func main() {
@@ -37,7 +37,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 func main() {
@@ -69,7 +69,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
 )
 
@@ -112,7 +112,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
 )
 
@@ -148,7 +148,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
 )
 
@@ -187,8 +187,8 @@ import (
 	"time"
 
 	"github.com/oklog/ulid"
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -225,8 +225,8 @@ package main
 import (
 	"log"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -266,7 +266,7 @@ import (
 	"bytes"
 	"net/http"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 func main() {
@@ -311,7 +311,7 @@ func main() {
 package main
 
 import (
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 func main() {
@@ -332,7 +332,7 @@ func main() {
 package main
 
 import (
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 func main() {
@@ -358,7 +358,7 @@ package main
 import (
 	"time"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 func main() {
@@ -387,14 +387,14 @@ package main
 import (
 	"time"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 func main() {
 	e := elton.New()
 
 	go func() {
-		e.GracefulClose(10 * time.Second)
+		e.GracefulClose(context.Background(), 10*time.Second)
 	}()
 
 	err := e.ListenAndServe(":3000")
@@ -413,8 +413,8 @@ func main() {
 package main
 
 import (
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -460,8 +460,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -502,8 +502,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -538,8 +538,8 @@ func main() {
 package main
 
 import (
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -573,8 +573,8 @@ import (
 	"errors"
 	"log"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {

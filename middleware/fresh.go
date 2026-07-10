@@ -25,7 +25,7 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 type (
@@ -42,10 +42,7 @@ func NewDefaultFresh() elton.Handler {
 
 // NewFresh returns a fresh middleware.
 func NewFresh(config FreshConfig) elton.Handler {
-	skipper := config.Skipper
-	if skipper == nil {
-		skipper = elton.DefaultSkipper
-	}
+	skipper := getSkipper(config.Skipper)
 	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()

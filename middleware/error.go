@@ -24,11 +24,9 @@ package middleware
 
 import (
 	"bytes"
-	"net/http"
 	"strings"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/hes"
+	"github.com/vicanso/elton/v2"
 )
 
 type (
@@ -52,10 +50,7 @@ func NewDefaultError() elton.Handler {
 
 // NewError return a new error handler.
 func NewError(config ErrorConfig) elton.Handler {
-	skipper := config.Skipper
-	if skipper == nil {
-		skipper = elton.DefaultSkipper
-	}
+	skipper := getSkipper(config.Skipper)
 	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
@@ -65,14 +60,7 @@ func NewError(config ErrorConfig) elton.Handler {
 		if err == nil {
 			return nil
 		}
-		he, ok := err.(*hes.Error)
-		if !ok {
-			he = hes.Wrap(err)
-			// 非hes的error，则都认为是500出错异常
-			he.StatusCode = http.StatusInternalServerError
-			he.Exception = true
-			he.Category = ErrErrorCategory
-		}
+		he := wrapAsHesError(err, ErrErrorCategory)
 		c.StatusCode = he.StatusCode
 		if config.ResponseType == "json" ||
 			strings.Contains(c.GetRequestHeader("Accept"), "application/json") {

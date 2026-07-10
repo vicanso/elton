@@ -28,7 +28,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 var (
@@ -96,7 +96,7 @@ func NewCompressConfig(compressors ...Compressor) CompressConfig {
 
 // NewDefaultCompress return a new compress middleware, it include gzip compress
 func NewDefaultCompress() elton.Handler {
-	cfg := NewCompressConfig(new(GzipCompressor))
+	cfg := NewCompressConfig(NewGzipCompressor())
 	return NewCompress(cfg)
 }
 
@@ -104,10 +104,7 @@ func NewDefaultCompress() elton.Handler {
 // It will use 'text|javascript|json|wasm|font' as default content type checker for compress.
 // It will throw a panic if the compressors is empty.
 func NewCompress(config CompressConfig) elton.Handler {
-	skipper := config.Skipper
-	if skipper == nil {
-		skipper = elton.DefaultSkipper
-	}
+	skipper := getSkipper(config.Skipper)
 	checker := config.Checker
 	if checker == nil {
 		checker = DefaultCompressRegexp

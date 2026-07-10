@@ -30,8 +30,8 @@ import (
 )
 
 type TemplateParser interface {
-	Render(ctx context.Context, text string, data interface{}) (string, error)
-	RenderFile(ctx context.Context, filename string, data interface{}) (string, error)
+	Render(ctx context.Context, text string, data any) (string, error)
+	RenderFile(ctx context.Context, filename string, data any) (string, error)
 }
 type TemplateParsers map[string]TemplateParser
 
@@ -72,7 +72,7 @@ type HTMLTemplate struct {
 	readFile ReadFile
 }
 
-func (ht *HTMLTemplate) render(name, text string, data interface{}) (string, error) {
+func (ht *HTMLTemplate) render(name, text string, data any) (string, error) {
 	tpl, err := template.New(name).Parse(text)
 	if err != nil {
 		return "", err
@@ -86,12 +86,12 @@ func (ht *HTMLTemplate) render(name, text string, data interface{}) (string, err
 }
 
 // Render renders the text using text/template
-func (ht *HTMLTemplate) Render(ctx context.Context, text string, data interface{}) (string, error) {
+func (ht *HTMLTemplate) Render(ctx context.Context, text string, data any) (string, error) {
 	return ht.render("", text, data)
 }
 
 // Render renders the text of file using text/template
-func (ht *HTMLTemplate) RenderFile(ctx context.Context, filename string, data interface{}) (string, error) {
+func (ht *HTMLTemplate) RenderFile(ctx context.Context, filename string, data any) (string, error) {
 	read := ht.readFile
 	if read == nil {
 		read = os.ReadFile

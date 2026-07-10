@@ -13,8 +13,8 @@ elton可以非常方便的获取各中间件的处理时长，获取统计时长
 package main
 
 import (
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {

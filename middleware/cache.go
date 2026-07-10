@@ -29,11 +29,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 type CacheConfig struct {
@@ -49,7 +50,7 @@ type CacheConfig struct {
 	GetKey func(*elton.Context) string
 	// Marshal marshal function for cache, if BodyBuffer is nil,
 	// the body will be marshaled to body buffer. The default marshal function will be json.Marshal
-	Marshal func(interface{}) ([]byte, error)
+	Marshal func(any) ([]byte, error)
 	// IgnoreHeaders ignore the headers for cache
 	IgnoreHeaders []string
 }
@@ -73,11 +74,15 @@ type CacheStore interface {
 const HeaderAge = "Age"
 const HeaderXCache = "X-Cache"
 
+// defaultIgnoreHeaders 序列化缓存响应时默认忽略的响应头：
+// Content-Encoding/Content-Length 由缓存的压缩类型与body重新生成，
+// Date/Age/X-Cache 每次命中时重新计算，Connection 属于连接级头不可缓存
 var defaultIgnoreHeaders = []string{
 	"Content-Encoding",
 	"Content-Length",
 	"Connection",
 	"Date",
+	HeaderAge,
 	HeaderXCache,
 }
 
@@ -115,8 +120,6 @@ func isCacheable(c *elton.Context) (bool, int) {
 	return cacheAge > 0, cacheAge
 }
 
-var cacheControlKeyLower = strings.ToLower(elton.HeaderCacheControl)
-
 // GetCacheMaxAge returns the age of cache,
 // get value from cache-control(s-maxage or max-age)
 func GetCacheMaxAge(header http.Header) int {
@@ -125,13 +128,7 @@ func GetCacheMaxAge(header http.Header) int {
 		return 0
 	}
 	// 如果没有设置cache-control，则不可缓存
-	var cc string
-	for k, v := range header {
-		if elton.HeaderCacheControl == k || strings.ToLower(k) == cacheControlKeyLower {
-			cc = strings.Join(v, ",")
-			break
-		}
-	}
+	cc := strings.Join(header.Values(elton.HeaderCacheControl), ",")
 	if cc == "" {
 		return 0
 	}
@@ -190,6 +187,8 @@ type CacheResponse struct {
 	Body *bytes.Buffer
 }
 
+// hitForPassData hit-for-pass状态的预编码数据（仅1个状态字节），
+// 所有不可缓存的URL共用此份数据
 var hitForPassData = (&CacheResponse{
 	Status: StatusHitForPass,
 }).Bytes()
@@ -202,7 +201,8 @@ func (cp *CacheResponse) Bytes(ignoreHeaders ...string) []byte {
 			byte(cp.Status),
 		}
 	}
-	ignoreHeaders = append(ignoreHeaders, defaultIgnoreHeaders...)
+	// 拼接为新的slice，避免对入参底层数组的并发写
+	ignoreHeaders = slices.Concat(ignoreHeaders, defaultIgnoreHeaders)
 	headers := NewHTTPHeaders(cp.Header, ignoreHeaders...)
 	headersLength := len(headers)
 	// 1个字节保存状态
@@ -251,8 +251,8 @@ func (cp *CacheResponse) Bytes(ignoreHeaders ...string) []byte {
 
 // GetBody returns the data match accept encoding
 func (cp *CacheResponse) GetBody(acceptEncoding string, compressor CacheCompressor) (*bytes.Buffer, string, error) {
-	if compressor != nil && cp.Compression == compressor.GetCompression() {
-		encoding := compressor.GetEncoding()
+	if compressor != nil && cp.Compression == compressor.Compression() {
+		encoding := compressor.Encoding()
 		// client accept the encoding
 		if strings.Contains(acceptEncoding, encoding) {
 			return cp.Body, encoding, nil
@@ -281,15 +281,23 @@ func (cp *CacheResponse) SetBody(c *elton.Context, compressor CacheCompressor) e
 	return nil
 }
 
-// NewCacheResponse create a new cache response
+// NewCacheResponse decodes the cache data to cache response,
+// it's the reverse operation of CacheResponse.Bytes.
+// 数据布局: [状态(1字节)][创建时间(4字节)][状态码(2字节)][请求头长度(4字节)][请求头内容(N字节)][压缩类型(1字节)][响应内容(N字节)]
+// 对于hit-for-pass的缓存，只有状态字节。
+// 若数据不完整（如自定义store返回损坏数据），返回StatusUnknown，按fetch处理。
 func NewCacheResponse(data []byte) *CacheResponse {
 	dataSize := len(data)
+	// 无数据或无状态字节
 	if dataSize < statusByteSize {
 		return &CacheResponse{
 			Status: StatusUnknown,
 		}
 	}
-	if dataSize < statusByteSize+statusCodeByteSize+headerBytesSize {
+	// 定长头部（状态+创建时间+状态码+请求头长度）共11字节，
+	// 不足时仅返回状态（hit-for-pass只写入状态字节）
+	prefixSize := statusByteSize + createAtByteSize + statusCodeByteSize + headerBytesSize
+	if dataSize < prefixSize {
 		return &CacheResponse{
 			Status: CacheStatus(data[0]),
 		}
@@ -307,6 +315,14 @@ func NewCacheResponse(data []byte) *CacheResponse {
 
 	size := int(binary.BigEndian.Uint32(data[offset:]))
 	offset += headerBytesSize
+
+	// 请求头长度来自数据本身，需校验剩余数据长度，
+	// 避免损坏数据导致越界
+	if dataSize < offset+size+compressionBytesSize {
+		return &CacheResponse{
+			Status: StatusUnknown,
+		}
+	}
 
 	hs := HTTPHeaders(data[offset : offset+size])
 	offset += size
@@ -339,7 +355,7 @@ func cacheDefaultGetKey(c *elton.Context) string {
 	return c.Request.Method + " " + c.Request.RequestURI
 }
 
-func getBodyBuffer(c *elton.Context, marshal func(interface{}) ([]byte, error)) (*bytes.Buffer, error) {
+func getBodyBuffer(c *elton.Context, marshal func(any) ([]byte, error)) (*bytes.Buffer, error) {
 	if c.BodyBuffer != nil {
 		return c.BodyBuffer, nil
 	}
@@ -351,11 +367,18 @@ func getBodyBuffer(c *elton.Context, marshal func(interface{}) ([]byte, error)) 
 }
 
 // NewCache return a new cache middleware.
+//
+// 缓存为三态状态机：
+//   - fetch: 缓存无数据，执行后续中间件获取响应。若响应可缓存
+//     （Cache-Control 带 max-age/s-maxage 且无 Set-Cookie），则以 hit 状态存储；
+//     否则存储 hit-for-pass 标记（TTL为HitForPassTTL）。
+//   - hit: 命中缓存，直接以缓存数据响应，不再执行后续中间件。
+//   - hit-for-pass: 此前已确认该URL响应不可缓存，直接透传至后续中间件，
+//     避免在TTL内反复尝试缓存判定。
+//
+// 仅 GET/HEAD 请求走缓存逻辑，其它method直接透传。
 func NewCache(config CacheConfig) elton.Handler {
-	skipper := config.Skipper
-	if skipper == nil {
-		skipper = elton.DefaultSkipper
-	}
+	skipper := getSkipper(config.Skipper)
 	store := config.Store
 	if store == nil {
 		panic("require store for cache")

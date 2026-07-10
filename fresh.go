@@ -23,41 +23,15 @@
 package elton
 
 import (
-	"bytes"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 )
 
 var noCacheReg = regexp.MustCompile(`(?:^|,)\s*?no-cache\s*?(?:,|$)`)
 
-var weekTagPrefix = []byte("W/")
-
-func parseTokenList(buf []byte) [][]byte {
-	end := 0
-	start := 0
-	count := len(buf)
-	list := make([][]byte, 0)
-	for index := 0; index < count; index++ {
-		switch int(buf[index]) {
-		// 空格
-		case 0x20:
-			if start == end {
-				end = index + 1
-				start = end
-			}
-		// , 号
-		case 0x2c:
-			list = append(list, buf[start:end])
-			end = index + 1
-			start = end
-		default:
-			end = index + 1
-		}
-	}
-	list = append(list, buf[start:end])
-	return list
-}
+const weakTagPrefix = "W/"
 
 func parseHTTPDate(date string) int64 {
 	t, err := time.Parse(time.RFC1123, date)
@@ -67,31 +41,40 @@ func parseHTTPDate(date string) int64 {
 	return t.Unix()
 }
 
+// etagWeakMatch 弱ETag比较：W/"xxx" 与 "xxx" 任意一侧带W/前缀均视为匹配
+// （弱比较语义，见RFC 7232 2.3.2）
+func etagWeakMatch(match, etag string) bool {
+	if match == etag {
+		return true
+	}
+	if strings.HasPrefix(match, weakTagPrefix) && match[2:] == etag {
+		return true
+	}
+	if strings.HasPrefix(etag, weakTagPrefix) && etag[2:] == match {
+		return true
+	}
+	return false
+}
+
 // isFresh returns true if the data is fresh
-func isFresh(modifiedSince, noneMatch, cacheControl, lastModified, etag []byte) bool {
-	if len(modifiedSince) == 0 && len(noneMatch) == 0 {
+func isFresh(modifiedSince, noneMatch, cacheControl, lastModified, etag string) bool {
+	if modifiedSince == "" && noneMatch == "" {
 		return false
 	}
-	if len(cacheControl) != 0 && noCacheReg.Match(cacheControl) {
+	// 请求端指定no-cache时不使用缓存
+	if cacheControl != "" && noCacheReg.MatchString(cacheControl) {
 		return false
 	}
 	// if none match
-	if len(noneMatch) != 0 && (len(noneMatch) != 1 || noneMatch[0] != byte('*')) {
-		if len(etag) == 0 {
+	// "*" 表示匹配任意etag，跳过比较
+	if noneMatch != "" && noneMatch != "*" {
+		if etag == "" {
 			return false
 		}
-		matches := parseTokenList(noneMatch)
+		// If-None-Match可为逗号分隔的多个etag，任意一个弱匹配即为fresh
 		etagStale := true
-		for _, match := range matches {
-			if bytes.Equal(match, etag) {
-				etagStale = false
-				break
-			}
-			if bytes.HasPrefix(match, weekTagPrefix) && bytes.Equal(match[2:], etag) {
-				etagStale = false
-				break
-			}
-			if bytes.HasPrefix(etag, weekTagPrefix) && bytes.Equal(etag[2:], match) {
+		for match := range strings.SplitSeq(noneMatch, ",") {
+			if etagWeakMatch(strings.TrimSpace(match), etag) {
 				etagStale = false
 				break
 			}
@@ -101,12 +84,12 @@ func isFresh(modifiedSince, noneMatch, cacheControl, lastModified, etag []byte) 
 		}
 	}
 	// if modified since
-	if len(modifiedSince) != 0 {
-		if len(lastModified) == 0 {
+	if modifiedSince != "" {
+		if lastModified == "" {
 			return false
 		}
-		lastModifiedUnix := parseHTTPDate(string(lastModified))
-		modifiedSinceUnix := parseHTTPDate(string(modifiedSince))
+		lastModifiedUnix := parseHTTPDate(lastModified)
+		modifiedSinceUnix := parseHTTPDate(modifiedSince)
 		if lastModifiedUnix == 0 || modifiedSinceUnix == 0 {
 			return false
 		}
@@ -117,14 +100,13 @@ func isFresh(modifiedSince, noneMatch, cacheControl, lastModified, etag []byte) 
 	return true
 }
 
-// Fresh returns fresh status by judget request header and response header
+// Fresh returns fresh status by judging request header and response header
 func Fresh(reqHeader http.Header, resHeader http.Header) bool {
-	modifiedSince := []byte(reqHeader.Get(HeaderIfModifiedSince))
-	noneMatch := []byte(reqHeader.Get(HeaderIfNoneMatch))
-	cacheControl := []byte(reqHeader.Get(HeaderCacheControl))
-
-	lastModified := []byte(resHeader.Get(HeaderLastModified))
-	etag := []byte(resHeader.Get(HeaderETag))
-
-	return isFresh(modifiedSince, noneMatch, cacheControl, lastModified, etag)
+	return isFresh(
+		reqHeader.Get(HeaderIfModifiedSince),
+		reqHeader.Get(HeaderIfNoneMatch),
+		reqHeader.Get(HeaderCacheControl),
+		resHeader.Get(HeaderLastModified),
+		resHeader.Get(HeaderETag),
+	)
 }

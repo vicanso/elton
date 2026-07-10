@@ -71,7 +71,10 @@ func (t *Trace) Add(info *TraceInfo) *Trace {
 	return t
 }
 
-// Calculate calculates the duration of middleware
+// Calculate calculates the duration of middleware.
+// 中间件采用洋葱模型，前面中间件记录的时长包含了它调用Next()之后
+// 所有后续中间件的时长。由于trace信息按执行顺序添加，
+// 依次让每个中间件减去紧随其后的中间件时长，即得到各自的真实耗时。
 func (t *Trace) Calculate() {
 	if t.calculateDone {
 		return
@@ -154,15 +157,15 @@ func (traceInfos TraceInfos) Filter(fn func(*TraceInfo) bool) TraceInfos {
 	return infos
 }
 
-// FilterDurationGT flters the duration of trace is gt than d.
-func (traceInfos TraceInfos) FilterDurationGT(d time.Duration) TraceInfos {
+// FilterDurationGreaterThan filters the trace infos of which duration is greater than d.
+func (traceInfos TraceInfos) FilterDurationGreaterThan(d time.Duration) TraceInfos {
 	return traceInfos.Filter(func(ti *TraceInfo) bool {
 		return ti.Duration > d
 	})
 }
 
-// GetTrace get trace from context, if context without trace, new trace will be created.
-func GetTrace(ctx context.Context) *Trace {
+// TraceFromContext gets trace from context, if context without trace, new trace will be created.
+func TraceFromContext(ctx context.Context) *Trace {
 	value := ctx.Value(ContextTraceKey)
 	if value == nil {
 		return NewTrace()

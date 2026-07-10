@@ -30,7 +30,7 @@ import (
 type (
 	// SignedKeysGenerator signed keys generator
 	SignedKeysGenerator interface {
-		GetKeys() []string
+		Keys() []string
 		SetKeys([]string)
 	}
 	// SimpleSignedKeys simple sigined key
@@ -48,8 +48,8 @@ type (
 	}
 )
 
-// GetKeys returns the key list of simple signed keys
-func (sk *SimpleSignedKeys) GetKeys() []string {
+// Keys returns the key list of simple signed keys
+func (sk *SimpleSignedKeys) Keys() []string {
 	return sk.keys
 }
 
@@ -60,8 +60,8 @@ func (sk *SimpleSignedKeys) SetKeys(values []string) {
 	sk.keys = keys
 }
 
-// GetKeys returns the key list of rwmutex signed keys
-func (rwSk *RWMutexSignedKeys) GetKeys() []string {
+// Keys returns the key list of rwmutex signed keys
+func (rwSk *RWMutexSignedKeys) Keys() []string {
 	rwSk.RLock()
 	defer rwSk.RUnlock()
 	return rwSk.keys
@@ -76,8 +76,8 @@ func (rwSk *RWMutexSignedKeys) SetKeys(values []string) {
 	rwSk.keys = keys
 }
 
-// GetKeys returns the key list of atomic signed keys
-func (atSk *AtomicSignedKeys) GetKeys() []string {
+// Keys returns the key list of atomic signed keys
+func (atSk *AtomicSignedKeys) Keys() []string {
 	if value := atSk.value.Load(); value != nil {
 		// atomic value只能相同的类型，因此只要值存在，转换时直接转换
 		return *value.(*[]string)

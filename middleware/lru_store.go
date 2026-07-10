@@ -29,20 +29,22 @@ import (
 	lru "github.com/hashicorp/golang-lru/v2"
 )
 
-var _ CacheStore = (*lruStore)(nil)
+var _ CacheStore = (*LRUStore)(nil)
 
-type lruStore struct {
+type LRUStore struct {
 	usePeek bool
 	store   *lru.Cache[string, []byte]
 }
 
+// 存储布局为 [过期时间戳(4字节,大端,单位秒)][payload]，
+// 过期判断使用墙上时钟，读取到过期数据返回nil（不主动删除，由lru淘汰）
 const expiredByteSize = 4
 
-func now_seconds() uint32 {
+func nowSeconds() uint32 {
 	return uint32(time.Now().Unix())
 }
 
-func (s *lruStore) Get(ctx context.Context, key string) ([]byte, error) {
+func (s *LRUStore) Get(ctx context.Context, key string) ([]byte, error) {
 	var value []byte
 	var ok bool
 	// 使用peek更高性能
@@ -55,39 +57,39 @@ func (s *lruStore) Get(ctx context.Context, key string) ([]byte, error) {
 		return nil, nil
 	}
 	expired := binary.BigEndian.Uint32(value)
-	if now_seconds() > expired {
+	if nowSeconds() > expired {
 		return nil, nil
 	}
 	return value[expiredByteSize:], nil
 }
 
-func (s *lruStore) Set(ctx context.Context, key string, data []byte, ttl time.Duration) error {
+func (s *LRUStore) Set(ctx context.Context, key string, data []byte, ttl time.Duration) error {
 	buf := make([]byte, len(data)+expiredByteSize)
-	expired := now_seconds() + uint32(ttl/time.Second)
+	expired := nowSeconds() + uint32(ttl/time.Second)
 	binary.BigEndian.PutUint32(buf, expired)
 	copy(buf[expiredByteSize:], data)
 	s.store.Add(key, buf)
 	return nil
 }
 
-func newLruStore(size int, usePeek bool) *lruStore {
+func newLRUStore(size int, usePeek bool) *LRUStore {
 	if size <= 0 {
 		size = 128
 	}
 	// 只要size > 0则不会出错
 	s, _ := lru.New[string, []byte](size)
-	return &lruStore{
+	return &LRUStore{
 		usePeek: usePeek,
 		store:   s,
 	}
 }
 
-// NewPeekLruStore creates a lru store use peek
-func NewPeekLruStore(size int) *lruStore {
-	return newLruStore(size, true)
+// NewPeekLRUStore creates a lru store use peek
+func NewPeekLRUStore(size int) *LRUStore {
+	return newLRUStore(size, true)
 }
 
-// NewLruStore creates a lru store
-func NewLruStore(size int) *lruStore {
-	return newLruStore(size, false)
+// NewLRUStore creates a lru store
+func NewLRUStore(size int) *LRUStore {
+	return newLRUStore(size, false)
 }

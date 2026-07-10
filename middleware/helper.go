@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2021 Tree Xie
+// Copyright (c) 2026 Tree Xie
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,29 +23,47 @@
 package middleware
 
 import (
-	"bytes"
-	"testing"
+	"crypto/sha1"
+	"encoding/base64"
+	"errors"
+	"fmt"
+	"net/http"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/hes"
 )
 
-func TestResponseSizeLimiter(t *testing.T) {
-	assert := assert.New(t)
-
-	fn := NewResponseSizeLimiter(ResponseSizeLimiterConfig{
-		MaxSize: 5,
-	})
-
-	c := elton.NewContext(nil, nil)
-	c.BodyBuffer = bytes.NewBufferString("test")
-	c.Next = func() error {
-		return nil
+// getSkipper returns the skipper if it's not nil,
+// otherwise returns elton.DefaultSkipper
+func getSkipper(skipper elton.Skipper) elton.Skipper {
+	if skipper == nil {
+		return elton.DefaultSkipper
 	}
-	err := fn(c)
-	assert.Nil(err)
+	return skipper
+}
 
-	c.BodyBuffer = bytes.NewBufferString("Hello World!")
-	err = fn(c)
-	assert.Equal(ErrResponseTooLarge, err)
+// wrapAsHesError returns the *hes.Error of err if err's chain contains one,
+// otherwise wraps err as an internal server error exception with the category
+func wrapAsHesError(err error, category string) *hes.Error {
+	he := &hes.Error{}
+	if errors.As(err, &he) {
+		return he
+	}
+	he = hes.Wrap(err)
+	he.StatusCode = http.StatusInternalServerError
+	he.Exception = true
+	he.Category = category
+	return he
+}
+
+// genETag generates an etag of the buffer by sha1
+func genETag(buf []byte) string {
+	size := len(buf)
+	if size == 0 {
+		return `"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="`
+	}
+	h := sha1.New()
+	h.Write(buf)
+	hash := base64.URLEncoding.EncodeToString(h.Sum(nil))
+	return fmt.Sprintf(`"%x-%s"`, size, hash)
 }

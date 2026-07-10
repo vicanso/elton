@@ -27,6 +27,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -173,14 +174,14 @@ func TestHandle(t *testing.T) {
 		e.TRACE(path)
 		allMethods := "/all-methods"
 		e.ALL(allMethods)
-		for index, r := range e.GetRouters() {
+		for index, r := range e.Routers() {
 			p := path
 			if index >= len(methods) {
 				p = allMethods
 			}
 			assert.Equal(p, r.Route)
 		}
-		assert.Equal(2*len(methods), len(e.GetRouters()), "method handle add fail")
+		assert.Equal(2*len(methods), len(e.Routers()), "method handle add fail")
 	})
 	t.Run("group", func(t *testing.T) {
 		assert := assert.New(t)
@@ -192,11 +193,11 @@ func TestHandle(t *testing.T) {
 		}
 		e.UseWithName(fn, "test")
 		e.Use(func(c *Context) error {
-			v := c.GetInt(key)
+			v := GetContextValue[int](c, key)
 			c.Set(key, v+1)
 			return c.Next()
 		}, func(c *Context) error {
-			v := c.GetInt(key)
+			v := GetContextValue[int](c, key)
 			c.Set(key, v+2)
 			return c.Next()
 		})
@@ -207,7 +208,7 @@ func TestHandle(t *testing.T) {
 		})
 		doneCount := 0
 		userGroup.ALL("/me", func(c *Context) (err error) {
-			v := c.GetInt(key)
+			v := GetContextValue[int](c, key)
 			assert.Equal(countValue, v)
 			assert.Equal(userGroupPath+"/me", c.Route, "route url is invalid")
 			doneCount++
@@ -310,7 +311,7 @@ func TestHandle(t *testing.T) {
 
 	t.Run("get routers", func(t *testing.T) {
 		assert := assert.New(t)
-		assert.Equal(34, len(e.GetRouters()), "router count fail")
+		assert.Equal(34, len(e.Routers()), "router count fail")
 	})
 
 	t.Run("response body reader", func(t *testing.T) {
@@ -572,6 +573,65 @@ func TestContextWithContext(t *testing.T) {
 	assert.Equal(ctx, c.Context())
 }
 
+// closableReader 用于测试reader body的自动关闭
+type closableReader struct {
+	io.Reader
+	closed bool
+}
+
+func (cr *closableReader) Close() error {
+	cr.closed = true
+	return nil
+}
+
+func TestCloseReaderBody(t *testing.T) {
+	t.Run("close on error", func(t *testing.T) {
+		assert := assert.New(t)
+		e := New()
+		cr := &closableReader{Reader: strings.NewReader("abcd")}
+		e.GET("/", func(c *Context) error {
+			c.Body = cr
+			return errors.New("custom error")
+		})
+		resp := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/", nil)
+		e.ServeHTTP(resp, req)
+		assert.True(cr.closed, "reader body should be closed on error")
+	})
+
+	t.Run("close when body buffer is set", func(t *testing.T) {
+		assert := assert.New(t)
+		e := New()
+		cr := &closableReader{Reader: strings.NewReader("abcd")}
+		e.GET("/", func(c *Context) error {
+			c.Body = cr
+			// BodyBuffer优先输出，reader body应被关闭
+			c.BodyBuffer = bytes.NewBufferString("hello")
+			return nil
+		})
+		resp := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/", nil)
+		e.ServeHTTP(resp, req)
+		assert.True(cr.closed, "unused reader body should be closed")
+		assert.Equal("hello", resp.Body.String())
+	})
+
+	t.Run("pipe close", func(t *testing.T) {
+		assert := assert.New(t)
+		e := New()
+		cr := &closableReader{Reader: strings.NewReader("abcd")}
+		e.GET("/", func(c *Context) error {
+			c.Body = cr
+			return nil
+		})
+		resp := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/", nil)
+		e.ServeHTTP(resp, req)
+		assert.True(cr.closed, "reader body should be closed after pipe")
+		assert.Equal("abcd", resp.Body.String())
+	})
+}
+
 func TestGracefulClose(t *testing.T) {
 	e := New()
 	t.Run("running 404", func(t *testing.T) {
@@ -586,12 +646,12 @@ func TestGracefulClose(t *testing.T) {
 		assert := assert.New(t)
 		done := make(chan bool)
 		go func() {
-			err := e.GracefulClose(time.Second)
+			err := e.GracefulClose(context.Background(), time.Second)
 			assert.Nil(err, "server close should be successful")
 			done <- true
 		}()
 		time.Sleep(10 * time.Millisecond)
-		assert.Equal(e.GetStatus(), int32(StatusClosing), "server status should be closing")
+		assert.Equal(e.Status(), StatusClosing, "server status should be closing")
 		assert.True(e.Closing())
 		assert.False(e.Running())
 		resp := httptest.NewRecorder()
@@ -601,7 +661,7 @@ func TestGracefulClose(t *testing.T) {
 		assert.Equal("service is not available, status is 1", resp.Body.String())
 
 		<-done
-		assert.Equal(int32(StatusClosed), e.GetStatus(), "server status should be closed")
+		assert.Equal(StatusClosed, e.Status(), "server status should be closed")
 	})
 }
 

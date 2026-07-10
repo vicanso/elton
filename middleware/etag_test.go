@@ -33,7 +33,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 var testData []byte
@@ -53,8 +53,7 @@ func init() {
 
 func TestGen(t *testing.T) {
 	assert := assert.New(t)
-	value, err := genETag([]byte(""))
-	assert.Nil(err)
+	value := genETag([]byte(""))
 	assert.Equal(value, `"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="`)
 }
 
@@ -146,10 +145,7 @@ func TestETag(t *testing.T) {
 func BenchmarkGenETag(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_, err := genETag(testData)
-		if err != nil {
-			panic(err)
-		}
+		_ = genETag(testData)
 	}
 }
 

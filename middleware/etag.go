@@ -23,12 +23,9 @@
 package middleware
 
 import (
-	"crypto/sha1"
-	"encoding/base64"
-	"fmt"
 	"net/http"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 type (
@@ -38,21 +35,6 @@ type (
 	}
 )
 
-// gen generate eTag
-func genETag(buf []byte) (string, error) {
-	size := len(buf)
-	if size == 0 {
-		return `"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="`, nil
-	}
-	h := sha1.New()
-	_, err := h.Write(buf)
-	if err != nil {
-		return "", err
-	}
-	hash := base64.URLEncoding.EncodeToString(h.Sum(nil))
-	return fmt.Sprintf(`"%x-%s"`, size, hash), nil
-}
-
 // NewDefaultETag returns a default ETag middleware, it will use sha1 to generate etag.
 func NewDefaultETag() elton.Handler {
 	return NewETag(ETagConfig{})
@@ -60,10 +42,7 @@ func NewDefaultETag() elton.Handler {
 
 // NewETag returns a default ETag middleware.
 func NewETag(config ETagConfig) elton.Handler {
-	skipper := config.Skipper
-	if skipper == nil {
-		skipper = elton.DefaultSkipper
-	}
+	skipper := getSkipper(config.Skipper)
 	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
@@ -87,8 +66,7 @@ func NewETag(config ETagConfig) elton.Handler {
 				statusCode >= http.StatusMultipleChoices) {
 			return nil
 		}
-		eTag, _ := genETag(bodyBuf.Bytes())
-		if eTag != "" {
+		if eTag := genETag(bodyBuf.Bytes()); eTag != "" {
 			c.SetHeader(elton.HeaderETag, eTag)
 		}
 		return nil

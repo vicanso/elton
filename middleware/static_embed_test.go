@@ -1,3 +1,4 @@
+//go:build go1.16
 // +build go1.16
 
 // Copyright (c) 2021 Tree Xie
@@ -34,7 +35,7 @@ var assetFS embed.FS
 
 func TestEmbedGetFile(t *testing.T) {
 	assert := assert.New(t)
-	es := embedStaticFS{
+	es := EmbedStaticFS{
 		Prefix: "web",
 	}
 	file := es.getFile("abc\\test.txt")

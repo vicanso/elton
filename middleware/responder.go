@@ -27,7 +27,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
 )
 
@@ -36,7 +36,7 @@ type (
 	ResponderConfig struct {
 		Skipper elton.Skipper
 		// Marshal custom marshal function
-		Marshal func(v interface{}) ([]byte, error)
+		Marshal func(v any) ([]byte, error)
 		// ContentType response's content type
 		ContentType string
 	}
@@ -66,10 +66,7 @@ func NewDefaultResponder() elton.Handler {
 // If will use json.Marshal as default marshal function.
 // If will use application/json as default content type.
 func NewResponder(config ResponderConfig) elton.Handler {
-	skipper := config.Skipper
-	if skipper == nil {
-		skipper = elton.DefaultSkipper
-	}
+	skipper := getSkipper(config.Skipper)
 	marshal := config.Marshal
 	// 如果未定义marshal
 	if marshal == nil {

@@ -28,99 +28,95 @@ import (
 	"net/http"
 	"sync/atomic"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
 )
 
 const (
-	// ErrRCLCategory router concurrent limiter error category
-	ErrRCLCategory = "elton-router-concurrent-limiter"
+	// ErrRouterConcurrentLimiterCategory router concurrent limiter error category
+	ErrRouterConcurrentLimiterCategory = "elton-router-concurrent-limiter"
 )
 
 var (
-	ErrRCLRequireLimiter = errors.New("require limiter")
+	ErrRequireLimiter = errors.New("require limiter")
 )
 
 type (
 	// Config router concurrent limiter config
-	RCLConfig struct {
+	RouterConcurrentLimiterConfig struct {
 		Skipper elton.Skipper
-		Limiter RCLLimiter
+		Limiter RouterConcurrencyLimiter
 	}
-	rclConcurrency struct {
+	routerConcurrency struct {
 		max     uint32
-		current uint32
+		current atomic.Uint32
 	}
-	// RCLLimiter limiter interface
-	RCLLimiter interface {
+	// RouterConcurrencyLimiter limiter interface
+	RouterConcurrencyLimiter interface {
 		IncConcurrency(route string) (current uint32, max uint32)
 		DecConcurrency(route string)
 		GetConcurrency(route string) (current uint32)
 	}
 	// LocalLimiter local limiter
-	RCLLocalLimiter struct {
-		m map[string]*rclConcurrency
+	LocalRouterConcurrencyLimiter struct {
+		m map[string]*routerConcurrency
 	}
 )
 
-// NewLocalLimiter returns a new local limiter, it's useful for limit concurrency for process.
-func NewLocalLimiter(data map[string]uint32) *RCLLocalLimiter {
-	m := make(map[string]*rclConcurrency, len(data))
+// NewLocalRouterConcurrencyLimiter returns a new local limiter, it's useful for limit concurrency for process.
+func NewLocalRouterConcurrencyLimiter(data map[string]uint32) *LocalRouterConcurrencyLimiter {
+	m := make(map[string]*routerConcurrency, len(data))
 	for route, max := range data {
-		m[route] = &rclConcurrency{
-			max:     max,
-			current: 0,
+		m[route] = &routerConcurrency{
+			max: max,
 		}
 	}
-	return &RCLLocalLimiter{
+	return &LocalRouterConcurrencyLimiter{
 		m: m,
 	}
 }
 
 // IncConcurrency inc 1
-func (l *RCLLocalLimiter) IncConcurrency(key string) (uint32, uint32) {
+func (l *LocalRouterConcurrencyLimiter) IncConcurrency(key string) (uint32, uint32) {
 	concur, ok := l.m[key]
 	if !ok {
 		return 0, 0
 	}
-	v := atomic.AddUint32(&concur.current, 1)
-	return v, concur.max
+	return concur.current.Add(1), concur.max
 }
 
 // DecConcurrency dec 1
-func (l *RCLLocalLimiter) DecConcurrency(key string) {
+func (l *LocalRouterConcurrencyLimiter) DecConcurrency(key string) {
 	concur, ok := l.m[key]
 	if !ok {
 		return
 	}
-	atomic.AddUint32(&concur.current, ^uint32(0))
+	// add ^uint32(0) means decrease 1
+	concur.current.Add(^uint32(0))
 }
 
 // GetConcurrency value
-func (l *RCLLocalLimiter) GetConcurrency(key string) uint32 {
+func (l *LocalRouterConcurrencyLimiter) GetConcurrency(key string) uint32 {
 	concur, ok := l.m[key]
 	if !ok {
 		return 0
 	}
-	return atomic.LoadUint32(&concur.current)
+	return concur.current.Load()
 }
 
-func createRCLError(current, max uint32) error {
+func createRouterConcurrentLimiterError(current, max uint32) error {
 	he := hes.New(fmt.Sprintf("too many request, current:%d, max:%d", current, max))
-	he.Category = ErrRCLCategory
+	he.Category = ErrRouterConcurrentLimiterCategory
 	he.StatusCode = http.StatusTooManyRequests
 	return he
 }
 
-// NewRCL returns a router concurrent limiter middleware.
+// NewRouterConcurrentLimiter returns a router concurrent limiter middleware.
 // It will throw panic if Limiter is nil.
-func NewRCL(config RCLConfig) elton.Handler {
-	skipper := config.Skipper
-	if skipper == nil {
-		skipper = elton.DefaultSkipper
-	}
+func NewRouterConcurrentLimiter(config RouterConcurrentLimiterConfig) elton.Handler {
+	skipper := getSkipper(config.Skipper)
 	if config.Limiter == nil {
-		panic(ErrRCLRequireLimiter)
+		panic(ErrRequireLimiter)
 	}
 	limiter := config.Limiter
 	return func(c *elton.Context) error {
@@ -131,7 +127,7 @@ func NewRCL(config RCLConfig) elton.Handler {
 		current, max := limiter.IncConcurrency(key)
 		defer limiter.DecConcurrency(key)
 		if max != 0 && current > max {
-			return createRCLError(current, max)
+			return createRouterConcurrentLimiterError(current, max)
 		}
 		return c.Next()
 	}

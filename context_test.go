@@ -53,11 +53,11 @@ func TestReset(t *testing.T) {
 		Body:        make(map[string]string),
 		BodyBuffer:  bytes.NewBufferString("abcd"),
 		RequestBody: []byte("abcd"),
-		m:           make(map[interface{}]interface{}),
+		m:           make(map[any]any),
 		realIP:      "abcd",
 		clientIP:    "abcd",
-		reuseStatus: ReuseContextEnabled,
 	}
+	c.DisableReuse()
 	c.Reset()
 	assert.Nil(c.Request)
 	assert.Nil(c.Response)
@@ -74,7 +74,7 @@ func TestReset(t *testing.T) {
 	assert.Nil(c.m)
 	assert.Equal("", c.realIP)
 	assert.Equal("", c.clientIP)
-	assert.Equal(int32(ReuseContextEnabled), c.reuseStatus)
+	assert.True(c.isReuse())
 }
 
 func TestContext(t *testing.T) {
@@ -250,41 +250,46 @@ func TestSetGet(t *testing.T) {
 
 	i := 1
 	c.Set("int", i)
-	assert.Equal(i, c.GetInt("int"))
+	assert.Equal(i, GetContextValue[int](&c, "int"))
 
 	var i64 int64 = 1
 	c.Set("int64", i64)
-	assert.Equal(i64, c.GetInt64("int64"))
+	assert.Equal(i64, GetContextValue[int64](&c, "int64"))
 
 	s := "s"
 	c.Set("string", s)
-	assert.Equal(s, c.GetString("string"))
+	assert.Equal(s, GetContextValue[string](&c, "string"))
 
 	b := true
 	c.Set("bool", b)
-	assert.Equal(b, c.GetBool("bool"))
+	assert.Equal(b, GetContextValue[bool](&c, "bool"))
 
 	var f32 float32 = 1.0
 	c.Set("float32", f32)
-	assert.Equal(f32, c.GetFloat32("float32"))
+	assert.Equal(f32, GetContextValue[float32](&c, "float32"))
 
 	f64 := 1.0
 	c.Set("float64", f64)
-	assert.Equal(f64, c.GetFloat64("float64"))
+	assert.Equal(f64, GetContextValue[float64](&c, "float64"))
 
 	now := time.Now()
 	c.Set("time", now)
-	assert.Equal(now, c.GetTime("time"))
+	assert.Equal(now, GetContextValue[time.Time](&c, "time"))
 
 	d := time.Second
 	c.Set("duration", d)
-	assert.Equal(d, c.GetDuration("duration"))
+	assert.Equal(d, GetContextValue[time.Duration](&c, "duration"))
 
 	arr := []string{
 		"a",
 	}
 	c.Set("stringSlice", arr)
-	assert.Equal(arr, c.GetStringSlice("stringSlice"))
+	assert.Equal(arr, GetContextValue[[]string](&c, "stringSlice"))
+
+	// type mismatch returns zero value
+	assert.Equal(0, GetContextValue[int](&c, "string"))
+	// key not exists returns zero value
+	assert.Equal("", GetContextValue[string](&c, "not-exists"))
 }
 
 func TestGetSetHeader(t *testing.T) {
@@ -538,7 +543,7 @@ func TestReadFile(t *testing.T) {
 		},
 	}
 	c := NewContext(httptest.NewRecorder(), req)
-	data, fileHeader, err := c.ReadFile("file")
+	data, fileHeader, err := c.ReadFormFile("file")
 	assert.Nil(err)
 	assert.Equal(fileName, fileHeader.Filename)
 	assert.Equal(int64(9), fileHeader.Size)
@@ -741,14 +746,6 @@ func TestDisableReuse(t *testing.T) {
 	assert.False(c.isReuse())
 }
 
-func TestPush(t *testing.T) {
-	assert := assert.New(t)
-	resp := httptest.NewRecorder()
-	c := NewContext(resp, nil)
-	err := c.Push("/a.css", nil)
-	assert.Equal(ErrNotSupportPush, err)
-}
-
 func TestGetCod(t *testing.T) {
 	assert := assert.New(t)
 	c := NewContext(nil, nil)
@@ -824,12 +821,12 @@ func TestPipe(t *testing.T) {
 	assert.Equal(data, resp.Body.Bytes())
 }
 
-func TestContextGetTrace(t *testing.T) {
+func TestContextTraceFromContext(t *testing.T) {
 	assert := assert.New(t)
 	req, err := http.NewRequest("GET", "/", nil)
 	assert.Nil(err)
 	c := NewContext(nil, req)
-	assert.NotNil(c.GetTrace())
+	assert.NotNil(c.Trace())
 }
 
 func TestContextIsContext(t *testing.T) {

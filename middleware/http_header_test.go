@@ -33,20 +33,20 @@ import (
 func TestShortHeaderIndexes(t *testing.T) {
 	assert := assert.New(t)
 
-	name := shortHeaderIndexes.getName(1)
+	name := shortHeaderIndexes.Load().getName(1)
 	assert.Equal("accept-charset", name)
-	name = shortHeaderIndexes.getName(3)
+	name = shortHeaderIndexes.Load().getName(3)
 	assert.Equal("accept-language", name)
-	assert.Empty(shortHeaderIndexes.getName(int(MaxShortHeader)))
-	name = shortHeaderIndexes.getName(30)
+	assert.Empty(shortHeaderIndexes.Load().getName(int(MaxShortHeader)))
+	name = shortHeaderIndexes.Load().getName(30)
 	assert.Equal("last-modified", name)
 
 	// 故意大写了O
-	index, ok := shortHeaderIndexes.getIndex("Cache-COntrol")
+	index, ok := shortHeaderIndexes.Load().getIndex("Cache-COntrol")
 	assert.True(ok)
 	assert.Equal(index, uint8(10))
 
-	_, ok = shortHeaderIndexes.getIndex("abc")
+	_, ok = shortHeaderIndexes.Load().getIndex("abc")
 	assert.False(ok)
 }
 

@@ -37,7 +37,7 @@ func TestSimpleSignedKeys(t *testing.T) {
 	}
 	sk = new(SimpleSignedKeys)
 	sk.SetKeys(keys)
-	assert.Equal(sk.GetKeys(), keys)
+	assert.Equal(sk.Keys(), keys)
 }
 
 func TestRWMutexSignedKeys(t *testing.T) {
@@ -49,7 +49,7 @@ func TestRWMutexSignedKeys(t *testing.T) {
 	}
 	sk = new(RWMutexSignedKeys)
 	sk.SetKeys(keys)
-	assert.Equal(sk.GetKeys(), keys)
+	assert.Equal(sk.Keys(), keys)
 	done := make(chan bool)
 	max := 10000
 	go func() {
@@ -59,7 +59,7 @@ func TestRWMutexSignedKeys(t *testing.T) {
 		done <- true
 	}()
 	for index := 0; index < max; index++ {
-		sk.GetKeys()
+		sk.Keys()
 	}
 	<-done
 }
@@ -73,7 +73,7 @@ func TestAtomicSignedKeys(t *testing.T) {
 	}
 	sk = new(AtomicSignedKeys)
 	sk.SetKeys(keys)
-	assert.Equal(sk.GetKeys(), keys)
+	assert.Equal(sk.Keys(), keys)
 	done := make(chan bool)
 	max := 10000
 	go func() {
@@ -83,7 +83,7 @@ func TestAtomicSignedKeys(t *testing.T) {
 		done <- true
 	}()
 	for index := 0; index < max; index++ {
-		keys := sk.GetKeys()
+		keys := sk.Keys()
 		if len(keys) == 2 {
 			assert.Equal([]string{"a", "b"}, keys)
 		} else {
@@ -97,7 +97,7 @@ func BenchmarkRWMutexSignedKeys(b *testing.B) {
 	sk := new(RWMutexSignedKeys)
 	sk.SetKeys([]string{"a"})
 	for i := 0; i < b.N; i++ {
-		sk.GetKeys()
+		sk.Keys()
 	}
 }
 
@@ -105,6 +105,6 @@ func BenchmarkAtomicSignedKeys(b *testing.B) {
 	sk := new(AtomicSignedKeys)
 	sk.SetKeys([]string{"a"})
 	for i := 0; i < b.N; i++ {
-		sk.GetKeys()
+		sk.Keys()
 	}
 }

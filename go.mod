@@ -1,8 +1,7 @@
-module github.com/vicanso/elton
+module github.com/vicanso/elton/v2
 
-go 1.22
+go 1.24
 
-toolchain go1.23.4
 
 require (
 	github.com/andybalholm/brotli v1.1.1

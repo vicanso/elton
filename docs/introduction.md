@@ -30,8 +30,8 @@ package main
 import (
 	"errors"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -97,7 +97,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 func main() {

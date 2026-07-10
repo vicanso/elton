@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2021 Tree Xie
+// Copyright (c) 2026 Tree Xie
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,28 +24,42 @@ package middleware
 
 import (
 	"bytes"
+	"net/http"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/vicanso/elton/v2"
 )
 
-func TestResponseSizeLimiter(t *testing.T) {
-	assert := assert.New(t)
-
-	fn := NewResponseSizeLimiter(ResponseSizeLimiterConfig{
-		MaxSize: 5,
+// FuzzNewCacheResponse 确保解码任意（含损坏/截断）的缓存数据不会panic，
+// 自定义store（如Redis）可能返回异常内容
+func FuzzNewCacheResponse(f *testing.F) {
+	f.Add([]byte(nil))
+	f.Add(hitForPassData)
+	// 一份合法的hit缓存数据作为种子
+	valid := (&CacheResponse{
+		Status:     StatusHit,
+		CreatedAt:  1700000000,
+		StatusCode: 200,
+		Header: http.Header{
+			"Content-Type": []string{"application/json; charset=utf-8"},
+		},
+		Body: bytes.NewBufferString(`{"name":"elton"}`),
+	}).Bytes()
+	f.Add(valid)
+	f.Fuzz(func(t *testing.T, data []byte) {
+		resp := NewCacheResponse(data)
+		if resp == nil {
+			t.Fatal("cache response should not be nil")
+		}
 	})
+}
 
-	c := elton.NewContext(nil, nil)
-	c.BodyBuffer = bytes.NewBufferString("test")
-	c.Next = func() error {
-		return nil
-	}
-	err := fn(c)
-	assert.Nil(err)
-
-	c.BodyBuffer = bytes.NewBufferString("Hello World!")
-	err = fn(c)
-	assert.Equal(ErrResponseTooLarge, err)
+// FuzzHTTPHeadersHeader 确保解码任意字节序列的header数据不会panic
+func FuzzHTTPHeadersHeader(f *testing.F) {
+	f.Add([]byte(nil))
+	f.Add([]byte(NewHTTPHeaders(http.Header{
+		"Content-Type": []string{"text/plain"},
+		"X-Custom":     []string{"a", "b"},
+	})))
+	f.Fuzz(func(t *testing.T, data []byte) {
+		_ = HTTPHeaders(data).Header()
+	})
 }

@@ -34,7 +34,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -42,13 +41,6 @@ import (
 
 	"github.com/vicanso/hes"
 	"github.com/vicanso/keygrip"
-)
-
-const (
-	// ReuseContextEnabled resuse context enabled
-	ReuseContextEnabled int32 = iota
-	// ReuseContextDisabled reuse context disabled
-	ReuseContextDisabled
 )
 
 type (
@@ -71,21 +63,23 @@ type (
 		StatusCode int
 		// Body http response's body, which should be converted to bytes by responder middleware.
 		// JSON response middleware,  xml response middleware and so on.
-		Body interface{}
+		// 约定：io.Reader类型的Body由框架流式写出（实现io.Closer会被自动关闭）；
+		// 其它类型需由responder等中间件转换为BodyBuffer后输出
+		Body any
 		// BodyBuffer http response's body buffer, it should be set by responder middleware.
 		BodyBuffer *bytes.Buffer
 		// RequestBody http request body, which should be converted by request body parser middleware.
 		RequestBody []byte
 		// store for context
-		m map[interface{}]interface{}
+		m map[any]any
 		// realIP the real ip
 		realIP string
 		// clientIP the clint ip
 		clientIP string
 		// elton instance
 		elton *Elton
-		// reuseStatus reuse status
-		reuseStatus int32
+		// reuseDisabled whether reuse of the context is disabled
+		reuseDisabled atomic.Bool
 		// cacheQuery the cache query
 		cacheQuery url.Values
 	}
@@ -114,7 +108,7 @@ func (c *Context) Err() error {
 	return c.Context().Err()
 }
 
-func (c *Context) Value(key interface{}) interface{} {
+func (c *Context) Value(key any) any {
 	return c.Context().Value(key)
 }
 
@@ -134,7 +128,7 @@ func (c *Context) Reset() {
 	c.m = nil
 	c.realIP = ""
 	c.clientIP = ""
-	c.reuseStatus = ReuseContextEnabled
+	c.reuseDisabled.Store(false)
 	c.cacheQuery = nil
 }
 
@@ -185,7 +179,7 @@ func GetClientIP(req *http.Request) string {
 	h := req.Header
 	ip := h.Get(HeaderXForwardedFor)
 	if ip != "" {
-		arr := sort.StringSlice(strings.Split(ip, ","))
+		arr := strings.Split(ip, ",")
 		// 从后往前找第一个非内网IP的则为客户IP
 		for i := len(arr) - 1; i >= 0; i-- {
 			v := strings.TrimSpace(arr[i])
@@ -270,15 +264,15 @@ func (c *Context) Redirect(code int, url string) error {
 }
 
 // Set the value to the context
-func (c *Context) Set(key, value interface{}) {
+func (c *Context) Set(key, value any) {
 	if c.m == nil {
-		c.m = make(map[interface{}]interface{}, 5)
+		c.m = make(map[any]any, 5)
 	}
 	c.m[key] = value
 }
 
 // Get the value from context
-func (c *Context) Get(key interface{}) (interface{}, bool) {
+func (c *Context) Get(key any) (any, bool) {
 	if c.m == nil {
 		return nil, false
 	}
@@ -286,86 +280,20 @@ func (c *Context) Get(key interface{}) (interface{}, bool) {
 	return value, exists
 }
 
-// GetInt returns int value from context
-func (c *Context) GetInt(key interface{}) int {
-	if value, exists := c.Get(key); exists && value != nil {
-		i, _ := value.(int)
-		return i
+// GetContextValue returns the value of the key from the context store.
+// The zero value of T will be returned if the key does not exist
+// or the value doesn't match type T.
+func GetContextValue[T any](c *Context, key any) T {
+	var zero T
+	value, exists := c.Get(key)
+	if !exists || value == nil {
+		return zero
 	}
-	return 0
-}
-
-// GetInt64 returns int64 value from context
-func (c *Context) GetInt64(key interface{}) int64 {
-	if value, exists := c.Get(key); exists && value != nil {
-		i, _ := value.(int64)
-		return i
+	v, ok := value.(T)
+	if !ok {
+		return zero
 	}
-	return 0
-}
-
-// GetString returns string value from context
-func (c *Context) GetString(key interface{}) string {
-	if value, exists := c.Get(key); exists && value != nil {
-		s, _ := value.(string)
-		return s
-	}
-	return ""
-}
-
-// GetBool returns bool value from context
-func (c *Context) GetBool(key interface{}) bool {
-	if value, exists := c.Get(key); exists && value != nil {
-		b, _ := value.(bool)
-		return b
-	}
-	return false
-}
-
-// GetFloat32 returns float32 value from context
-func (c *Context) GetFloat32(key interface{}) float32 {
-	if value, exists := c.Get(key); exists && value != nil {
-		f, _ := value.(float32)
-		return f
-	}
-	return 0
-}
-
-// GetFloat64 returns float64 value from context
-func (c *Context) GetFloat64(key interface{}) float64 {
-	if value, exists := c.Get(key); exists && value != nil {
-		f, _ := value.(float64)
-		return f
-	}
-	return 0
-}
-
-// GetTime returns time value from context
-func (c *Context) GetTime(key interface{}) time.Time {
-	if value, exists := c.Get(key); exists && value != nil {
-		t, _ := value.(time.Time)
-		return t
-
-	}
-	return time.Time{}
-}
-
-// GetDuration returns duration from context
-func (c *Context) GetDuration(key interface{}) time.Duration {
-	if value, exists := c.Get(key); exists && value != nil {
-		d, _ := value.(time.Duration)
-		return d
-	}
-	return 0
-}
-
-// GetStringSlice returns string slice from context
-func (c *Context) GetStringSlice(key interface{}) []string {
-	if value, exists := c.Get(key); exists && value != nil {
-		arr, _ := value.([]string)
-		return arr
-	}
-	return nil
+	return v
 }
 
 // GetRequestHeader returns header value from http request
@@ -419,7 +347,9 @@ func (c *Context) Write(buf []byte) (int, error) {
 	return c.BodyBuffer.Write(buf)
 }
 
-// GetHeader return header value from http response
+// GetHeader returns header value from http response.
+// Note: unqualified header methods (GetHeader/SetHeader/AddHeader) operate
+// on the RESPONSE header, use GetRequestHeader to read the request header
 func (c *Context) GetHeader(key string) string {
 	return c.Header().Get(key)
 }
@@ -451,10 +381,7 @@ func (c *Context) MergeHeader(h http.Header) {
 
 // ResetHeader resets response header
 func (c *Context) ResetHeader() {
-	h := c.Header()
-	for k := range h {
-		h.Del(k)
-	}
+	clear(c.Header())
 }
 
 // Cookie return the cookie from http request
@@ -472,11 +399,11 @@ func (c *Context) getKeys() []string {
 	if e == nil || e.SignedKeys == nil {
 		return nil
 	}
-	return e.SignedKeys.GetKeys()
+	return e.SignedKeys.Keys()
 }
 
-// GetSignedCookie returns signed cookie from http request
-func (c *Context) GetSignedCookie(name string) (*http.Cookie, int, error) {
+// SignedCookieWithIndex returns signed cookie from http request
+func (c *Context) SignedCookieWithIndex(name string) (*http.Cookie, int, error) {
 	cookie, err := c.Cookie(name)
 	if err != nil {
 		return nil, -1, err
@@ -489,7 +416,6 @@ func (c *Context) GetSignedCookie(name string) (*http.Cookie, int, error) {
 	sc, err := c.Cookie(name + SignedCookieSuffix)
 	// 如果获取失败，则获取不到cookie
 	if err != nil {
-		cookie = nil
 		return nil, -1, err
 	}
 	kg := keygrip.New(keys)
@@ -499,7 +425,7 @@ func (c *Context) GetSignedCookie(name string) (*http.Cookie, int, error) {
 
 // SignedCookie returns signed cookie from http request
 func (c *Context) SignedCookie(name string) (*http.Cookie, error) {
-	cookie, index, err := c.GetSignedCookie(name)
+	cookie, index, err := c.SignedCookieWithIndex(name)
 	if err != nil {
 		return cookie, err
 	}
@@ -620,7 +546,7 @@ func (c *Context) PrivateCacheMaxAge(age time.Duration) {
 }
 
 // Created sets the body to response and set the status to 201
-func (c *Context) Created(body interface{}) {
+func (c *Context) Created(body any) {
 	c.StatusCode = http.StatusCreated
 	c.Body = body
 }
@@ -634,8 +560,8 @@ func (c *Context) SetContentTypeByExt(file string) {
 	}
 }
 
-// ReadFile reads file data from request
-func (c *Context) ReadFile(key string) ([]byte, *multipart.FileHeader, error) {
+// ReadFormFile reads the multipart form file data from request
+func (c *Context) ReadFormFile(key string) ([]byte, *multipart.FileHeader, error) {
 	file, header, err := c.Request.FormFile(key)
 	if err != nil {
 		return nil, nil, err
@@ -658,23 +584,11 @@ func (c *Context) HTML(html string) {
 
 // DisableReuse sets the context disable reuse
 func (c *Context) DisableReuse() {
-	atomic.StoreInt32(&c.reuseStatus, ReuseContextDisabled)
+	c.reuseDisabled.Store(true)
 }
 
 func (c *Context) isReuse() bool {
-	return atomic.LoadInt32(&c.reuseStatus) == ReuseContextEnabled
-}
-
-// Push the target to http response
-func (c *Context) Push(target string, opts *http.PushOptions) error {
-	if c.Response == nil {
-		return ErrNilResponse
-	}
-	pusher, ok := c.Response.(http.Pusher)
-	if !ok {
-		return ErrNotSupportPush
-	}
-	return pusher.Push(target, opts)
+	return !c.reuseDisabled.Load()
 }
 
 // Elton returns the elton instance of context
@@ -711,9 +625,22 @@ func (c *Context) IsReaderBody() bool {
 	return ok
 }
 
-// GetTrace get trace from context, if context without trace, new trace will be created.
-func (c *Context) GetTrace() *Trace {
-	return GetTrace(c.Context())
+// closeReaderBody closes the reader body if it implements io.Closer.
+// 用于reader body不会被pipe输出的路径（出错或已有BodyBuffer），
+// 避免文件句柄等资源泄漏。关闭后将Body置空防止重复关闭
+func (c *Context) closeReaderBody() {
+	if !c.IsReaderBody() {
+		return
+	}
+	if closer, ok := c.Body.(io.Closer); ok {
+		_ = closer.Close()
+		c.Body = nil
+	}
+}
+
+// Trace gets trace from context, if context without trace, new trace will be created.
+func (c *Context) Trace() *Trace {
+	return TraceFromContext(c.Context())
 }
 
 // NewTrace returns a new trace and set it to context value

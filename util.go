@@ -43,7 +43,7 @@ type simpleBufferPool struct {
 // the buffer will be init with cap size
 func NewBufferPool(initCap int) BufferPool {
 	p := &simpleBufferPool{}
-	p.pool.New = func() interface{} {
+	p.pool.New = func() any {
 		if initCap > 0 {
 			return bytes.NewBuffer(make([]byte, 0, initCap))
 		}
@@ -86,21 +86,9 @@ func ReadAllInitCap(r io.Reader, initCap int) ([]byte, error) {
 	}
 }
 
-// ReadAllToBuffer reader from r util an error or EOF and write data to buffer.
-// A successful call returns err == nil, not err == EOF. Because ReadAll is
-// defined to read from src until EOF, it does not treat an EOF from Read
-// as an error to be reported.
+// ReadAllToBuffer reads from r until an error or EOF and writes data to buffer.
+// A successful call returns err == nil, not err == EOF.
 func ReadAllToBuffer(r io.Reader, buffer *bytes.Buffer) error {
-	b := make([]byte, 512)
-	for {
-		n, err := r.Read(b)
-		// 先将读取数据写入
-		buffer.Write(b[0:n])
-		if err != nil {
-			if err == io.EOF {
-				err = nil
-			}
-			return err
-		}
-	}
+	_, err := buffer.ReadFrom(r)
+	return err
 }

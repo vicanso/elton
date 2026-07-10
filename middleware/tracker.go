@@ -28,8 +28,9 @@ import (
 	"fmt"
 	"regexp"
 	"time"
+	"unicode/utf8"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 const (
@@ -47,13 +48,13 @@ var (
 type (
 	// TrackerInfo tracker info
 	TrackerInfo struct {
-		CID     string                 `json:"cid,omitempty"`
-		Query   map[string]string      `json:"query,omitempty"`
-		Params  map[string]string      `json:"params,omitempty"`
-		Form    map[string]interface{} `json:"form,omitempty"`
-		Latency time.Duration          `json:"latency,omitempty"`
-		Result  int                    `json:"result,omitempty"`
-		Err     error                  `json:"err,omitempty"`
+		CID     string            `json:"cid,omitempty"`
+		Query   map[string]string `json:"query,omitempty"`
+		Params  map[string]string `json:"params,omitempty"`
+		Form    map[string]any    `json:"form,omitempty"`
+		Latency time.Duration     `json:"latency,omitempty"`
+		Result  int               `json:"result,omitempty"`
+		Err     error             `json:"err,omitempty"`
 	}
 	// OnTrack on track function
 	OnTrack func(*TrackerInfo, *elton.Context)
@@ -69,6 +70,22 @@ type (
 	}
 )
 
+// truncateString 按rune边界截断字符串，避免产生非法utf-8数据
+func truncateString(s string, maxLength int) string {
+	if len(s) <= maxLength {
+		return s
+	}
+	for maxLength > 0 && !utf8.RuneStart(s[maxLength]) {
+		maxLength--
+	}
+	return s[:maxLength]
+}
+
+func cutString(v string, maxLength int) string {
+	prefix := truncateString(v, maxLength)
+	return fmt.Sprintf("%s ... (%d more)", prefix, len(v)-len(prefix))
+}
+
 func convertMap(data map[string]string, mask *regexp.Regexp, maxLength int) map[string]string {
 	size := len(data)
 	if size == 0 {
@@ -78,9 +95,8 @@ func convertMap(data map[string]string, mask *regexp.Regexp, maxLength int) map[
 	for k, v := range data {
 		if mask.MatchString(k) {
 			v = "***"
-			m[k] = "***"
 		} else if maxLength > 0 && len(v) > maxLength {
-			v = fmt.Sprintf("%s ... (%d more)", v[:maxLength], len(v)-maxLength)
+			v = cutString(v, maxLength)
 		}
 		m[k] = v
 	}
@@ -97,10 +113,7 @@ func NewTracker(config TrackerConfig) elton.Handler {
 	if config.OnTrack == nil {
 		panic(ErrTrackerNoFunction)
 	}
-	skipper := config.Skipper
-	if skipper == nil {
-		skipper = elton.DefaultSkipper
-	}
+	skipper := getSkipper(config.Skipper)
 	maxLength := config.MaxLength
 	if maxLength <= 0 {
 		maxLength = 20
@@ -113,9 +126,9 @@ func NewTracker(config TrackerConfig) elton.Handler {
 		result := HandleSuccess
 		query := convertMap(c.Query(), mask, maxLength)
 		params := convertMap(c.Params.ToMap(), mask, maxLength)
-		var form map[string]interface{}
+		var form map[string]any
 		if len(c.RequestBody) != 0 {
-			form = make(map[string]interface{})
+			form = make(map[string]any)
 			_ = json.Unmarshal(c.RequestBody, &form)
 			for k := range form {
 				if mask.MatchString(k) {
@@ -123,8 +136,7 @@ func NewTracker(config TrackerConfig) elton.Handler {
 				} else {
 					str, ok := form[k].(string)
 					if ok && len(str) > maxLength {
-						str = fmt.Sprintf("%s ... (%d more)", str[:maxLength], len(str)-maxLength)
-						form[k] = str
+						form[k] = cutString(str, maxLength)
 					}
 				}
 			}

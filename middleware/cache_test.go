@@ -35,7 +35,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 func TestGetCacheMaxAge(t *testing.T) {
@@ -105,6 +105,32 @@ func TestGetCacheMaxAge(t *testing.T) {
 		age := GetCacheMaxAge(h)
 		assert.Equal(tt.age, age)
 	}
+}
+
+func TestNewCacheResponseCorrupted(t *testing.T) {
+	assert := assert.New(t)
+
+	// 空数据
+	assert.Equal(StatusUnknown, NewCacheResponse(nil).Status)
+
+	// 长度不足定长头部（7~10字节），仅返回状态字节
+	for size := 2; size < 11; size++ {
+		data := make([]byte, size)
+		data[0] = byte(StatusHit)
+		resp := NewCacheResponse(data)
+		assert.Equal(StatusHit, resp.Status)
+		assert.Nil(resp.Header)
+	}
+
+	// 请求头长度字段被污染为超大值，不应越界panic
+	data := make([]byte, 12)
+	data[0] = byte(StatusHit)
+	// header length 位于第8-11字节
+	data[7] = 0xff
+	data[8] = 0xff
+	data[9] = 0xff
+	data[10] = 0xff
+	assert.Equal(StatusUnknown, NewCacheResponse(data).Status)
 }
 
 func TestCacheResponse(t *testing.T) {

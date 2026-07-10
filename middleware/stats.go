@@ -29,7 +29,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
 )
 
@@ -77,17 +77,14 @@ func NewStats(config StatsConfig) elton.Handler {
 	if config.OnStats == nil {
 		panic(ErrStatsNoFunction)
 	}
-	var connectingCount uint32
-	skipper := config.Skipper
-	if skipper == nil {
-		skipper = elton.DefaultSkipper
-	}
+	connectingCount := atomic.Int32{}
+	skipper := getSkipper(config.Skipper)
 	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
 		}
-		connecting := atomic.AddUint32(&connectingCount, 1)
-		defer atomic.AddUint32(&connectingCount, ^uint32(0))
+		connecting := connectingCount.Add(1)
+		defer connectingCount.Add(-1)
 
 		startedAt := time.Now()
 
@@ -101,7 +98,7 @@ func NewStats(config StatsConfig) elton.Handler {
 			Method:          req.Method,
 			Route:           c.Route,
 			URI:             uri,
-			Connecting:      connecting,
+			Connecting:      uint32(connecting),
 			IP:              c.RealIP(),
 			RequestBodySize: len(c.RequestBody),
 		}
@@ -111,11 +108,10 @@ func NewStats(config StatsConfig) elton.Handler {
 		info.Latency = time.Since(startedAt)
 		status := c.StatusCode
 		if err != nil {
-			he, ok := err.(*hes.Error)
-			if ok {
+			status = http.StatusInternalServerError
+			he := &hes.Error{}
+			if errors.As(err, &he) {
 				status = he.StatusCode
-			} else {
-				status = http.StatusInternalServerError
 			}
 		}
 		if status == 0 {

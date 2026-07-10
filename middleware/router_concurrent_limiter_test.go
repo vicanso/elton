@@ -29,13 +29,13 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 func TestRCLLimiter(t *testing.T) {
 
 	assert := assert.New(t)
-	limiter := NewLocalLimiter(map[string]uint32{
+	limiter := NewLocalRouterConcurrencyLimiter(map[string]uint32{
 		"/users/login": 10,
 		"/books/:id":   100,
 	})
@@ -60,10 +60,10 @@ func TestRCLNoLimiterPanic(t *testing.T) {
 	defer func() {
 		r := recover()
 		assert.NotNil(r)
-		assert.Equal(r.(error), ErrRCLRequireLimiter)
+		assert.Equal(r.(error), ErrRequireLimiter)
 	}()
 
-	NewRCL(RCLConfig{})
+	NewRouterConcurrentLimiter(RouterConcurrentLimiterConfig{})
 }
 
 func TestRouterConcurrentLimiter(t *testing.T) {
@@ -74,8 +74,8 @@ func TestRouterConcurrentLimiter(t *testing.T) {
 		return skipErr
 	}
 
-	defaultLimiter := NewRCL(RCLConfig{
-		Limiter: NewLocalLimiter(map[string]uint32{
+	defaultLimiter := NewRouterConcurrentLimiter(RouterConcurrentLimiterConfig{
+		Limiter: NewLocalRouterConcurrencyLimiter(map[string]uint32{
 			"POST /users/login": 1,
 			"GET /books/:id":    100,
 		}),
@@ -121,7 +121,7 @@ func TestRouterConcurrentLimiter(t *testing.T) {
 				}
 				return c
 			},
-			err: createRCLError(2, 1),
+			err: createRouterConcurrentLimiterError(2, 1),
 		},
 		{
 			newContext: func() *elton.Context {

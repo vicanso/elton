@@ -32,7 +32,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
 )
 
@@ -40,6 +40,8 @@ const (
 	// ErrProxyCategory proxy error category
 	ErrProxyCategory = "elton-proxy"
 	ProxyTargetKey   = "proxyTarget"
+	// proxyErrorKey 保存当前请求的代理出错信息
+	proxyErrorKey = "proxyError"
 )
 
 var (
@@ -83,7 +85,7 @@ type bufferPool struct {
 
 func newBufferPool(size int) *bufferPool {
 	p := &bufferPool{}
-	p.pool.New = func() interface{} {
+	p.pool.New = func() any {
 		buf := make([]byte, size)
 		return &buf
 	}
@@ -151,6 +153,25 @@ func generateRewrites(arr []string) (rewrites []*rewriteRegexp, err error) {
 	return
 }
 
+// newReverseProxy 创建reverse proxy，出错信息通过context传递，
+// 保证并发请求间不会串写
+func newReverseProxy(target *url.URL, config *ProxyConfig, bufPool httputil.BufferPool) *httputil.ReverseProxy {
+	p := httputil.NewSingleHostReverseProxy(target)
+	if config.Transport != nil {
+		p.Transport = config.Transport
+	}
+	p.BufferPool = bufPool
+	p.ErrorHandler = func(rw http.ResponseWriter, _ *http.Request, e error) {
+		he := hes.NewWithError(e)
+		he.Category = ErrProxyCategory
+		he.Exception = true
+		if c, ok := rw.(*elton.Context); ok {
+			c.Set(proxyErrorKey, he)
+		}
+	}
+	return p
+}
+
 // NewProxy returns a new proxy middleware, it can proxy the request to other server.
 // It will throw a panic if Target and TargetPicker function is nil.
 // It will throw a panic if Rewrites config is not a regexp.
@@ -162,12 +183,14 @@ func NewProxy(config ProxyConfig) elton.Handler {
 	if err != nil {
 		panic(err)
 	}
-	skipper := config.Skipper
-	if skipper == nil {
-		skipper = elton.DefaultSkipper
-	}
+	skipper := getSkipper(config.Skipper)
 	// 默认使用32KB的buffer
 	bufPool := newBufferPool(32 * 1024)
+	// 静态target的reverse proxy可安全并发复用
+	var sharedProxy *httputil.ReverseProxy
+	if config.Target != nil {
+		sharedProxy = newReverseProxy(config.Target, &config, bufPool)
+	}
 	return func(c *elton.Context) error {
 		if skipper(c) {
 			return c.Next()
@@ -176,26 +199,23 @@ func NewProxy(config ProxyConfig) elton.Handler {
 			defer config.Done(c)
 		}
 		target := config.Target
-		var done ProxyDone
+		p := sharedProxy
 		if target == nil {
-			target, done, err = config.TargetPicker(c)
+			t, done, err := config.TargetPicker(c)
 			if err != nil {
 				return err
 			}
 			if done != nil {
 				defer done(c)
 			}
-		}
-		// 如果无target，则抛错
-		if target == nil {
-			return ErrProxyTargetIsNil
+			// 如果无target，则抛错
+			if t == nil {
+				return ErrProxyTargetIsNil
+			}
+			target = t
+			p = newReverseProxy(target, &config, bufPool)
 		}
 		c.Set(ProxyTargetKey, target.String())
-		p := httputil.NewSingleHostReverseProxy(target)
-		if config.Transport != nil {
-			p.Transport = config.Transport
-		}
-		p.BufferPool = bufPool
 		req := c.Request
 		var originalPath, originalHost string
 		if len(rewrites) != 0 {
@@ -206,16 +226,9 @@ func NewProxy(config ProxyConfig) elton.Handler {
 			originalHost = req.Host
 			req.Host = config.Host
 		}
-		p.ErrorHandler = func(_ http.ResponseWriter, _ *http.Request, e error) {
-			he := hes.NewWithError(e)
-			he.Category = ErrProxyCategory
-			he.Exception = true
-			err = he
-		}
 		p.ServeHTTP(c, req)
-
-		if err != nil {
-			return err
+		if value, exists := c.Get(proxyErrorKey); exists {
+			return value.(error)
 		}
 		if originalPath != "" {
 			req.URL.Path = originalPath

@@ -33,7 +33,7 @@ import (
 	"io"
 
 	"github.com/pierrec/lz4"
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 const (
@@ -101,9 +101,9 @@ package main
 import (
 	"bytes"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 	compress "github.com/vicanso/elton-compress"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {

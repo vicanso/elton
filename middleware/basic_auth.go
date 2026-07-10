@@ -26,7 +26,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
 )
 
@@ -85,10 +85,7 @@ func NewBasicAuth(config BasicAuthConfig) elton.Handler {
 		realm = config.Realm
 	}
 	wwwAuthenticate := basic + ` realm="` + realm + `"`
-	skipper := config.Skipper
-	if skipper == nil {
-		skipper = elton.DefaultSkipper
-	}
+	skipper := getSkipper(config.Skipper)
 	return func(c *elton.Context) error {
 		if skipper(c) || c.Request.Method == http.MethodOptions {
 			return c.Next()
@@ -105,11 +102,11 @@ func NewBasicAuth(config BasicAuthConfig) elton.Handler {
 
 		// 如果返回出错，则输出出错信息
 		if e != nil {
-			err, ok := e.(*hes.Error)
-			if !ok {
-				err = getBasicAuthError(e, http.StatusBadRequest)
+			he := &hes.Error{}
+			if errors.As(e, &he) {
+				return he
 			}
-			return err
+			return getBasicAuthError(e, http.StatusBadRequest)
 		}
 
 		// 如果校验失败，设置认证头，客户重新输入

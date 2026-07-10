@@ -28,7 +28,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 func TestNoTrackPanic(t *testing.T) {
@@ -99,7 +99,7 @@ func TestTracker(t *testing.T) {
 				Params: map[string]string{
 					"category": "login",
 				},
-				Form: map[string]interface{}{
+				Form: map[string]any{
 					"account":  "tree.xie tree.xie tr ... (6 more)",
 					"password": "***",
 				},

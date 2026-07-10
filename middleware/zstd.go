@@ -27,7 +27,7 @@ import (
 	"io"
 
 	"github.com/klauspost/compress/zstd"
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 type (
@@ -37,6 +37,11 @@ type (
 		MinLength int
 	}
 )
+
+// NewZstdCompressor returns a new zstd compressor
+func NewZstdCompressor() *ZstdCompressor {
+	return &ZstdCompressor{}
+}
 
 // Accept accept zstd encoding
 func (z *ZstdCompressor) Accept(c *elton.Context, bodySize int) (bool, string) {
@@ -53,10 +58,7 @@ func (z *ZstdCompressor) getLevel() int {
 	if level <= 0 {
 		level = int(zstd.SpeedBetterCompression)
 	}
-	if level > int(zstd.SpeedBestCompression) {
-		level = int(zstd.SpeedBestCompression)
-	}
-	return level
+	return min(level, int(zstd.SpeedBestCompression))
 }
 
 func (z *ZstdCompressor) getMinLength() int {

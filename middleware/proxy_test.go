@@ -33,7 +33,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
 )
 
@@ -258,8 +258,8 @@ func TestProxy(t *testing.T) {
 			assert.Equal(tt.err.Error(), err.Error())
 		}
 		assert.Equal(tt.statusCode, c.StatusCode)
-		assert.Equal(tt.target, c.GetString(ProxyTargetKey))
-		assert.Equal(tt.proxyDone, c.GetBool(proxyDoneKey))
+		assert.Equal(tt.target, elton.GetContextValue[string](c, ProxyTargetKey))
+		assert.Equal(tt.proxyDone, elton.GetContextValue[bool](c, proxyDoneKey))
 		assert.Equal(tt.result, c.BodyBuffer)
 	}
 

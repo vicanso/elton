@@ -31,6 +31,7 @@ import (
 	"net/http"
 	"reflect"
 	"runtime"
+	"slices"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -40,14 +41,20 @@ import (
 	intranetip "github.com/vicanso/intranet-ip"
 )
 
+// Status is the running status of elton
+type Status int32
+
 const (
 	// StatusRunning running status
-	StatusRunning = iota
+	StatusRunning Status = iota
 	// StatusClosing closing status
 	StatusClosing
 	// StatusClosed closed status
 	StatusClosed
 )
+
+// ErrServerNotInitialized the http server of elton is not initialized
+var ErrServerNotInitialized = errors.New("server is not initialized")
 
 type (
 	// Skipper check for skip middleware
@@ -75,11 +82,11 @@ type (
 		SignedKeys SignedKeysGenerator
 
 		// status of elton
-		status int32
+		status atomic.Int32
 		// route tree
 		tree *node
 		// routers all router infos
-		routers []*RouterInfo
+		routers []RouterInfo
 		// middlewares middleware function
 		middlewares []Handler
 		// preMiddlewares pre middleware function
@@ -92,7 +99,9 @@ type (
 		beforeListeners []BeforeListener
 		// functionInfos the function address:name map
 		functionInfos map[uintptr]string
-		ctxPool       sync.Pool
+		// functionInfosMutex protects functionInfos for concurrent access
+		functionInfosMutex sync.RWMutex
+		ctxPool            sync.Pool
 	}
 
 	// Router router
@@ -106,6 +115,7 @@ type (
 		Path        string
 		HandlerList []Handler
 		routers     []*Router
+		children    []*Group
 	}
 	// ErrorHandler error handle function
 	ErrorHandler func(*Context, error)
@@ -149,7 +159,7 @@ func NewWithoutServer() *Elton {
 		tree:          new(node),
 		functionInfos: make(map[uintptr]string),
 	}
-	e.ctxPool.New = func() interface{} {
+	e.ctxPool.New = func() any {
 		return &Context{
 			elton:  e,
 			Params: new(RouteParams),
@@ -173,15 +183,19 @@ func IsIntranet(ip string) bool {
 
 // SetFunctionName sets the name of handler function,
 // it will use to http timing
-func (e *Elton) SetFunctionName(fn interface{}, name string) {
+func (e *Elton) SetFunctionName(fn any, name string) {
 	p := reflect.ValueOf(fn).Pointer()
+	e.functionInfosMutex.Lock()
+	defer e.functionInfosMutex.Unlock()
 	e.functionInfos[p] = name
 }
 
 // GetFunctionName return the name of handler function
-func (e *Elton) GetFunctionName(fn interface{}) string {
+func (e *Elton) GetFunctionName(fn any) string {
 	p := reflect.ValueOf(fn).Pointer()
+	e.functionInfosMutex.RLock()
 	name := e.functionInfos[p]
+	e.functionInfosMutex.RUnlock()
 	if name != "" {
 		return name
 	}
@@ -189,71 +203,88 @@ func (e *Elton) GetFunctionName(fn interface{}) string {
 }
 
 // ListenAndServe listens the addr and serve http,
-// it will throw panic if the server of elton is nil.
+// it returns ErrServerNotInitialized if the server of elton is nil.
 func (e *Elton) ListenAndServe(addr string) error {
 	if e.Server == nil {
-		panic(errors.New("server is not initialized"))
+		return ErrServerNotInitialized
 	}
 	e.Server.Addr = addr
 	return e.Server.ListenAndServe()
 }
 
-// ListenAndServeTLS listens the addr and server https,
-// it will throw panic if the server of elton is nil.
+// ListenAndServeTLS listens the addr and serve https,
+// it returns ErrServerNotInitialized if the server of elton is nil.
 func (e *Elton) ListenAndServeTLS(addr, certFile, keyFile string) error {
 	if e.Server == nil {
-		panic(errors.New("server is not initialized"))
+		return ErrServerNotInitialized
 	}
 	e.Server.Addr = addr
 	return e.Server.ListenAndServeTLS(certFile, keyFile)
 }
 
 // Serve serves http server,
-// it will throw panic if the server of elton is nil.
+// it returns ErrServerNotInitialized if the server of elton is nil.
 func (e *Elton) Serve(l net.Listener) error {
 	if e.Server == nil {
-		panic(errors.New("server is not initialized"))
+		return ErrServerNotInitialized
 	}
 	return e.Server.Serve(l)
 }
 
 // Close closes the http server
 func (e *Elton) Close() error {
+	if e.Server == nil {
+		return ErrServerNotInitialized
+	}
 	return e.Server.Close()
 }
 
-// Shutdown shotdowns the http server
-func (e *Elton) Shutdown() error {
-	return e.Server.Shutdown(context.Background())
+// Shutdown gracefully shuts down the http server without
+// interrupting any active connections
+func (e *Elton) Shutdown(ctx context.Context) error {
+	if e.Server == nil {
+		return ErrServerNotInitialized
+	}
+	return e.Server.Shutdown(ctx)
 }
 
-// GracefulClose closes the http server graceful.
-// It sets the status to be closing and delay to close.
-func (e *Elton) GracefulClose(delay time.Duration) error {
-	atomic.StoreInt32(&e.status, StatusClosing)
-	time.Sleep(delay)
-	atomic.StoreInt32(&e.status, StatusClosed)
-	return e.Shutdown()
+// GracefulClose closes the http server gracefully.
+// It sets the status to be closing (rejecting new requests with 503),
+// waits for the delay, then shuts down the server.
+// ctx取消时停止等待并立即进入shutdown（此时Shutdown会关闭监听
+// 并立即返回ctx.Err，不再等待活跃连接处理完成）。
+func (e *Elton) GracefulClose(ctx context.Context, delay time.Duration) error {
+	e.status.Store(int32(StatusClosing))
+	if delay > 0 {
+		timer := time.NewTimer(delay)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+		case <-timer.C:
+		}
+	}
+	e.status.Store(int32(StatusClosed))
+	return e.Shutdown(ctx)
 }
 
-// GetStatus returns status of elton
-func (e *Elton) GetStatus() int32 {
-	return atomic.LoadInt32(&e.status)
+// Status returns status of elton
+func (e *Elton) Status() Status {
+	return Status(e.status.Load())
 }
 
 // Closing judge the status whether is closing
 func (e *Elton) Closing() bool {
-	return e.GetStatus() == StatusClosing
+	return e.Status() == StatusClosing
 }
 
 // Running judge the status whether is running
 func (e *Elton) Running() bool {
-	return e.GetStatus() == StatusRunning
+	return e.Status() == StatusRunning
 }
 
 // ServeHTTP http handler
 func (e *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	status := e.GetStatus()
+	status := e.Status()
 	// 非运行中的状态
 	if status != StatusRunning {
 		resp.WriteHeader(http.StatusServiceUnavailable)
@@ -295,26 +326,27 @@ func (e *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// GetRouters returns routers of elton
-func (e *Elton) GetRouters() []RouterInfo {
-	routers := make([]RouterInfo, len(e.routers))
-	for index, r := range e.routers {
-		routers[index] = *r
-	}
-	return routers
+// Routers returns routers of elton
+func (e *Elton) Routers() []RouterInfo {
+	return slices.Clone(e.routers)
 }
 
-// Handle adds http handle function
+// Handle adds http handle function.
+// 注册时将全局中间件（Use添加）与该路由的handler列表合并为一条执行链，
+// 请求到达时通过c.Next()逐个推进（洋葱模型）：
+//   - 任一环节返回error则中断，触发error监听器并输出错误响应；
+//   - c.Committed为true时Next短路，不再执行后续handler；
+//   - 链执行完成后，统一将BodyBuffer（或reader类型的Body）写出至响应。
+//
+// 注意：路由注册（Handle/GET/POST/Use等）应在服务启动前完成，
+// 路由树不支持与请求处理并发修改。
 func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 	for _, fn := range handlerList {
 		name := e.GetFunctionName(fn)
 		e.SetFunctionName(fn, name)
 	}
 
-	if e.routers == nil {
-		e.routers = make([]*RouterInfo, 0)
-	}
-	e.routers = append(e.routers, &RouterInfo{
+	e.routers = append(e.routers, RouterInfo{
 		Method: method,
 		Route:  path,
 	})
@@ -389,11 +421,15 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 		c.Committed = true
 		// 如果出错则触发出错处理，返回
 		if err != nil {
+			// 出错时reader body不会被输出，关闭避免资源泄漏
+			c.closeReaderBody()
 			e.error(c, err)
 			return
 		}
 		// 需要在设置status code之前设置响应长度
 		if c.BodyBuffer != nil {
+			// BodyBuffer优先输出，若Body为未使用的reader则关闭
+			c.closeReaderBody()
 			c.SetHeader(HeaderContentLength, strconv.Itoa(c.BodyBuffer.Len()))
 		}
 		if c.StatusCode != 0 {
@@ -470,9 +506,6 @@ func (e *Elton) Multi(methods []string, path string, handlerList ...Handler) *El
 
 // Use adds middleware handler function to elton's middleware list
 func (e *Elton) Use(handlerList ...Handler) *Elton {
-	if e.middlewares == nil {
-		e.middlewares = make([]Handler, 0)
-	}
 	for _, fn := range handlerList {
 		name := e.GetFunctionName(fn)
 		e.SetFunctionName(fn, name)
@@ -489,9 +522,6 @@ func (e *Elton) UseWithName(handler Handler, name string) *Elton {
 
 // Pre adds pre middleware function handler to elton's pre middleware list
 func (e *Elton) Pre(handlerList ...PreHandler) *Elton {
-	if e.preMiddlewares == nil {
-		e.preMiddlewares = make([]PreHandler, 0)
-	}
 	e.preMiddlewares = append(e.preMiddlewares, handlerList...)
 	return e
 }
@@ -541,10 +571,10 @@ func (e *Elton) error(c *Context, err error) *Elton {
 	}
 
 	resp := c.Response
-	he, ok := err.(*hes.Error)
 	status := http.StatusInternalServerError
 	message := err.Error()
-	if ok {
+	he := &hes.Error{}
+	if errors.As(err, &he) {
 		status = he.StatusCode
 		message = he.Error()
 	}
@@ -569,14 +599,12 @@ func (e *Elton) emitError(resp http.ResponseWriter, req *http.Request, err error
 	e.EmitError(&Context{
 		Request:  req,
 		Response: resp,
+		elton:    e,
 	}, err)
 }
 
 // OnError adds listen to error event
 func (e *Elton) OnError(ln ErrorListener) *Elton {
-	if e.errorListeners == nil {
-		e.errorListeners = make([]ErrorListener, 0)
-	}
 	e.errorListeners = append(e.errorListeners, ln)
 	return e
 }
@@ -592,9 +620,6 @@ func (e *Elton) EmitTrace(c *Context, infos TraceInfos) *Elton {
 
 // OnTrace adds listen to trace event
 func (e *Elton) OnTrace(ln TraceListener) *Elton {
-	if e.traceListeners == nil {
-		e.traceListeners = make([]TraceListener, 0)
-	}
 	e.traceListeners = append(e.traceListeners, ln)
 	return e
 }
@@ -602,9 +627,6 @@ func (e *Elton) OnTrace(ln TraceListener) *Elton {
 // OnDone adds listen to request done, it will be triggered
 // when the request handle is done
 func (e *Elton) OnDone(ln DoneListener) *Elton {
-	if e.doneListeners == nil {
-		e.doneListeners = make([]DoneListener, 0)
-	}
 	e.doneListeners = append(e.doneListeners, ln)
 	return e
 }
@@ -617,9 +639,6 @@ func (e *Elton) emitDone(c *Context) {
 
 // OnBefore adds listen to before request done(after pre middlewares, before middlewares)
 func (e *Elton) OnBefore(ln BeforeListener) *Elton {
-	if e.beforeListeners == nil {
-		e.beforeListeners = make([]BeforeListener, 0)
-	}
 	e.beforeListeners = append(e.beforeListeners, ln)
 	return e
 }
@@ -630,12 +649,13 @@ func (e *Elton) emitBefore(c *Context) {
 	}
 }
 
-// AddGroup adds the group to elton
+// AddGroup adds the group and its sub groups to elton
 func (e *Elton) AddGroup(groups ...*Group) *Elton {
 	for _, g := range groups {
 		for _, r := range g.routers {
 			e.Handle(r.Method, r.Path, r.HandleList...)
 		}
+		e.AddGroup(g.children...)
 	}
 	return e
 }
@@ -648,85 +668,79 @@ func (g *Group) merge(s2 []Handler) []Handler {
 	return fns
 }
 
-func (g *Group) add(method, path string, handlerList ...Handler) {
-	if g.routers == nil {
-		g.routers = make([]*Router, 0, 5)
+// NewGroup returns a new sub group of the group,
+// the path and handler list will be merged with the parent's.
+// The sub group will be added to elton together with its parent
+// by elton.AddGroup.
+func (g *Group) NewGroup(path string, handlerList ...Handler) *Group {
+	child := &Group{
+		Path:        g.Path + path,
+		HandlerList: g.merge(handlerList),
 	}
+	g.children = append(g.children, child)
+	return child
+}
+
+func (g *Group) handle(method, path string, handlerList ...Handler) *Group {
 	g.routers = append(g.routers, &Router{
 		Method:     method,
-		Path:       path,
-		HandleList: handlerList,
+		Path:       g.Path + path,
+		HandleList: g.merge(handlerList),
 	})
+	return g
 }
 
 // GET adds http get method handler to group
-func (g *Group) GET(path string, handlerList ...Handler) {
-	p := g.Path + path
-	fns := g.merge(handlerList)
-	g.add(http.MethodGet, p, fns...)
+func (g *Group) GET(path string, handlerList ...Handler) *Group {
+	return g.handle(http.MethodGet, path, handlerList...)
 }
 
 // POST adds http post method handler to group
-func (g *Group) POST(path string, handlerList ...Handler) {
-	p := g.Path + path
-	fns := g.merge(handlerList)
-	g.add(http.MethodPost, p, fns...)
+func (g *Group) POST(path string, handlerList ...Handler) *Group {
+	return g.handle(http.MethodPost, path, handlerList...)
 }
 
 // PUT adds http put method handler to group
-func (g *Group) PUT(path string, handlerList ...Handler) {
-	p := g.Path + path
-	fns := g.merge(handlerList)
-	g.add(http.MethodPut, p, fns...)
+func (g *Group) PUT(path string, handlerList ...Handler) *Group {
+	return g.handle(http.MethodPut, path, handlerList...)
 }
 
 // PATCH adds http patch method handler to group
-func (g *Group) PATCH(path string, handlerList ...Handler) {
-	p := g.Path + path
-	fns := g.merge(handlerList)
-	g.add(http.MethodPatch, p, fns...)
+func (g *Group) PATCH(path string, handlerList ...Handler) *Group {
+	return g.handle(http.MethodPatch, path, handlerList...)
 }
 
 // DELETE adds http delete method handler to group
-func (g *Group) DELETE(path string, handlerList ...Handler) {
-	p := g.Path + path
-	fns := g.merge(handlerList)
-	g.add(http.MethodDelete, p, fns...)
+func (g *Group) DELETE(path string, handlerList ...Handler) *Group {
+	return g.handle(http.MethodDelete, path, handlerList...)
 }
 
 // HEAD adds http head method handler to group
-func (g *Group) HEAD(path string, handlerList ...Handler) {
-	p := g.Path + path
-	fns := g.merge(handlerList)
-	g.add(http.MethodHead, p, fns...)
+func (g *Group) HEAD(path string, handlerList ...Handler) *Group {
+	return g.handle(http.MethodHead, path, handlerList...)
 }
 
 // OPTIONS adds http options method handler to group
-func (g *Group) OPTIONS(path string, handlerList ...Handler) {
-	p := g.Path + path
-	fns := g.merge(handlerList)
-	g.add(http.MethodOptions, p, fns...)
+func (g *Group) OPTIONS(path string, handlerList ...Handler) *Group {
+	return g.handle(http.MethodOptions, path, handlerList...)
 }
 
 // TRACE adds http trace method handler to group
-func (g *Group) TRACE(path string, handlerList ...Handler) {
-	p := g.Path + path
-	fns := g.merge(handlerList)
-	g.add(http.MethodTrace, p, fns...)
+func (g *Group) TRACE(path string, handlerList ...Handler) *Group {
+	return g.handle(http.MethodTrace, path, handlerList...)
 }
 
 // ALL adds http all methods handler to group
-func (g *Group) ALL(path string, handlerList ...Handler) {
-	g.Multi(methods, path, handlerList...)
+func (g *Group) ALL(path string, handlerList ...Handler) *Group {
+	return g.Multi(methods, path, handlerList...)
 }
 
-// ALL adds http all methods handler to group
-func (g *Group) Multi(methods []string, path string, handlerList ...Handler) {
-	p := g.Path + path
-	fns := g.merge(handlerList)
+// Multi adds multi http methods handler to group
+func (g *Group) Multi(methods []string, path string, handlerList ...Handler) *Group {
 	for _, method := range methods {
-		g.add(method, p, fns...)
+		g.handle(method, path, handlerList...)
 	}
+	return g
 }
 
 // Compose composes handler list as a handler

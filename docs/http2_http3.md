@@ -25,7 +25,7 @@ package main
 import (
 	"bytes"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 func main() {
@@ -55,7 +55,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 // 获取证书内容
@@ -113,8 +113,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 )
@@ -194,7 +194,7 @@ import (
 	"time"
 
 	"github.com/lucas-clemente/quic-go/http3"
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 const listenAddr = ":4000"

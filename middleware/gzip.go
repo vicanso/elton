@@ -27,7 +27,7 @@ import (
 	"compress/gzip"
 	"io"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 )
 
 type (
@@ -37,6 +37,11 @@ type (
 		MinLength int
 	}
 )
+
+// NewGzipCompressor returns a new gzip compressor
+func NewGzipCompressor() *GzipCompressor {
+	return &GzipCompressor{}
+}
 
 // Accept accept gzip encoding
 func (g *GzipCompressor) Accept(c *elton.Context, bodySize int) (bool, string) {
@@ -96,10 +101,7 @@ func (g *GzipCompressor) getLevel() int {
 	if level <= 0 {
 		level = gzip.DefaultCompression
 	}
-	if level > gzip.BestCompression {
-		level = gzip.BestCompression
-	}
-	return level
+	return min(level, gzip.BestCompression)
 }
 
 func (g *GzipCompressor) getMinLength() int {

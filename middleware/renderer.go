@@ -26,7 +26,7 @@ import (
 	"bytes"
 	"path/filepath"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
 )
 
@@ -34,7 +34,7 @@ type RenderData struct {
 	File         string
 	Text         string
 	TemplateType string
-	Data         interface{}
+	Data         any
 }
 
 type RendererConfig struct {
@@ -80,10 +80,7 @@ var (
 // It will render the template with data,
 // and set response data as html.
 func NewRenderer(config RendererConfig) elton.Handler {
-	skipper := config.Skipper
-	if skipper == nil {
-		skipper = elton.DefaultSkipper
-	}
+	skipper := getSkipper(config.Skipper)
 	parsers := config.Parsers
 	if parsers == nil {
 		parsers = elton.DefaultTemplateParsers
@@ -125,8 +122,8 @@ func NewRenderer(config RendererConfig) elton.Handler {
 			return ErrTemplateTypeInvalid
 		}
 		var html string
-		file := filepath.Join(config.ViewPath, data.File)
-		if file != "" {
+		if data.File != "" {
+			file := filepath.Join(config.ViewPath, data.File)
 			html, err = parser.RenderFile(c.Context(), file, data.Data)
 		} else {
 			html, err = parser.Render(c.Context(), data.Text, data.Data)

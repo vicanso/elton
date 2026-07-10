@@ -26,7 +26,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/vicanso/elton"
+	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
 )
 
@@ -47,12 +47,12 @@ var ErrResponseTooLarge = &hes.Error{
 	StatusCode: http.StatusInternalServerError,
 }
 
-// NewResponseSizeLimiter returns a new response size limiter
+// NewResponseSizeLimiter returns a new response size limiter.
+// 注意：仅对缓冲型响应（BodyBuffer）生效，流式reader body不做限制；
+// 且校验发生在body已生成之后，用于阻止超大响应返回客户端，
+// 而非阻止其占用服务端内存
 func NewResponseSizeLimiter(config ResponseSizeLimiterConfig) elton.Handler {
-	skipper := config.Skipper
-	if skipper == nil {
-		skipper = elton.DefaultSkipper
-	}
+	skipper := getSkipper(config.Skipper)
 	if config.MaxSize <= 0 {
 		panic(errors.New("max size should be > 0"))
 	}

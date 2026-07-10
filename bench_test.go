@@ -67,7 +67,7 @@ func BenchmarkContextGet(b *testing.B) {
 func BenchmarkContextNewMap(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = make(map[string]interface{})
+		_ = make(map[string]any)
 	}
 }
 
@@ -85,7 +85,7 @@ func BenchmarkConvertServerTiming(b *testing.B) {
 	}
 }
 
-func BenchmarkGetStatus(b *testing.B) {
+func BenchmarkStatus(b *testing.B) {
 	b.ReportAllocs()
 	var v int32
 	for i := 0; i < b.N; i++ {

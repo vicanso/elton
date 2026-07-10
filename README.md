@@ -8,10 +8,18 @@
 Elton的实现参考了[koa](https://github.com/koajs/koa)以及[echo](https://github.com/labstack/echo)，中间件的调用为洋葱模型：请求由外至内，响应由内至外。主要特性如下：
 
 - 处理函数（中间件）均以返回error的形式响应出错，方便使用统一的出错处理中间件将出错统一转换为对应的输出（JSON），并根据出错的类型等生成各类统计分析
-- 成功响应数据直接赋值至Context.Body（interface{})，由统一的响应中间件将其转换为对应的输出（JSON，XML）
+- 成功响应数据直接赋值至Context.Body（any），由统一的响应中间件将其转换为对应的输出（JSON，XML）
 - 支持不同种类的事件，如`OnBefore`、`OnDone`、`OnError`等，方便添加各类统计行为
 
 如何使用`elton`开发WEB后端程序，可以参考[一步一步学习如何使用elton](https://treexie.gitbook.io/elton-beginner/)
+
+## 安装
+
+```bash
+go get github.com/vicanso/elton/v2
+```
+
+从 1.x 升级请参考[2.0 迁移指南](./docs/migration-v2.md)。
 
 ## Hello, World!
 
@@ -21,8 +29,8 @@ Elton的实现参考了[koa](https://github.com/koajs/koa)以及[echo](https://g
 package main
 
 import (
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -117,7 +125,7 @@ e.GET("/users/me", func(c *elton.Context) error {
 	c.Set("account", "tree.xie")
 	return c.Next()
 }, func(c *elton.Context) error {
-	c.BodyBuffer = bytes.NewBufferString(c.GetString("account"))
+	c.BodyBuffer = bytes.NewBufferString(elton.GetContextValue[string](c, "account"))
 	return nil
 })
 ```
@@ -128,14 +136,14 @@ e.GET("/users/me", func(c *elton.Context) error {
 
 ### responder
 
-HTTP请求响应数据时，需要将数据转换为Buffer返回，而在应用时响应数据一般为各类的struct或map等结构化数据，因此elton提供了Body(interface{})字段来保存这些数据，再使用自定义的中间件将数据转换为对应的字节数据，`elton-responder`提供了将struct(map)转换为json字节并设置对应的Content-Type，对于string([]byte)则直接输出。
+HTTP请求响应数据时，需要将数据转换为Buffer返回，而在应用时响应数据一般为各类的struct或map等结构化数据，因此elton提供了Body(any)字段来保存这些数据，再使用自定义的中间件将数据转换为对应的字节数据，`elton-responder`提供了将struct(map)转换为json字节并设置对应的Content-Type，对于string([]byte)则直接输出。
 
 ```go
 package main
 
 import (
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
 func main() {
@@ -153,7 +161,7 @@ func main() {
 			Name string `json:"name"`
 			Type string `json:"type"`
 		}{
-			c.GetString("account"),
+			elton.GetContextValue[string](c, "account"),
 			"vip",
 		}
 		return
@@ -174,8 +182,8 @@ func main() {
 package main
 
 import (
-	"github.com/vicanso/elton"
-	"github.com/vicanso/elton/middleware"
+	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 	"github.com/vicanso/hes"
 )
 
