@@ -184,9 +184,21 @@ func TestFresh(t *testing.T) {
 }
 
 func BenchmarkFresh(b *testing.B) {
-	b.ResetTimer()
 	reqHeader := createRequestHeader("Sat, 01 Jan 2000 00:00:00 GMT", "\"foo\"", "")
 	resHeader := createResponseHeader("Sat, 01 Jan 2000 00:00:00 GMT", "\"foo\"")
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		Fresh(reqHeader, resHeader)
+	}
+}
+
+func BenchmarkFreshMultiETag(b *testing.B) {
+	// 多 ETag 列表，覆盖手写 CSV 分割路径
+	reqHeader := createRequestHeader("", `"a", "b", "foo", "c"`, "")
+	resHeader := createResponseHeader("", `"foo"`)
+	b.ReportAllocs()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		Fresh(reqHeader, resHeader)
 	}

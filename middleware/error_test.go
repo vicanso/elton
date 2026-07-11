@@ -107,7 +107,7 @@ func TestErrorHandler(t *testing.T) {
 				return c
 			},
 			fn:           defaultErrorHandler,
-			result:       bytes.NewBufferString(`statusCode=500, category=elton-error, message=abcd`),
+			result:       bytes.NewBufferString(`statusCode=500, category=elton-error, message=abcd, exception=true`),
 			cacheControl: "public, max-age=300",
 			contentType:  "text/plain; charset=utf-8",
 		},

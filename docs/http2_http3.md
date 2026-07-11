@@ -181,7 +181,7 @@ curl -v --http2-prior-knowledge http://127.0.0.1:3000/
 
 ## http3
 
-http3现在支持的浏览器只有chrome canary以及firefox最新版本，虽然http3的标准方案已确定，但是需要注意http3模块的使用范围并不广泛，建议不要在正式环境中大规模使用。下面是使用[quic-go](https://github.com/lucas-clemente/quic-go)使用http3的示例：
+HTTP/3 浏览器支持已较过去改善，但生产仍需评估基础设施与证书（通常需 TLS）。下面使用 [quic-go](https://github.com/quic-go/quic-go) 的示例（模块路径已从旧的 `lucas-clemente/quic-go` 迁至 `quic-go/quic-go`，请以当前文档为准）：
 
 ```go
 package main
@@ -191,9 +191,10 @@ import (
 	"crypto/tls"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
-	"github.com/lucas-clemente/quic-go/http3"
+	"github.com/quic-go/quic-go/http3"
 	"github.com/vicanso/elton/v2"
 )
 

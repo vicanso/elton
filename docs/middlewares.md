@@ -4,27 +4,48 @@ description: 各类常用的中间件
 
 # Middlewares
 
+- [recommended](#recommended) 常用全局中间件栈（一键 `e.Use(middleware.Recommended()...)`）
 - [basic auth](#basic-auth) HTTP Basic Auth，建议只用于内部管理系统使用
-- [body parser](#body-parser) 请求数据的解析中间件，支持`application/json`以及`application/x-www-form-urlencoded`两种数据类型
-- [cache](#cache) HTTP缓存模块，基于响应头的`Cache-Control`缓存数据，并支持缓存时以br或gzip压缩后缓存 
-- [compress](#compress) 数据压缩中间件，默认仅支持gzip。如果需要支持更多的压缩方式，如brotli、snappy、zstd以及lz4，可以使用[elton-compress](https://github.com/vicanso/elton-compress)，也可根据需要增加相应的压缩处理
-- [concurrent limiter](#concurrent-limiter) 根据指定参数限制并发请求，可用于订单提交等防止重复提交或限制提交频率的场景
-- [error handler](#error-handler) 用于将处理函数的Error转换为对应的响应数据，如HTTP响应中的状态码(4xx, 5xx)，对应的出错类别等，建议在实际使用中根据项目自定义的Error对象生成相应的响应数据
-- [etag](#etag) 用于生成HTTP响应数据的ETag
-- [fresh](#fresh) 判断HTTP请求是否未修改(Not Modified)
-- [json picker](https://github.com/vicanso/elton-json-picker) 用于从响应的JSON中筛选指定字段
-- [jwt](https://github.com/vicanso/elton-jwt) jwt中间件
-- [logger](#logger) 生成HTTP请求日志，支持从请求头、响应头中获取相应信息
-- [proxy](#proxy) Proxy中间件，可定义请求转发至其它的服务
-- [recover](#recover) 捕获程序的panic异常，避免程序崩溃
-- [renderer](#renderer) 模板渲染中间件，用于将模板编译输出为html
-- [responder](#responder) 响应处理中间件，用于将`Context.Body`(interface{})转换为对应的JSON数据并输出。如果系统使用xml等输出响应数据，可参考此中间件实现interface{}至xml的转换
-- [response-size-limiter](#response-size-limiter) 响应长度限制中间件，用于限制响应数据的最大长度
-- [router-concurrent-limiter](#router-concurrent-limiter) 路由并发限制中间件，可以针对路由限制并发请求量。
-- [session](https://github.com/vicanso/elton-session) Session中间件，默认支持保存内存中，可自定义相应的存储实现保存至redis等数据库。
-- [stats](#stats) 请求处理的统计中间件，包括处理时长、状态码、响应数据长度、连接数等信息
-- [static serve](#static-serve) 静态文件处理中间件，默认支持从目录中读取静态文件或实现StaticFile的相关接口，从[packr](github.com/gobuffalo/packr/v2)或者数据库(mongodb)等读取文件
-- [tracker](#tracker) 可以用于在POST、PUT等提交类的接口中增加跟踪日志，此中间件将输出QueryString，Params以及RequestBody部分，并能将指定的字段做"***"的处理，避免输出敏感信息
+- [body parser](#body-parser) 请求数据解析，支持 `application/json` 与 `application/x-www-form-urlencoded`
+- [cache](#cache) HTTP 缓存，基于响应头 `Cache-Control`，可配合 br/gzip/zstd 压缩后写入 store
+- [compress](#compress) 响应压缩；内置 gzip / brotli / zstd，其它算法（如 snappy、lz4）可实现 `Compressor` 接口扩展（见 [自定义压缩](./custom_compress.md)）
+- [cors](#cors) 跨域（含预检短路）
+- [global concurrent limiter](#global-concurrent-limiter) 全局在途请求数限制
+- [concurrent limiter](#concurrent-limiter) 按 IP/头/query/body 等维度限制并发，防重复提交
+- [error handler](#error-handler) 将处理函数返回的 `error` 转为 HTTP 状态码与响应体（内置支持 [hes.Error](https://github.com/vicanso/hes)）
+- [etag](#etag) 生成响应 ETag
+- [fresh](#fresh) 判断是否可返回 304 Not Modified
+- [json picker](https://github.com/vicanso/elton-json-picker)（外部）从响应 JSON 中筛选字段
+- [jwt](https://github.com/vicanso/elton-jwt)（外部）JWT 中间件
+- [logger](#logger) 请求日志，可从请求/响应头取值
+- [proxy](#proxy) 反向代理
+- [recover](#recover) 捕获 panic，避免进程崩溃
+- [renderer](#renderer) 模板渲染为 HTML
+- [request id](#request-id) 请求 ID（透传或生成，写入响应头与 context）
+- [responder](#responder) 将 `Context.Body`（`any`）转为 JSON 等并写入 `BodyBuffer`；XML 等可自定义 marshal
+- [response-size-limiter](#response-size-limiter) 限制响应体最大长度
+- [router-concurrent-limiter](#router-concurrent-limiter) 按路由限制并发
+- [session](https://github.com/vicanso/elton-session)（外部）Session，默认可存内存，可自定义存 redis 等
+- [stats](#stats) 请求统计（耗时、状态码、响应长度等）
+- [static serve](#static-serve) 静态文件；支持 OS 目录、`embed.FS`、自实现 `StaticFile` / encoding FS
+- [timeout](#timeout) 请求处理截止时间（依赖 `c.Context()` 协作取消）
+- [tracker](#tracker) 提交类接口跟踪日志（Query/Params/Body，支持字段脱敏）
+
+## recommended
+
+JSON API 常用全局栈，等价于 README Hello World 中的中间件组合，并加上 RequestID：
+
+`Recover → Error → RequestID → BodyParser → Fresh → ETag → Responder`
+
+```go
+e := elton.New()
+e.Use(middleware.Recommended()...)
+// 按需再加：CORS、Timeout、Compress、Logger
+e.Use(middleware.NewDefaultTimeout(5 * time.Second))
+e.Use(middleware.NewDefaultCORS())
+```
+
+完整示例见仓库 [`examples/`](../examples/)。
 
 ## basic auth
 
@@ -184,15 +205,19 @@ func main() {
 
 ## compress
 
-响应数据压缩中间件，可对特定数据类型、数据长度的响应数据做压缩处理。默认支持`gzip`，`brotli`压缩，可扩展更多的压缩方式，如：lz4，zstd等。
+响应压缩中间件，可按 `Content-Type`、体长度与客户端 `Accept-Encoding` 选择算法。
+
+- **内置**：`NewGzipCompressor()`、`NewBrCompressor()`、`NewZstdCompressor()`
+- **默认**：`NewDefaultCompress()` 仅启用 gzip；多算法请用 `NewCompressConfig(...)` / `NewCompress`
+- **扩展**：实现 `Compressor` 接口即可接入 snappy、lz4 等，见 [自定义压缩](./custom_compress.md)
 
 ### Compressor
 
-实现自定义的压缩主要实现三下方法：
+自定义压缩需实现：
 
-- `Accept` 判断该压缩是否支持该压缩，根据请求头以及响应数据大小
-- `Compress` 数据压缩方法
-- `Pipe` 数据Pipe处理
+- `Accept`：是否对当前请求/体长启用该编码
+- `Compress`：缓冲数据压缩（可选 level 参数）
+- `Pipe`：流式 `Body`（`io.Reader`）压缩写出
 
 **Example**
 ```go
@@ -209,7 +234,12 @@ func main() {
 
 	e := elton.New()
 
-	e.Use(middleware.NewDefaultCompress())
+	// 同时启用 gzip / br / zstd（按 Accept-Encoding 协商）
+	e.Use(middleware.NewCompress(middleware.NewCompressConfig(
+		middleware.NewGzipCompressor(),
+		middleware.NewBrCompressor(),
+		middleware.NewZstdCompressor(),
+	)))
 
 	e.Use(middleware.NewDefaultResponder())
 
@@ -236,7 +266,9 @@ func main() {
 
 ## global concurrent limiter
 
-全局的并发请求限制，可以用于控制应用的并发请求量。
+全局在途请求数限制，用于保护进程不被瞬时流量打满。
+
+**Max 语义（重要）**：在途计数 `Add(1)` 之后若 `value >= Max` 则拒绝。因此配置 `Max: N` 时，**实际允许的最大并发为 `N - 1`**（与 v1 一致）。例如希望最多 1000 路同时处理，应设 `Max: 1001`，或按「阈值」理解并在容量规划中预留 1。
 
 **Example**
 ```go
@@ -244,7 +276,6 @@ package main
 
 import (
 	"bytes"
-	"sync"
 	"time"
 
 	"github.com/vicanso/elton/v2"
@@ -255,6 +286,7 @@ func main() {
 
 	e := elton.New()
 	e.Use(middleware.NewGlobalConcurrentLimiter(middleware.GlobalConcurrentLimiterConfig{
+		// 在途达到 1000 时拒绝 → 实际最多约 999 个并发在途
 		Max: 1000,
 	}))
 
@@ -698,7 +730,7 @@ func main() {
 
 ## router concurrent limiter
 
-路由限制中间件，可以指定路由的并发访问数量，建议使用`NewLocalLimiter`每个实例的限制分开，主要是用于避免某个接口并发过高导致系统不稳定。
+按路由限制并发，避免单接口打满进程。本地实现请用 `NewLocalRouterConcurrencyLimiter`（v2 已重命名，原 `NewLocalLimiter` / `NewRCL` 见 [迁移指南](./migration-v2.md)）。
 
 **Example**
 ```go
@@ -776,9 +808,14 @@ func main() {
 
 ## static serve
 
-静态文件处理中间件，默认支持通过目录访问，在实例使用中可以根据需求实现接口以使用各类不同的存储方式，如`packr`打包或mongodb存储等。
+静态文件中间件。常见用法：
 
-**Example**
+- **OS 目录**：`middleware.NewFSStaticServe(config)`（v2 语义名；内部使用 `middleware.FS`，根目录为 `config.Path`）
+- **embed**：`middleware.NewEmbedStaticServe(embedFS, config)`
+- **自实现**：实现 `StaticFile`（`Exists` / `Get` / `Stat` / `NewReader` 返回 `io.ReadCloser`），再 `NewStaticServe`
+- **预压缩资源**：`NewEncodingStaticServe`，按 Accept-Encoding 选择编码 FS
+
+**Example（目录）**
 ```go
 package main
 
@@ -792,9 +829,7 @@ import (
 func main() {
 	e := elton.New()
 
-	sf := new(middleware.FS)
-	// static file route
-	e.GET("/*", middleware.NewStaticServe(sf, middleware.StaticServeConfig{
+	e.GET("/*", middleware.NewFSStaticServe(middleware.StaticServeConfig{
 		Path: "/tmp",
 		// 客户端缓存一年
 		MaxAge: 365 * 24 * time.Hour,
@@ -802,7 +837,7 @@ func main() {
 		SMaxAge:             time.Hour,
 		DenyQueryString:     true,
 		DisableLastModified: true,
-		// 如果使用packr，它不支持Stat，因此需要用强ETag
+		// 无 Stat 的后端可开强 ETag
 		EnableStrongETag: true,
 	}))
 
@@ -813,65 +848,30 @@ func main() {
 }
 ```
 
-使用packr打包前端应用程序，通过static serve提供网站静态文件访问：
-
-**Example**
+**Example（go:embed）**
 ```go
 package main
 
 import (
-	"bytes"
-	"io"
+	"embed"
 	"time"
-	"os"
 
-	packr "github.com/gobuffalo/packr/v2"
 	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/elton/v2/middleware"
 )
 
-var (
-	box = packr.New("asset", "./")
-)
-
-type (
-	staticFile struct {
-		box *packr.Box
-	}
-)
-
-func (sf *staticFile) Exists(file string) bool {
-	return sf.box.Has(file)
-}
-func (sf *staticFile) Get(file string) ([]byte, error) {
-	return sf.box.Find(file)
-}
-func (sf *staticFile) Stat(file string) os.FileInfo {
-	return nil
-}
-func (sf *staticFile) NewReader(file string) (io.Reader, error) {
-	buf, err := sf.Get(file)
-	if err != nil {
-		return nil, err
-	}
-	return bytes.NewReader(buf), nil
-}
+//go:embed assets/*
+var assets embed.FS
 
 func main() {
 	e := elton.New()
 
-	sf := &staticFile{
-		box: box,
-	}
-
-	// static file route
-	e.GET("/static/*", middleware.NewStaticServe(sf, middleware.StaticServeConfig{
-		// 客户端缓存一年
-		MaxAge: 365 * 24 * time.Hour,
-		// 缓存服务器缓存一个小时
-		SMaxAge:             time.Hour,
-		DenyQueryString:     true,
-		DisableLastModified: true,
+	e.GET("/static/*", middleware.NewEmbedStaticServe(assets, middleware.StaticServeConfig{
+		// embed 内子路径，按实际调整；也可留空表示根
+		Path:            "assets",
+		MaxAge:          365 * 24 * time.Hour,
+		SMaxAge:         time.Hour,
+		DenyQueryString: true,
 	}))
 
 	err := e.ListenAndServe(":3000")
@@ -880,6 +880,8 @@ func main() {
 	}
 }
 ```
+
+自定义存储（对象存储等）实现 `StaticFile` 即可：`NewReader` 须返回 `io.ReadCloser`（内存数据可用 `io.NopCloser`），关闭由框架统一负责。
 
 ## tracker
 
@@ -927,4 +929,38 @@ func main() {
 		panic(err)
 	}
 }
+```
+## cors
+
+跨域中间件。预检（`OPTIONS` + `Access-Control-Request-Method`）会设置 CORS 头并 `204` 短路，不调用后续中间件。
+
+**Example**
+```go
+e.Use(middleware.NewCORS(middleware.CORSConfig{
+	AllowOrigins:     []string{"https://app.example"},
+	AllowCredentials: true,
+	MaxAge:           time.Hour,
+	ExposeHeaders:    []string{middleware.HeaderXRequestID},
+}))
+// 或任意 origin（无 credentials）：middleware.NewDefaultCORS()
+```
+
+## timeout
+
+为请求 context 设置 deadline。业务与下游客户端应使用 `c.Context()`；超时后返回 504（`ErrRequestTimeout`）。**不会**强制中断已在运行的非协作代码。
+
+**Example**
+```go
+e.Use(middleware.NewDefaultTimeout(5 * time.Second))
+// 或 NewTimeout(middleware.TimeoutConfig{Timeout: 3 * time.Second})
+```
+
+## request id
+
+确保每个请求有 ID：优先使用请求头 `X-Request-Id`（可配置），否则生成 16 字节 hex；写入 context（`middleware.GetRequestID`）、响应头，并在 `c.ID` 为空时填充。
+
+**Example**
+```go
+e.Use(middleware.NewDefaultRequestID())
+// logger 中可用 {>X-Request-Id} 或 {:requestId}
 ```

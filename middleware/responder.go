@@ -120,10 +120,8 @@ func NewResponder(config ResponderConfig) elton.Handler {
 				// 使用marshal转换（默认为转换为json）
 				buf, e := marshal(data)
 				if e != nil {
-					he := hes.NewWithErrorStatusCode(e, http.StatusInternalServerError)
-					he.Category = ErrResponderCategory
-					he.Exception = true
-					return he
+					// hes.Wrap 对非 hes 错误默认 500 + Exception
+					return hes.Wrap(e, hes.WithCategory(ErrResponderCategory))
 				}
 				if !hadContentType {
 					c.SetHeader(elton.HeaderContentType, contentType)

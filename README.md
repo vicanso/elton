@@ -36,21 +36,10 @@ import (
 func main() {
 	e := elton.New()
 
-	// panic处理
-	e.Use(middleware.NewRecover())
-
-	// 出错处理
-	e.Use(middleware.NewDefaultError())
-
-	// 默认的请求数据解析
-	e.Use(middleware.NewDefaultBodyParser())
-
-	// not modified 304的处理
-	e.Use(middleware.NewDefaultFresh())
-	e.Use(middleware.NewDefaultETag())
-
-	// 响应数据转换为json
-	e.Use(middleware.NewDefaultResponder())
+	// Recover + Error + RequestID + BodyParser + Fresh + ETag + Responder
+	e.Use(middleware.Recommended()...)
+	// 可选：e.Use(middleware.NewDefaultTimeout(5*time.Second))
+	// 可选：e.Use(middleware.NewDefaultCORS())
 
 	e.GET("/", func(c *elton.Context) error {
 		c.Body = &struct {
@@ -84,10 +73,11 @@ func main() {
 ```
 
 ```bash
-go run main.go
+go run ./examples/hello
+# 或自建 main.go 后 go run .
 ```
 
-之后在浏览器中打开`http://localhost:3000/`则能看到返回的`Hello, World!`。
+之后在浏览器中打开`http://localhost:3000/`则能看到返回的`Hello, World!`。更多示例见 [`examples/`](./examples/)。
 
 ## 路由
 
@@ -136,7 +126,7 @@ e.GET("/users/me", func(c *elton.Context) error {
 
 ### responder
 
-HTTP请求响应数据时，需要将数据转换为Buffer返回，而在应用时响应数据一般为各类的struct或map等结构化数据，因此elton提供了Body(any)字段来保存这些数据，再使用自定义的中间件将数据转换为对应的字节数据，`elton-responder`提供了将struct(map)转换为json字节并设置对应的Content-Type，对于string([]byte)则直接输出。
+HTTP请求响应数据时，需要将数据转换为Buffer返回，而在应用时响应数据一般为各类的struct或map等结构化数据，因此elton提供了`Body`（`any`）字段来保存这些数据，再由中间件转换为对应的字节数据。内置的 `middleware.NewDefaultResponder()` 会将 struct/map 转为 JSON 并设置 `Content-Type`，对 `string`/`[]byte` 则直接输出。
 
 ```go
 package main
@@ -215,37 +205,46 @@ func main() {
 
 ## bench
 
+```bash
+go test -bench=. -benchmem ./...
+```
+
+参考结果（darwin/arm64，elton 2.0 / Go 1.24+）：
+
 ```
 goos: darwin
-goarch: amd64
-pkg: github.com/vicanso/elton
-BenchmarkRoutes-8                        6925746               169.4 ns/op           120 B/op          2 allocs/op
-BenchmarkGetFunctionName-8              136577900                9.265 ns/op           0 B/op          0 allocs/op
-BenchmarkContextGet-8                   15311328                78.11 ns/op           16 B/op          1 allocs/op
-BenchmarkContextNewMap-8                187684261                6.276 ns/op           0 B/op          0 allocs/op
-BenchmarkConvertServerTiming-8           1484379               835.8 ns/op           360 B/op         11 allocs/op
-BenchmarkGetStatus-8                    1000000000               0.2817 ns/op          0 B/op          0 allocs/op
-BenchmarkFresh-8                          955664              1233 ns/op             416 B/op         10 allocs/op
-BenchmarkStatic-8                          25128             46709 ns/op           20794 B/op        471 allocs/op
-BenchmarkGitHubAPI-8                       14724             76190 ns/op           27175 B/op        609 allocs/op
-BenchmarkGplusAPI-8                       326769              3659 ns/op            1717 B/op         39 allocs/op
-BenchmarkParseAPI-8                       162340              6989 ns/op            3435 B/op         78 allocs/op
-BenchmarkRWMutexSignedKeys-8            71757390                17.51 ns/op            0 B/op          0 allocs/op
-BenchmarkAtomicSignedKeys-8             923771157                1.297 ns/op           0 B/op          0 allocs/op
+goarch: arm64
+pkg: github.com/vicanso/elton/v2
+BenchmarkRoutes-12                 	18873722	        55.69 ns/op	     120 B/op	       2 allocs/op
+BenchmarkGetFunctionName-12        	295134098	         4.082 ns/op	       0 B/op	       0 allocs/op
+BenchmarkContextGet-12             	57954447	        20.43 ns/op	       0 B/op	       0 allocs/op
+BenchmarkContextNewMap-12          	227259025	         5.333 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConvertServerTiming-12    	 3219936	       367.6 ns/op	     360 B/op	      11 allocs/op
+BenchmarkStatus-12                 	1000000000	         0.2438 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFresh-12                  	 2878122	       407.8 ns/op	     326 B/op	       8 allocs/op
+BenchmarkStatic-12                 	   64177	     17887 ns/op	   21147 B/op	     471 allocs/op
+BenchmarkGitHubAPI-12              	   40027	     29236 ns/op	   26832 B/op	     609 allocs/op
+BenchmarkGplusAPI-12               	  837277	      1295 ns/op	    1744 B/op	      39 allocs/op
+BenchmarkParseAPI-12               	  445596	      2526 ns/op	    3479 B/op	      78 allocs/op
+BenchmarkRWMutexSignedKeys-12      	313402153	         3.828 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAtomicSignedKeys-12       	1000000000	         0.7715 ns/op	       0 B/op	       0 allocs/op
+BenchmarkReadAllInitCap-12         	     520	   2258030 ns/op	73546877 B/op	      14 allocs/op
 PASS
-ok      github.com/vicanso/elton        20.225s
+ok  	github.com/vicanso/elton/v2
 goos: darwin
-goarch: amd64
-pkg: github.com/vicanso/elton/middleware
-BenchmarkGenETag-8                        230718              4409 ns/op             160 B/op          6 allocs/op
-BenchmarkMd5-8                            200134              5958 ns/op             120 B/op          6 allocs/op
-BenchmarkNewShortHTTPHeader-8           10220961               116.4 ns/op            80 B/op          2 allocs/op
-BenchmarkNewHTTPHeader-8                 4368654               277.1 ns/op            88 B/op          3 allocs/op
-BenchmarkNewHTTPHeaders-8                 384062              2822 ns/op            1182 B/op         23 allocs/op
-BenchmarkHTTPHeaderMarshal-8              225123              4664 ns/op            1344 B/op         21 allocs/op
-BenchmarkToHTTPHeader-8                   296210              3834 ns/op            1272 B/op         34 allocs/op
-BenchmarkHTTPHeaderUnmarshal-8            120136             10108 ns/op            1888 B/op         50 allocs/op
-BenchmarkProxy-8                           13393             85170 ns/op           16031 B/op        104 allocs/op
+goarch: arm64
+pkg: github.com/vicanso/elton/v2/middleware
+BenchmarkBodyParserBufferPool-12    	  219397	      5430 ns/op	   23393 B/op	      24 allocs/op
+BenchmarkGenETag-12                 	  878080	      1370 ns/op	     128 B/op	       5 allocs/op
+BenchmarkMd5-12                     	  251551	      4744 ns/op	      96 B/op	       5 allocs/op
+BenchmarkNewShortHTTPHeader-12      	23356375	        51.05 ns/op	      80 B/op	       2 allocs/op
+BenchmarkNewHTTPHeader-12           	17233610	        69.85 ns/op	      88 B/op	       3 allocs/op
+BenchmarkNewHTTPHeaders-12          	 1528754	       797.2 ns/op	    1136 B/op	      23 allocs/op
+BenchmarkHTTPHeaderMarshal-12       	 1501634	       797.6 ns/op	     920 B/op	      16 allocs/op
+BenchmarkToHTTPHeader-12            	 1452776	       842.2 ns/op	    1272 B/op	      34 allocs/op
+BenchmarkHTTPHeaderUnmarshal-12     	  513957	      2328 ns/op	    1216 B/op	      36 allocs/op
+BenchmarkLRUStore-12                	13680637	        87.71 ns/op	      16 B/op	       1 allocs/op
+BenchmarkProxy-12                   	   25860	     45085 ns/op	   20476 B/op	     112 allocs/op
 PASS
-ok      github.com/vicanso/elton/middleware     14.007s
+ok  	github.com/vicanso/elton/v2/middleware
 ```

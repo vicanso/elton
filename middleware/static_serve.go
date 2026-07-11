@@ -25,7 +25,6 @@ package middleware
 import (
 	"bytes"
 	"embed"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -263,12 +262,7 @@ func NewEncodingStaticServe(config StaticServeConfig, selector EncodingFsSelecto
 		if !config.DisableETag && config.EnableStrongETag {
 			buf, e := staticFile.Get(file)
 			if e != nil {
-				he := &hes.Error{}
-				if !errors.As(e, &he) {
-					he = hes.NewWithErrorStatusCode(e, http.StatusInternalServerError)
-					he.Category = ErrStaticServeCategory
-				}
-				return he
+				return wrapAsHesError(e, ErrStaticServeCategory)
 			}
 			fileBuf = buf
 		}

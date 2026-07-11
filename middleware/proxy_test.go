@@ -63,17 +63,43 @@ func TestInvalidRewrite(t *testing.T) {
 
 func TestGenerateRewrites(t *testing.T) {
 	assert := assert.New(t)
+
+	// SplitN：replacement 可含 ':'
 	regs, err := generateRewrites([]string{
 		"a:b:c",
 	})
 	assert.Nil(err)
-	assert.Equal(0, len(regs), "rewrite regexp map should be 0")
+	assert.Equal(1, len(regs))
+	assert.Equal("b:c", regs[0].Value)
 
+	// 缺少分隔符：报错（不再静默跳过）
+	regs, err = generateRewrites([]string{
+		"nocolon",
+	})
+	assert.NotNil(err)
+	assert.Nil(regs)
+
+	// 空 pattern：报错
+	regs, err = generateRewrites([]string{
+		":/only-replacement",
+	})
+	assert.NotNil(err)
+	assert.Nil(regs)
+
+	// 非法正则：报错
 	regs, err = generateRewrites([]string{
 		"/(d/:a",
 	})
 	assert.NotNil(err)
-	assert.Equal(0, len(regs), "regexp map should be 0 when error occur")
+	assert.Nil(regs)
+
+	// 正常规则
+	regs, err = generateRewrites([]string{
+		"/api/*:/$1",
+	})
+	assert.Nil(err)
+	assert.Equal(1, len(regs))
+	assert.Equal("/$1", regs[0].Value)
 }
 
 func newServer() (net.Listener, *url.URL) {
@@ -174,7 +200,7 @@ func TestProxy(t *testing.T) {
 			}),
 			err: &hes.Error{
 				Category:   ErrProxyCategory,
-				StatusCode: 400,
+				StatusCode: http.StatusBadGateway,
 				Message:    "dial tcp 127.0.0.1:443: connect: connection refused",
 				Exception:  true,
 			},

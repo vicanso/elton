@@ -61,16 +61,19 @@ func NewError(config ErrorConfig) elton.Handler {
 			return nil
 		}
 		he := wrapAsHesError(err, ErrErrorCategory)
-		c.StatusCode = he.StatusCode
+		// 自定义 hes.Error 未设置 StatusCode 时兜底为 500
+		c.StatusCode = he.StatusOrInternal()
 		if config.ResponseType == "json" ||
 			strings.Contains(c.GetRequestHeader("Accept"), "application/json") {
-			buf := he.ToJSON()
-			c.BodyBuffer = bytes.NewBuffer(buf)
-			c.SetHeader(elton.HeaderContentType, elton.MIMEApplicationJSON)
-		} else {
-			c.BodyBuffer = bytes.NewBufferString(he.Error())
-			c.SetHeader(elton.HeaderContentType, elton.MIMETextPlain)
+			// 序列化失败时降级为 text 输出
+			if buf, e := he.ToJSON(); e == nil {
+				c.BodyBuffer = bytes.NewBuffer(buf)
+				c.SetHeader(elton.HeaderContentType, elton.MIMEApplicationJSON)
+				return nil
+			}
 		}
+		c.BodyBuffer = bytes.NewBufferString(he.Error())
+		c.SetHeader(elton.HeaderContentType, elton.MIMETextPlain)
 
 		return nil
 	}

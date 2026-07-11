@@ -2,6 +2,8 @@
 
 * [Introduction](./docs/introduction.md)
 
+* [Migration Guide (v2)](./docs/migration-v2.md)
+
 * [Application](./docs/application.md)
 
 * [Context](./docs/context.md)
@@ -9,6 +11,8 @@
 * [Group](./docs/group.md)
 
 * [Middlewares](./docs/middlewares.md)
+
+* [Examples](./examples/README.md)
 
 ## More
 

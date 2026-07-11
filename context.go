@@ -40,7 +40,6 @@ import (
 	"time"
 
 	"github.com/vicanso/hes"
-	"github.com/vicanso/keygrip"
 )
 
 type (
@@ -394,22 +393,17 @@ func (c *Context) AddCookie(cookie *http.Cookie) {
 	http.SetCookie(c, cookie)
 }
 
-func (c *Context) getKeys() []string {
-	e := c.elton
-	if e == nil || e.SignedKeys == nil {
-		return nil
-	}
-	return e.SignedKeys.Keys()
-}
-
 // SignedCookieWithIndex returns signed cookie from http request
 func (c *Context) SignedCookieWithIndex(name string) (*http.Cookie, int, error) {
 	cookie, err := c.Cookie(name)
 	if err != nil {
 		return nil, -1, err
 	}
-	keys := c.getKeys()
-	if len(keys) == 0 {
+	if c.elton == nil {
+		return nil, -1, ErrSignKeyIsNil
+	}
+	kg := c.elton.keygrip()
+	if kg == nil {
 		return nil, -1, ErrSignKeyIsNil
 	}
 
@@ -418,7 +412,6 @@ func (c *Context) SignedCookieWithIndex(name string) (*http.Cookie, int, error) 
 	if err != nil {
 		return nil, -1, err
 	}
-	kg := keygrip.New(keys)
 	index := kg.Index([]byte(cookie.Value), []byte(sc.Value))
 	return cookie, index, nil
 }
@@ -483,11 +476,13 @@ func cloneCookie(cookie *http.Cookie) *http.Cookie {
 func (c *Context) addSigCookie(cookie *http.Cookie) {
 	sc := cloneCookie(cookie)
 	sc.Name = sc.Name + SignedCookieSuffix
-	keys := c.getKeys()
-	if len(keys) == 0 {
+	if c.elton == nil {
 		return
 	}
-	kg := keygrip.New(keys)
+	kg := c.elton.keygrip()
+	if kg == nil {
+		return
+	}
 	sc.Value = string(kg.Sign([]byte(sc.Value)))
 	c.AddCookie(sc)
 }

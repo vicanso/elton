@@ -25,6 +25,7 @@ package middleware
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -134,26 +135,27 @@ func (fd *formURLEncodedDecoder) Validate(c *elton.Context) bool {
 func (fd *formURLEncodedDecoder) Decode(c *elton.Context, originalData []byte) ([]byte, error) {
 	urlValues, err := url.ParseQuery(string(originalData))
 	if err != nil {
-		he := hes.Wrap(err)
-		he.Exception = true
-		return nil, he
+		return nil, hes.Wrap(err)
 	}
 
-	arr := make([]string, 0, len(urlValues))
+	// 经 json.Marshal 序列化，避免手工拼接导致的转义缺失与字段注入
+	m := make(map[string]any, len(urlValues))
 	for key, values := range urlValues {
-		// 此处有可能导致如果一次该值只有一个，一次有两个，会导致数据类型不匹配
-		// 后续再确认是否调整（不建议使用form url encode）
 		if len(values) < 2 {
-			arr = append(arr, fmt.Sprintf(`"%s":"%s"`, key, values[0]))
+			if len(values) == 0 {
+				m[key] = ""
+			} else {
+				m[key] = values[0]
+			}
 			continue
 		}
-		tmpArr := []string{}
-		for _, v := range values {
-			tmpArr = append(tmpArr, `"`+v+`"`)
-		}
-		arr = append(arr, fmt.Sprintf(`"%s":[%s]`, key, strings.Join(tmpArr, ",")))
+		// 同 key 多值保持为字符串数组；单值与多值类型仍可能不一致（form 固有问题）
+		m[key] = values
 	}
-	data := []byte("{" + strings.Join(arr, ",") + "}")
+	data, err := json.Marshal(m)
+	if err != nil {
+		return nil, hes.Wrap(err)
+	}
 	return data, nil
 }
 
@@ -283,9 +285,17 @@ func (rr *requestBodyReader) ReadAll(c *elton.Context) ([]byte, error) {
 	var body []byte
 	var err error
 	contentLength := c.GetRequestHeader(elton.HeaderContentLength)
-	// 如果有设置数据长度，直接初始化相应的容量读取
+	// 有合法 Content-Length 时预分配；容量不得超过 limit，避免恶意 CL 放大内存
+	initCap := 0
 	if contentLength != "" {
-		initCap, _ := strconv.Atoi(contentLength)
+		if n, parseErr := strconv.Atoi(contentLength); parseErr == nil && n > 0 {
+			initCap = n
+			if limit > 0 && initCap > limit {
+				initCap = limit
+			}
+		}
+	}
+	if initCap > 0 {
 		body, err = elton.ReadAllInitCap(r, initCap)
 	} else {
 		b := rr.bufferPool.Get()
@@ -298,17 +308,11 @@ func (rr *requestBodyReader) ReadAll(c *elton.Context) ([]byte, error) {
 	}
 	if err != nil {
 		// 如果已经是http error
-		if hes.IsError(err) {
+		if hes.Is(err) {
 			return nil, err
 		}
-		// IO 读取失败的认为是 exception
-		return nil, &hes.Error{
-			Exception:  true,
-			StatusCode: http.StatusInternalServerError,
-			Message:    err.Error(),
-			Category:   ErrBodyParserCategory,
-			Err:        err,
-		}
+		// IO 读取失败的认为是 exception（hes.Wrap 默认 500 + Exception）
+		return nil, hes.Wrap(err, hes.WithCategory(ErrBodyParserCategory))
 	}
 	return body, nil
 }

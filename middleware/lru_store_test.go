@@ -49,6 +49,24 @@ func TestLRUStore(t *testing.T) {
 	assert.Empty(buf)
 }
 
+func TestPeekLRUStore(t *testing.T) {
+	assert := assert.New(t)
+	store := NewPeekLRUStore(0) // size<=0 走默认容量
+	assert.NotNil(store)
+	assert.True(store.usePeek)
+
+	ctx := context.Background()
+	_ = store.Set(ctx, "k", []byte("v"), time.Minute)
+	buf, err := store.Get(ctx, "k")
+	assert.Nil(err)
+	assert.Equal([]byte("v"), buf)
+
+	// 不存在
+	buf, err = store.Get(ctx, "missing")
+	assert.Nil(err)
+	assert.Empty(buf)
+}
+
 func BenchmarkLRUStore(b *testing.B) {
 	store := NewLRUStore(128)
 	ctx := context.Background()

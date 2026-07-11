@@ -2,16 +2,14 @@ module github.com/vicanso/elton/v2
 
 go 1.24
 
-
 require (
-	github.com/andybalholm/brotli v1.1.1
+	github.com/andybalholm/brotli v1.2.2
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/klauspost/compress v1.18.0
-	github.com/stretchr/testify v1.10.0
-	github.com/tidwall/gjson v1.18.0
-	github.com/vicanso/hes v0.7.1
-	github.com/vicanso/intranet-ip v0.2.0
-	github.com/vicanso/keygrip v1.3.0
+	github.com/klauspost/compress v1.19.0
+	github.com/stretchr/testify v1.11.1
+	github.com/tidwall/gjson v1.19.0
+	github.com/vicanso/hes v1.0.0
+	github.com/vicanso/keygrip v1.4.0
 )
 
 require (

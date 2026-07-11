@@ -65,7 +65,7 @@ type (
 	}
 )
 
-func doValidate(s interface{}, data interface{}) (err error) {
+func doValidate(s any, data any) (err error) {
 	// 如果有数据则做反序列化
 	if data != nil {
 		switch data := data.(type) {
@@ -133,7 +133,7 @@ var (
 
 func init() {
 	// 添加自定义参数校验，如果返回false则表示参数不符合
-	customTypeTagMap.Set("xAccount", func(i interface{}, _ interface{}) bool {
+	customTypeTagMap.Set("xAccount", func(i any, _ any) bool {
 		v, ok := i.(string)
 		if !ok || v == "" {
 			return false
@@ -148,7 +148,7 @@ func init() {
 		}
 		return true
 	})
-	customTypeTagMap.Set("xPassword", func(i interface{}, _ interface{}) bool {
+	customTypeTagMap.Set("xPassword", func(i any, _ any) bool {
 		v, ok := i.(string)
 		if !ok || v == "" {
 			return false
@@ -172,7 +172,7 @@ type (
 	}
 )
 
-func doValidate(s interface{}, data interface{}) (err error) {
+func doValidate(s any, data any) (err error) {
 	// 如果有数据则做反序列化
 	if data != nil {
 		switch data := data.(type) {

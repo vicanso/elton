@@ -30,9 +30,17 @@ import (
 	"testing"
 
 	"github.com/andybalholm/brotli"
+	"github.com/klauspost/compress/zstd"
 	"github.com/stretchr/testify/assert"
 	"github.com/vicanso/elton/v2"
 )
+
+func TestNewCompressors(t *testing.T) {
+	assert := assert.New(t)
+	assert.NotNil(NewGzipCompressor())
+	assert.NotNil(NewBrCompressor())
+	assert.NotNil(NewZstdCompressor())
+}
 
 func TestCompressor(t *testing.T) {
 	tests := []struct {
@@ -41,7 +49,7 @@ func TestCompressor(t *testing.T) {
 		uncompress func([]byte) ([]byte, error)
 	}{
 		{
-			compressor: new(GzipCompressor),
+			compressor: NewGzipCompressor(),
 			encoding:   elton.Gzip,
 			uncompress: func(b []byte) ([]byte, error) {
 				buffer, err := GzipDecompress(b)
@@ -52,10 +60,21 @@ func TestCompressor(t *testing.T) {
 			},
 		},
 		{
-			compressor: new(BrCompressor),
+			compressor: NewBrCompressor(),
 			encoding:   elton.Br,
 			uncompress: func(b []byte) ([]byte, error) {
 				buffer, err := BrotliDecompress(b)
+				if err != nil {
+					return nil, err
+				}
+				return buffer.Bytes(), nil
+			},
+		},
+		{
+			compressor: NewZstdCompressor(),
+			encoding:   elton.Zstd,
+			uncompress: func(b []byte) ([]byte, error) {
+				buffer, err := ZstdDecompress(b)
 				if err != nil {
 					return nil, err
 				}
@@ -67,7 +86,7 @@ func TestCompressor(t *testing.T) {
 	for _, tt := range tests {
 		originalData := randomString(1024)
 		req := httptest.NewRequest("GET", "/users/me", nil)
-		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+		req.Header.Set("Accept-Encoding", "gzip, deflate, br, zstd")
 		c := elton.NewContext(nil, req)
 
 		acceptable, encoding := tt.compressor.Accept(c, 0)
@@ -97,7 +116,7 @@ func TestCompressorPipe(t *testing.T) {
 		uncompress func(io.Reader) ([]byte, error)
 	}{
 		{
-			compressor: new(GzipCompressor),
+			compressor: NewGzipCompressor(),
 			uncompress: func(r io.Reader) ([]byte, error) {
 				gzipReader, err := gzip.NewReader(r)
 				if err != nil {
@@ -110,9 +129,20 @@ func TestCompressorPipe(t *testing.T) {
 			},
 		},
 		{
-			compressor: new(BrCompressor),
+			compressor: NewBrCompressor(),
 			uncompress: func(r io.Reader) ([]byte, error) {
 				return io.ReadAll(brotli.NewReader(r))
+			},
+		},
+		{
+			compressor: NewZstdCompressor(),
+			uncompress: func(r io.Reader) ([]byte, error) {
+				zr, err := zstd.NewReader(r)
+				if err != nil {
+					return nil, err
+				}
+				defer zr.Close()
+				return io.ReadAll(zr)
 			},
 		},
 	}
@@ -150,6 +180,14 @@ func TestCompressorGetLevel(t *testing.T) {
 	assert.Equal(defaultBrQuality, br.getLevel())
 	br.Level = 1
 	assert.Equal(1, br.getLevel())
+
+	z := ZstdCompressor{
+		Level: 1000,
+	}
+	// 超过 SpeedBestCompression 时被截断
+	assert.Equal(int(zstd.SpeedBestCompression), z.getLevel())
+	z.Level = 0
+	assert.Equal(int(zstd.SpeedBetterCompression), z.getLevel())
 }
 
 func TestCompressorGetMinLength(t *testing.T) {
@@ -164,4 +202,9 @@ func TestCompressorGetMinLength(t *testing.T) {
 	assert.Equal(DefaultCompressMinLength, br.getMinLength())
 	br.MinLength = 1
 	assert.Equal(1, br.getMinLength())
+
+	z := ZstdCompressor{}
+	assert.Equal(DefaultCompressMinLength, z.getMinLength())
+	z.MinLength = 2
+	assert.Equal(2, z.getMinLength())
 }

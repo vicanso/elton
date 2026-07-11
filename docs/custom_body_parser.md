@@ -2,7 +2,7 @@
 description: 自定义Body Parser
 ---
 
-`elton-body-parser`只提供对`application/json`以及`application/x-www-form-urlencoded`转换为json字节的处理，在实际使用中还存在一些其它的场景。如`xml`，自定义数据结构等。
+内置的 `middleware` body parser（`NewDefaultBodyParser` / `NewBodyParser`）主要将 `application/json` 与 `application/x-www-form-urlencoded` 处理为 JSON 字节。实际项目中还可能有 XML、自定义二进制等场景，可通过自定义 `BodyDecoder` 扩展。
 
 在实际项目中，统计数据一般记录至influxdb，为了性能的考虑，统计数据是批量提交（如每1000个统计点提交一次）。数据提交的时候，重复的字符比较多，为了减少带宽的占用，所以先做压缩处理。考虑到性能的原因，采用了`snappy`压缩处理。下面是抽取出来的示例代码：
 
@@ -101,7 +101,7 @@ func main() {
 
 通过各类自定义的中间件，可以实现各种不同的提交数据的解析，只要将解析结果保存至`Context.RequestBody`中，后续则由处理函数再将字节转换为相对应的结构，简单易用。
 
-`elton-body-parser`提供自定义Decoder方式，可以按实际使用添加Decoder，上面的实现可以简化为：
+`BodyParserConfig.AddDecoder` 支持按需挂载 Decoder，上面的实现可以简化为：
 
 ```go
 package main

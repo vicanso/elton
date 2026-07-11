@@ -55,10 +55,10 @@ var (
 )
 
 func getBasicAuthError(err error, statusCode int) *hes.Error {
-	he := hes.Wrap(err)
-	he.StatusCode = statusCode
-	he.Category = ErrBasicAuthCategory
-	return he
+	return hes.New(err.Error(),
+		hes.WithStatus(statusCode),
+		hes.WithCategory(ErrBasicAuthCategory),
+		hes.WithCause(err))
 }
 
 // NewDefaultBasicAuth returns a new basic auth middleware,

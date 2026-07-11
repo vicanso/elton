@@ -2,28 +2,52 @@
 description: 自定义压缩
 ---
 
-绝大多数客户端都支持多种压缩方式，需要不同的场景选择适合的压缩算法，微服务之间的调用更是可以选择一些高性能的压缩方式，下面来介绍如何编写自定义的压缩中间件，主要的要点如下：
+绝大多数客户端都支持多种压缩方式，需要按场景选择合适算法：公网偏重压缩率（br/zstd/gzip），内网微服务可偏向低 CPU（snappy/lz4 等）。
 
-- 根据请求头`Accept-Encoding`判断客户端支持的压缩算法
-- 设定最小压缩长度，避免对较小数据的压缩浪费性能
-- 根据响应头`Content-Type`判断只压缩文本类的响应数据
-- 根据场景平衡压缩率与性能的选择，如内网的可以选择snappy，lz4等高效压缩算法
+## 内置压缩（2.0）
 
-[elton-compress](https://github.com/vicanso/elton-compress)中间件提供了其它几种常用的压缩方式，包括`zstd`以及`snappy`等。如果要增加压缩方式，只需要实现`Compressor`的三个函数则可。
+`github.com/vicanso/elton/v2/middleware` **已内置**：
+
+| 构造函数 | 编码 |
+|----------|------|
+| `NewGzipCompressor()` | gzip |
+| `NewBrCompressor()` | br |
+| `NewZstdCompressor()` | zstd |
+
+```go
+e.Use(middleware.NewCompress(middleware.NewCompressConfig(
+	middleware.NewGzipCompressor(),
+	middleware.NewBrCompressor(),
+	middleware.NewZstdCompressor(),
+)))
+```
+
+`NewDefaultCompress()` 仅启用 gzip。缓存侧还有 `NewCacheGzipCompressor` / `NewCacheBrCompressor` / `NewCacheZstdCompressor` 等，与 HTTP cache 中间件配合使用。
+
+## 扩展自定义算法
+
+实现 `Compressor` 三个方法即可接入任意编码：
 
 ```go
 // Compressor compressor interface
-Compressor interface {
-	// Accept accept check function
+type Compressor interface {
+	// Accept 是否接受该编码（通常看 Accept-Encoding 与 body 大小）
 	Accept(c *elton.Context, bodySize int) (acceptable bool, encoding string)
-	// Compress compress function
-	Compress([]byte) (*bytes.Buffer, error)
-	// Pipe pipe function
+	// Compress 缓冲压缩；level 由中间件 DynamicLevel 等传入，可忽略
+	Compress([]byte, ...int) (*bytes.Buffer, error)
+	// Pipe 流式 Body（io.Reader）压缩写出
 	Pipe(*elton.Context) error
 }
 ```
 
-下面是elton-compress中间件lz4压缩的实现代码：
+常见注意点：
+
+- 根据请求头 `Accept-Encoding` 判断客户端是否支持
+- 设定最小压缩长度，避免对过小 body 浪费 CPU
+- 根据响应头 `Content-Type` 只压缩文本类（中间件默认 checker 为 `text|javascript|json|wasm|font`）
+- 内网可选用 snappy、lz4 等高效算法（需自实现或第三方库）
+
+下面以 **lz4** 为例（算法本身不在 elton 仓库内，依赖 `github.com/pierrec/lz4`）：
 
 ```go
 package compress
@@ -34,66 +58,74 @@ import (
 
 	"github.com/pierrec/lz4"
 	"github.com/vicanso/elton/v2"
+	"github.com/vicanso/elton/v2/middleware"
 )
 
-const (
-	// Lz4Encoding lz4 encoding
-	Lz4Encoding = "lz4"
-)
+const Lz4Encoding = "lz4"
 
-type (
-	// Lz4Compressor lz4 compress
-	Lz4Compressor struct {
-		Level     int
-		MinLength int
-	}
-)
+type Lz4Compressor struct {
+	Level     int
+	MinLength int
+}
 
 func (l *Lz4Compressor) getMinLength() int {
 	if l.MinLength == 0 {
-		return defaultCompressMinLength
+		return middleware.DefaultCompressMinLength
 	}
 	return l.MinLength
 }
 
-// Accept check accept encoding
-func (l *Lz4Compressor) Accept(c *elton.Context, bodySize int) (acceptable bool, encoding string) {
-	// 如果数据少于最低压缩长度，则不压缩
+func (l *Lz4Compressor) Accept(c *elton.Context, bodySize int) (bool, string) {
 	if bodySize >= 0 && bodySize < l.getMinLength() {
-		return
+		return false, ""
 	}
-	return AcceptEncoding(c, Lz4Encoding)
+	return middleware.AcceptEncoding(c, Lz4Encoding)
 }
 
-// Compress lz4 compress
-func (l *Lz4Compressor) Compress(buf []byte) (*bytes.Buffer, error) {
+func (l *Lz4Compressor) Compress(buf []byte, levels ...int) (*bytes.Buffer, error) {
+	level := l.Level
+	if len(levels) > 0 {
+		level = levels[0]
+	}
 	buffer := new(bytes.Buffer)
 	w := lz4.NewWriter(buffer)
-	defer w.Close()
-	w.Header.CompressionLevel = l.Level
+	if level != 0 {
+		w.Header.CompressionLevel = level
+	}
 	_, err := w.Write(buf)
 	if err != nil {
+		return nil, err
+	}
+	if err = w.Close(); err != nil {
 		return nil, err
 	}
 	return buffer, nil
 }
 
-// Pipe lz4 pipe compress
-func (l *Lz4Compressor) Pipe(c *elton.Context) (err error) {
-	r := c.Body.(io.Reader)
-	closer, ok := c.Body.(io.Closer)
+func (l *Lz4Compressor) Pipe(c *elton.Context) error {
+	r, ok := c.Body.(io.Reader)
+	if !ok {
+		return nil
+	}
+	closer, ok := r.(io.Closer)
 	if ok {
-		defer closer.Close()
+		defer func() {
+			_ = closer.Close()
+		}()
 	}
 	w := lz4.NewWriter(c.Response)
-	w.Header.CompressionLevel = l.Level
-	defer w.Close()
-	_, err = io.Copy(w, r)
-	return
+	if l.Level != 0 {
+		w.Header.CompressionLevel = l.Level
+	}
+	defer func() {
+		_ = w.Close()
+	}()
+	_, err := io.Copy(w, r)
+	return err
 }
 ```
 
-下面调用示例：
+调用示例：
 
 ```go
 package main
@@ -102,19 +134,20 @@ import (
 	"bytes"
 
 	"github.com/vicanso/elton/v2"
-	compress "github.com/vicanso/elton-compress"
 	"github.com/vicanso/elton/v2/middleware"
+	// 将上面的 Lz4Compressor 放在本模块或独立包中
 )
 
 func main() {
 	d := elton.New()
 
-	conf := middleware.CompressConfig{}
-	lz4 := &compress.Lz4Compressor{
-		Level:     2,
-		MinLength: 1024,
-	}
-	conf.AddCompressor(lz4)
+	conf := middleware.NewCompressConfig(
+		middleware.NewGzipCompressor(),
+		&Lz4Compressor{
+			Level:     2,
+			MinLength: 1024,
+		},
+	)
 	d.Use(middleware.NewCompress(conf))
 
 	d.GET("/", func(c *elton.Context) (err error) {
@@ -134,25 +167,6 @@ func main() {
 }
 ```
 
-
+```bash
+curl -H 'Accept-Encoding: lz4' -v 'http://127.0.0.1:3000'
 ```
-curl -H 'Accept-Encoding:lz4' -v 'http://127.0.0.1:3000'
-* Rebuilt URL to: http://127.0.0.1:3000/
-*   Trying 127.0.0.1...
-* TCP_NODELAY set
-* Connected to 127.0.0.1 (127.0.0.1) port 3000 (#0)
-> GET / HTTP/1.1
-> Host: 127.0.0.1:3000
-> User-Agent: curl/7.54.0
-> Accept: */*
-> Accept-Encoding:lz4
->
-< HTTP/1.1 200 OK
-< Content-Encoding: lz4
-< Content-Length: 103
-< Content-Type: text/plain; charset=utf-8
-< Vary: Accept-Encoding
-...
-```
-
-从响应头中可以看出，数据已经压缩为`lz4`的格式，数据长度仅为`103`字节，节约了带宽。

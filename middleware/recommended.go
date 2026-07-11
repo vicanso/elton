@@ -22,42 +22,33 @@
 
 package middleware
 
-import (
-	"crypto/sha1"
-	"encoding/base64"
-	"fmt"
+import "github.com/vicanso/elton/v2"
 
-	"github.com/vicanso/elton/v2"
-	"github.com/vicanso/hes"
-)
-
-// getSkipper returns the skipper if it's not nil,
-// otherwise returns elton.DefaultSkipper
-func getSkipper(skipper elton.Skipper) elton.Skipper {
-	if skipper == nil {
-		return elton.DefaultSkipper
+// Recommended returns a common global middleware stack suitable for JSON APIs:
+//
+//	Recover → Error → RequestID → BodyParser → Fresh → ETag → Responder
+//
+// Usage:
+//
+//	e.Use(middleware.Recommended()...)
+//
+// Order notes:
+//   - Recover outermost so panics become errors (and Error can format them if re-entered via EmitError path separately)
+//   - Error wraps the rest so returned errors become JSON/text responses
+//   - RequestID early for logging / tracing correlation
+//   - BodyParser before handlers that need RequestBody
+//   - Fresh/ETag before Responder so 304 can skip body serialization costs where applicable
+//   - Responder innermost among globals so c.Body is converted after business handlers
+//
+// Not included (add as needed): CORS, Timeout, Compress, Logger, Stats.
+func Recommended() []elton.Handler {
+	return []elton.Handler{
+		NewRecover(),
+		NewDefaultError(),
+		NewDefaultRequestID(),
+		NewDefaultBodyParser(),
+		NewDefaultFresh(),
+		NewDefaultETag(),
+		NewDefaultResponder(),
 	}
-	return skipper
-}
-
-// wrapAsHesError returns the *hes.Error of err if err's chain contains one,
-// otherwise wraps err as an internal server error exception with the category
-// (hes.Wrap sets StatusCode 500 and Exception=true for non-hes errors).
-func wrapAsHesError(err error, category string) *hes.Error {
-	if he, ok := hes.As(err); ok {
-		return he
-	}
-	return hes.Wrap(err, hes.WithCategory(category))
-}
-
-// genETag generates an etag of the buffer by sha1
-func genETag(buf []byte) string {
-	size := len(buf)
-	if size == 0 {
-		return `"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="`
-	}
-	h := sha1.New()
-	h.Write(buf)
-	hash := base64.URLEncoding.EncodeToString(h.Sum(nil))
-	return fmt.Sprintf(`"%x-%s"`, size, hash)
 }

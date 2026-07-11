@@ -179,7 +179,7 @@ func (t *TarFS) Get(file string) ([]byte, error) {
 		return nil, err
 	}
 	if !found {
-		return nil, hes.NewWithStatusCode("Not Found", 404)
+		return nil, hes.NotFound("Not Found")
 	}
 	return data, nil
 }

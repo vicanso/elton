@@ -38,7 +38,7 @@ HTTP响应码，设置HTTP请求处理结果的响应码。
 
 ## Body
 
-HTTP响应数据，此属性为interface{}，因此可以设置不同的数据类型（与koa类似）。注意：设置Body之后，还需要使用中间件`responder`来将此属性转换为字节，并设置相应的`Content-Type`，此中间件主要将各类的struct转换为json，对于具体的实现可以查阅代码，或者自己实现相应的responder。
+HTTP 响应数据，类型为 `any`，可设置不同数据类型（与 koa 类似）。注意：设置 `Body` 后，还需使用 `middleware.NewDefaultResponder()`（或自定义 responder）将其转为字节并设置 `Content-Type`；默认实现主要将 struct/map 转为 JSON。
 
 ## BodyBuffer
 

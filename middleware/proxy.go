@@ -24,6 +24,7 @@ package middleware
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -124,7 +125,10 @@ func urlRewrite(rewrites []*rewriteRegexp, req *http.Request) {
 	}
 }
 
-// generateRewrites generate rewrites
+// generateRewrites generate rewrites.
+// Each rule is "pattern:replacement"; only the first ':' separates the two parts
+// so replacement may itself contain ':' (e.g. scheme or port).
+// Invalid rules (missing ':', empty pattern) return an error instead of being skipped.
 func generateRewrites(arr []string) (rewrites []*rewriteRegexp, err error) {
 	size := len(arr)
 	if size == 0 {
@@ -133,17 +137,16 @@ func generateRewrites(arr []string) (rewrites []*rewriteRegexp, err error) {
 	rewrites = make([]*rewriteRegexp, 0, size)
 
 	for _, value := range arr {
-		arr := strings.Split(value, ":")
-		if len(arr) != 2 {
-			continue
+		parts := strings.SplitN(value, ":", 2)
+		if len(parts) != 2 || parts[0] == "" {
+			return nil, fmt.Errorf("invalid proxy rewrite rule %q, want pattern:replacement", value)
 		}
-		k := arr[0]
-		v := arr[1]
+		k := parts[0]
+		v := parts[1]
 		k = strings.ReplaceAll(k, "*", "(\\S*)")
 		reg, e := regexp.Compile(k)
 		if e != nil {
-			err = e
-			return
+			return nil, e
 		}
 		rewrites = append(rewrites, &rewriteRegexp{
 			Regexp: reg,
@@ -162,9 +165,10 @@ func newReverseProxy(target *url.URL, config *ProxyConfig, bufPool httputil.Buff
 	}
 	p.BufferPool = bufPool
 	p.ErrorHandler = func(rw http.ResponseWriter, _ *http.Request, e error) {
-		he := hes.NewWithError(e)
-		he.Category = ErrProxyCategory
-		he.Exception = true
+		he := hes.Wrap(e,
+			hes.WithStatus(http.StatusBadGateway),
+			hes.WithCategory(ErrProxyCategory),
+			hes.WithException())
 		if c, ok := rw.(*elton.Context); ok {
 			c.Set(proxyErrorKey, he)
 		}

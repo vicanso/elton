@@ -71,10 +71,18 @@ func isFresh(modifiedSince, noneMatch, cacheControl, lastModified, etag string) 
 		if etag == "" {
 			return false
 		}
-		// If-None-Match可为逗号分隔的多个etag，任意一个弱匹配即为fresh
+		// If-None-Match可为逗号分隔的多个etag，任意一个弱匹配即为fresh。
+		// 手写分割避免 Split/SplitSeq 的中间切片分配。
 		etagStale := true
-		for match := range strings.SplitSeq(noneMatch, ",") {
-			if etagWeakMatch(strings.TrimSpace(match), etag) {
+		rest := noneMatch
+		for rest != "" {
+			var part string
+			if i := strings.IndexByte(rest, ','); i >= 0 {
+				part, rest = rest[:i], rest[i+1:]
+			} else {
+				part, rest = rest, ""
+			}
+			if etagWeakMatch(strings.TrimSpace(part), etag) {
 				etagStale = false
 				break
 			}

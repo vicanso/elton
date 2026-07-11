@@ -117,7 +117,7 @@ func TestConcurrentLimiter(t *testing.T) {
 					return false, nil, errors.New("lock error")
 				},
 			}),
-			err: hes.NewWithError(errors.New("lock error")),
+			err: hes.Wrap(errors.New("lock error")),
 		},
 		// global concurrency limit 1(fail)
 		{

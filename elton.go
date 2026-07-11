@@ -38,7 +38,7 @@ import (
 	"time"
 
 	"github.com/vicanso/hes"
-	intranetip "github.com/vicanso/intranet-ip"
+	"github.com/vicanso/keygrip"
 )
 
 // Status is the running status of elton
@@ -101,7 +101,11 @@ type (
 		functionInfos map[uintptr]string
 		// functionInfosMutex protects functionInfos for concurrent access
 		functionInfosMutex sync.RWMutex
-		ctxPool            sync.Pool
+		// keygrip 缓存：避免每次 SignedCookie 都 keygrip.New
+		kgMu    sync.Mutex
+		kgKeys  []string
+		kg      *keygrip.Keygrip
+		ctxPool sync.Pool
 	}
 
 	// Router router
@@ -176,9 +180,14 @@ func NewGroup(path string, handlerList ...Handler) *Group {
 	}
 }
 
-// IsIntranet judges whether the ip is intranet
-func IsIntranet(ip string) bool {
-	return intranetip.Is(net.ParseIP(ip))
+// IsIntranet reports whether s is a loopback, private, or link-local address.
+// Invalid or empty values return false.
+func IsIntranet(s string) bool {
+	ip := net.ParseIP(s)
+	if ip == nil {
+		return false
+	}
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast()
 }
 
 // SetFunctionName sets the name of handler function,
@@ -186,8 +195,8 @@ func IsIntranet(ip string) bool {
 func (e *Elton) SetFunctionName(fn any, name string) {
 	p := reflect.ValueOf(fn).Pointer()
 	e.functionInfosMutex.Lock()
-	defer e.functionInfosMutex.Unlock()
 	e.functionInfos[p] = name
+	e.functionInfosMutex.Unlock()
 }
 
 // GetFunctionName return the name of handler function
@@ -200,6 +209,55 @@ func (e *Elton) GetFunctionName(fn any) string {
 		return name
 	}
 	return runtime.FuncForPC(p).Name()
+}
+
+// ensureFunctionName returns the handler name, caching runtime name if unset.
+func (e *Elton) ensureFunctionName(fn any) string {
+	p := reflect.ValueOf(fn).Pointer()
+	e.functionInfosMutex.RLock()
+	name := e.functionInfos[p]
+	e.functionInfosMutex.RUnlock()
+	if name != "" {
+		return name
+	}
+	name = runtime.FuncForPC(p).Name()
+	e.functionInfosMutex.Lock()
+	// double-check：并发 ensure 时只写一次
+	if existing := e.functionInfos[p]; existing != "" {
+		name = existing
+	} else {
+		e.functionInfos[p] = name
+	}
+	e.functionInfosMutex.Unlock()
+	return name
+}
+
+// functionNameLocked resolves name; caller must hold functionInfosMutex (RLock).
+func (e *Elton) functionNameLocked(fn Handler) string {
+	p := reflect.ValueOf(fn).Pointer()
+	if name := e.functionInfos[p]; name != "" {
+		return name
+	}
+	return runtime.FuncForPC(p).Name()
+}
+
+// keygrip returns a cached keygrip for SignedKeys, rebuilding when keys change.
+func (e *Elton) keygrip() *keygrip.Keygrip {
+	if e.SignedKeys == nil {
+		return nil
+	}
+	keys := e.SignedKeys.Keys()
+	if len(keys) == 0 {
+		return nil
+	}
+	e.kgMu.Lock()
+	defer e.kgMu.Unlock()
+	if e.kg != nil && slices.Equal(e.kgKeys, keys) {
+		return e.kg
+	}
+	e.kgKeys = slices.Clone(keys)
+	e.kg = keygrip.New(keys)
+	return e.kg
 }
 
 // ListenAndServe listens the addr and serve http,
@@ -342,8 +400,7 @@ func (e *Elton) Routers() []RouterInfo {
 // 路由树不支持与请求处理并发修改。
 func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 	for _, fn := range handlerList {
-		name := e.GetFunctionName(fn)
-		e.SetFunctionName(fn, name)
+		e.ensureFunctionName(fn)
 	}
 
 	e.routers = append(e.routers, RouterInfo{
@@ -363,9 +420,22 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 		maxNext := maxMid + len(handlerList)
 		index := -1
 		var trace *Trace
+		// handlerNames 在 EnableTrace 时一次性解析，避免每层 Next 加锁查名
+		var handlerNames []string
 		if e.EnableTrace {
-			trace = NewTrace()
+			trace = &Trace{
+				Infos: make(TraceInfos, 0, maxNext),
+			}
 			c.WithContext(context.WithValue(c.Context(), ContextTraceKey, trace))
+			handlerNames = make([]string, maxNext)
+			e.functionInfosMutex.RLock()
+			for i := 0; i < maxMid; i++ {
+				handlerNames[i] = e.functionNameLocked(mids[i])
+			}
+			for i, fn := range handlerList {
+				handlerNames[maxMid+i] = e.functionNameLocked(fn)
+			}
+			e.functionInfosMutex.RUnlock()
 		}
 		c.Next = func() error {
 			// 如果已设置响应数据，则不再执行后续的中间件
@@ -388,7 +458,7 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 			if trace == nil {
 				return fn(c)
 			}
-			fnName := e.GetFunctionName(fn)
+			fnName := handlerNames[index]
 			// 如果函数名字为 - ，则跳过
 			if fnName == "-" {
 				return fn(c)
@@ -507,8 +577,7 @@ func (e *Elton) Multi(methods []string, path string, handlerList ...Handler) *El
 // Use adds middleware handler function to elton's middleware list
 func (e *Elton) Use(handlerList ...Handler) *Elton {
 	for _, fn := range handlerList {
-		name := e.GetFunctionName(fn)
-		e.SetFunctionName(fn, name)
+		e.ensureFunctionName(fn)
 	}
 	e.middlewares = append(e.middlewares, handlerList...)
 	return e

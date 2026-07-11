@@ -216,7 +216,17 @@ func main() {
 
 ## EnableTrace
 
-是否启用调用跟踪，设置此参数为true，则会记录每个Handler的调用时长，建议使用时对全局中间件设定名称。
+是否启用调用跟踪。为 `true` 时，框架会在请求上下文中挂载 `*Trace`，并记录每个 Handler 的耗时，最终通过 `OnTrace` 回调。建议对全局中间件用 `UseWithName` / `SetFunctionName` 命名；名称为 `"-"` 的 Handler 不计入 trace。
+
+**与 `TraceFromContext` / `Context.Trace()` 的语义**
+
+| API | 行为 |
+|-----|------|
+| `EnableTrace = true` | 请求入口创建 trace 并写入 `Request.Context()`，中间件耗时会进入该实例 |
+| `c.NewTrace()` | 新建 trace 并**写回** context，之后可用 |
+| `elton.TraceFromContext(ctx)` / `c.Trace()` | 若 context **已有** trace 则返回它；**若无**，则 `NewTrace()` 返回一个**未挂到 context 上的孤立对象**，对其 `Add` 不会出现在 `OnTrace` 里 |
+
+因此业务代码若要在未开启 `EnableTrace` 时自行打点，应使用 `c.NewTrace()`（或自行 `WithContext` 写入），不要依赖 `TraceFromContext` 的“空则新建”副作用。
 
 **Example**
 ```go
@@ -378,13 +388,16 @@ func main() {
 
 ## GracefulClose
 
-优雅的关闭当前服务，首先将实例的状态设置为`StatusClosing`，此时所有新的请求都将直接出错，在等于指定时间后，则调用http.Server的`Close`方法。
+优雅关闭：先将状态设为 `StatusClosing`（新请求直接 503），等待 `delay` 后调用 `Shutdown(ctx)`。`ctx` 在等待阶段可取消；取消后会立刻进入 shutdown（不再保证等满 delay）。
+
+签名：`GracefulClose(ctx context.Context, delay time.Duration) error`。
 
 **Example**
 ```go
 package main
 
 import (
+	"context"
 	"time"
 
 	"github.com/vicanso/elton/v2"
@@ -394,7 +407,7 @@ func main() {
 	e := elton.New()
 
 	go func() {
-		e.GracefulClose(context.Background(), 10*time.Second)
+		_ = e.GracefulClose(context.Background(), 10*time.Second)
 	}()
 
 	err := e.ListenAndServe(":3000")

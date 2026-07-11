@@ -68,7 +68,7 @@ e.AddGroup(api)
 | `Elton.GetStatus()` | `Elton.Status()` | 属性 getter 去 Get 前缀 |
 | `Elton.GetRouters()` | `Elton.Routers()` | 同上 |
 | `Context.GetTrace()` | `Context.Trace()` | 与 `NewTrace()` 配对 |
-| `elton.GetTrace(ctx)` | `elton.TraceFromContext(ctx)` | context 取值的生态惯例 |
+| `elton.GetTrace(ctx)` | `elton.TraceFromContext(ctx)` | context 取值的生态惯例；**注意**：context 中无 trace 时返回**未挂载**的新 `*Trace`，不会写回 request context，业务打点请用 `c.NewTrace()` 或开启 `EnableTrace` |
 | `SignedKeysGenerator.GetKeys()` | `Keys()` | 接口方法，自定义实现需同步修改 |
 | `CacheCompressor.GetEncoding()` | `Encoding()` | 接口方法 |
 | `CacheCompressor.GetCompression()` | `Compression()` | 接口方法 |
@@ -143,8 +143,22 @@ compressor.Level = 6
 - **cache**：`NewCacheResponse` 解码损坏/截断数据（如自定义 store 返回异常内容）时可能越界 panic，已补齐边界校验，异常数据按 fetch 处理。
 - **logger**：预置格式 `LoggerTiny` 使用了不存在的 `{url}` 标签导致 URL 永远输出为空，已修正为 `{uri}`。
 - **http_header**：`SetShortHeaders` 的全局字典改为 `atomic.Pointer`，消除运行期调用时的数据竞争（仍建议仅在启动期调用，短头索引会持久化进缓存数据）。
+- **body_parser**：读取 body 时若存在 `Content-Length`，预分配容量上限为 `min(Content-Length, Limit)`，避免恶意过大 CL 导致内存放大；非法或非正 CL 改走 buffer 路径，不再按声明长度分配。
+- **body_parser**（form urlencoded）：转 JSON 改为 `json.Marshal`，自动转义引号/反斜杠等，避免手工拼接产生非法 JSON 或字段注入。
+- **proxy**：rewrite 规则改为按首个 `:` 分割（`SplitN`），replacement 可含 `:`；缺少 `:` 或 pattern 为空的规则在构造时返回错误（不再静默跳过）。
+
+## 依赖升级带来的行为变化
+
+v2 依赖 `hes v1.0.0` 与 `keygrip v1.4.0`，相关行为变化：
+
+- **非 hes 错误被包装后 `Exception=true`**：`hes.Wrap` 对普通 error 默认设置 `StatusCode=500` 与 `Exception=true`，错误文本相应带有 `exception=true` 后缀（如 recover、error、static_serve 等中间件输出）。
+- **proxy 上游失败状态码 400 → 502**：旧版 `hes.NewWithError` 隐式默认 400，语义不当；现与 `httputil.ReverseProxy` 默认行为一致，返回 `502 Bad Gateway`。
+- **error 中间件对未设置 `StatusCode` 的 `*hes.Error` 兜底为 500**（原会得到 0 并按 200 输出）。
+- **`*hes.Error` 视为不可变**：自定义中间件若使用 `hes.Wrap(err)` 后就地修改字段，可能污染共享错误对象（无 opts 时返回链中原指针），应改用 `hes.Wrap(err, hes.WithStatus(...), hes.WithCategory(...))` 等 options 形式。
+- **`hes.Error.Err` 字段更名为 `Cause`**，且不再参与 JSON 序列化。
+- **`keygrip.New` 对空 keys 会 panic**：elton 内部在构建前已做空值守卫（`SignedKeys` 返回空 keys 时签名 cookie 功能不生效），直接使用 keygrip 的业务代码需自行保证 keys 非空。
 
 ## 仓库与工具链
 
-- `go.mod`：`go 1.24`。
+- `go.mod`：`go 1.24`，`hes v1.0.0`、`keygrip v1.4.0`。
 - CI 测试矩阵：Go 1.24 / 1.25。

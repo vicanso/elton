@@ -12,7 +12,7 @@ description: elton简述
 
 - 请求经过中间件的处理方式为由外至内，响应时再由内至外
 - 所有的处理函数都一致（参数、类型等），每个处理函数都可以是其它处理函数的前置中间件
-- 请求处理成功时，直接赋值至Body(interface{})，由中间件将interface{}序列化为相应的bytes（如json，xml等）
+- 请求处理成功时，直接赋值至 `Body`（`any`），由中间件将其序列化为相应的 bytes（如 json、xml 等）
 - 请求处理失败时，返回error，由中间件将error转换为相应的bytes（golang中的error为interface，可自定义相应的Error实例）
 
 elton参考koa的实现，能够简单的添加各类中间件，中间件的执行也和koa一样，如下图所示的洋葱图，从外层往内层递进，再从内层返回外层（也可以未至最内层则直接往上返回）。
@@ -61,14 +61,14 @@ func main() {
 }
 ```
 
-如代码所示，处理过程非常简单，响应数据直接赋值至Body(interface{})，通过Responder中间件可将struct等数据转换为json响应(也可通过自定义中间件实现更多类型的响应输出)。如果处理出错，直接返回error则可，由error中间件可将error转换为对应的http响应信息。此两类中间件后续会有更详细的介绍说明。
+如代码所示，处理过程非常简单：响应数据直接赋值至 `Body`（`any`），通过 `middleware.NewDefaultResponder()` 可将 struct 等转换为 JSON 响应（也可自定义中间件实现更多类型输出）。若处理出错，直接返回 `error`，由 `middleware.NewDefaultError()` 等错误中间件转换为对应的 HTTP 响应。此两类中间件后续会有更详细的介绍。
 
 
 ## 统一的HTTP响应
 
 `elton`的HTTP响应（成功与出错）是在所有的中间件以及路由处理函数完成之后，常规处理是由框架最终将`BodyBuffer`的数据写入`http.ResponseWriter`，所有中间件与处理函数均不直接将数据写入`http.ResponseWriter`。
 
-对于成功响应数据，为了方便开发，`elton`提供`ctx.Body`允许设置各类不同的响应数据（类型为interface{}），通过响应中间件将其转换为对应的Buffer（如json.Marshal等），也支持直接写入ResponseWriter中，但不建议使用。
+对于成功响应数据，为了方便开发，`elton` 提供 `ctx.Body`（类型为 `any`）保存各类响应数据，再由响应中间件转换为对应的 Buffer（如 `json.Marshal` 等）；也支持直接写入 `ResponseWriter`，但不建议使用。
 
 处理出错都是直接返回`error`，通过自定义的error handler中间件，根据应用场景将error转换为相应的数据类型（如json）。由于统一的出错处理，因此可以在自定义的错误处理中间件极为方便的将各类出错信息汇总、统计，针对非自定义的出错（如开发不规范或一些未知出错）汇总，方便后续针对相关流程优化调整。
 
@@ -133,9 +133,9 @@ func main() {
 
 ### responder中间件
 
-HTTP的响应主要分三部分，HTTP响应状态码，HTTP响应头以及HTTP响应体。前两部分比较简单，格式统一，但是HTTP响应体对于不同的应用有所不同。在elton的处理中，会将BodyBuffer的相应数据在响应时作为HTTP响应体输出。在实际应用中，有些会使用json，有些是xml或者自定义的响应格式。因此在elton是提供了Body(interface{})属性，允许将响应数据赋值至此字段，再由相应的中间件转换为对应的BodyBuffer以及设置`Content-Type`。
+HTTP 的响应主要分三部分：状态码、响应头、响应体。前两部分格式统一，响应体则因应用而异。elton 最终将 `BodyBuffer` 作为 HTTP 响应体输出；应用侧可把业务数据赋给 `Body`（`any`），再由中间件转为 `BodyBuffer` 并设置 `Content-Type`（JSON / XML / 自定义均可）。
 
-在实际使用中，HTTP接口的响应主要还是以`json`为主，因此`elton-responder`提供了将Body转换为对应的BodyBuffer(json)的处理，主要的处理如下：
+实际接口多以 JSON 为主，内置 `middleware.NewDefaultResponder()`（`NewResponder`）会将 `Body` 转为 JSON 的 `BodyBuffer`，核心处理逻辑如下：
 
 ```go
 // NewResponder create a responder
@@ -200,11 +200,8 @@ func NewResponder(config ResponderConfig) elton.Handler {
 				// 使用marshal转换（默认为转换为json）
 				buf, e := marshal(data)
 				if e != nil {
-					he := hes.NewWithErrorStatusCode(e, http.StatusInternalServerError)
-					he.Category = ErrResponderCategory
-					he.Exception = true
-					err = he
-					return
+					// hes.Wrap 对非 hes 错误默认 500 + Exception
+					return hes.Wrap(e, hes.WithCategory(ErrResponderCategory))
 				}
 				if !hadContentType {
 					c.SetHeader(elton.HeaderContentType, contentType)
@@ -240,7 +237,7 @@ func NewResponder(config ResponderConfig) elton.Handler {
 
 ### error handler中间件
 
-elton中默认的Error处理只是简单的输出`err.Error()`，而且状态码也只是简单的使用`StatusInternalServerError`，无法满足应用中的各类定制的出错方式。因此一般建议编写自定义的出错处理中间件，根据自定义的Error对象生成相应的出错响应数据。如`elton-error`则针对返回的[hes.Error](https://github.com/vicanso/hes)对应生成相应的状态码，响应类型以及响应数据(json)：
+elton 框架内置的默认 Error 处理只输出 `err.Error()`，状态码多为 `StatusInternalServerError`，难以满足定制场景。建议使用中间件统一处理错误；内置的 `middleware.NewDefaultError()` / `NewError` 会识别 [hes.Error](https://github.com/vicanso/hes)（含 `fmt.Errorf("%w")` 包装），生成对应状态码与 JSON/文本响应：
 
 ```go
 // NewError create a error handler
@@ -258,24 +255,23 @@ func NewError(config ErrorConfig) elton.Handler {
 		if err == nil {
 			return nil
 		}
-		he, ok := err.(*hes.Error)
+		he, ok := hes.As(err)
 		if !ok {
-			he = hes.Wrap(err)
-			// 非hes的error，则都认为是500出错异常
-			he.StatusCode = http.StatusInternalServerError
-			he.Exception = true
-			he.Category = ErrErrorCategory
+			// 非hes的error包装为500出错异常
+			he = hes.Wrap(err, hes.WithCategory(ErrErrorCategory))
 		}
-		c.StatusCode = he.StatusCode
+		c.StatusCode = he.StatusOrInternal()
 		if config.ResponseType == "json" ||
 			strings.Contains(c.GetRequestHeader("Accept"), "application/json") {
-			buf := he.ToJSON()
-			c.BodyBuffer = bytes.NewBuffer(buf)
-			c.SetHeader(elton.HeaderContentType, elton.MIMEApplicationJSON)
-		} else {
-			c.BodyBuffer = bytes.NewBufferString(he.Error())
-			c.SetHeader(elton.HeaderContentType, elton.MIMETextPlain)
+			// 序列化失败时降级为 text 输出
+			if buf, e := he.ToJSON(); e == nil {
+				c.BodyBuffer = bytes.NewBuffer(buf)
+				c.SetHeader(elton.HeaderContentType, elton.MIMEApplicationJSON)
+				return nil
+			}
 		}
+		c.BodyBuffer = bytes.NewBufferString(he.Error())
+		c.SetHeader(elton.HeaderContentType, elton.MIMETextPlain)
 
 		return nil
 	}

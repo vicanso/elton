@@ -93,29 +93,41 @@ func (t *Trace) Calculate() {
 	t.calculateDone = true
 }
 
+// getMs formats ns as milliseconds string (for tests and callers needing string).
 func getMs(ns int) string {
+	var s strings.Builder
+	writeMs(&s, ns)
+	return s.String()
+}
+
+// writeMs appends duration in milliseconds (up to 2 fractional digits) without
+// intermediate string allocations for the numeric part.
+func writeMs(s *strings.Builder, ns int) {
 	microSecond := int(time.Microsecond)
 	milliSecond := int(time.Millisecond)
 	if ns < microSecond {
-		return "0"
+		s.WriteByte('0')
+		return
 	}
 
-	// 计算ms的位
+	var buf [20]byte
+	// 计算 ms 整数部分
 	ms := ns / milliSecond
-	prefix := strconv.Itoa(ms)
+	s.Write(strconv.AppendInt(buf[:0], int64(ms), 10))
 
-	// 计算micro seconds
+	// 计算 micro seconds（取小数点两位）
 	offset := (ns % milliSecond) / microSecond
-	// 如果小于10，不展示小数点（取小数点两位）
 	unit := 10
 	if offset < unit {
-		return prefix
+		return
 	}
-	// 如果小于100，补一位0
+	s.WriteByte('.')
 	if offset < 100 {
-		return prefix + ".0" + strconv.Itoa(offset/unit)
+		s.WriteByte('0')
+		s.Write(strconv.AppendInt(buf[:0], int64(offset/unit), 10))
+		return
 	}
-	return prefix + "." + strconv.Itoa(offset/unit)
+	s.Write(strconv.AppendInt(buf[:0], int64(offset/unit), 10))
 }
 
 // ServerTiming return server timing with prefix
@@ -127,21 +139,21 @@ func (traceInfos TraceInfos) ServerTiming(prefix string) string {
 
 	// 转换为 http server timing
 	s := new(strings.Builder)
-	// 每一个server timing长度预估为30
-	s.Grow(30 * size)
+	// 预估：prefix+index+固定片段+name+逗号
+	s.Grow((len(prefix) + 24) * size)
+	var idxBuf [20]byte
 	for i, traceInfo := range traceInfos {
 		v := traceInfo.Duration.Nanoseconds()
 		s.WriteString(prefix)
-		s.WriteString(strconv.Itoa(i))
+		s.Write(strconv.AppendInt(idxBuf[:0], int64(i), 10))
 		s.Write(ServerTimingDur)
-		s.WriteString(getMs(int(v)))
+		writeMs(s, int(v))
 		s.Write(ServerTimingDesc)
 		s.WriteString(traceInfo.Name)
 		s.Write(ServerTimingEnd)
 		if i != size-1 {
-			s.WriteRune(',')
+			s.WriteByte(',')
 		}
-
 	}
 	return s.String()
 }

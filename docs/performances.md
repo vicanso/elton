@@ -2,7 +2,14 @@
 description: 性能测试
 ---
 
-`elton`的性能如何是大家都会关心的重点，下面是使用测试服务器(4U8线程，8G内存)的几个测试场景，go版本为1.14：
+`elton` 的性能是常见关注点。下列 wrk 场景来自历史测试服务器（4U8 线程、8G 内存），数值仅供量级参考；本地微基准请以当前模块路径为准：
+
+```bash
+go test -bench=. -benchmem ./...
+# 包名：github.com/vicanso/elton/v2 与 github.com/vicanso/elton/v2/middleware
+```
+
+以下示例与 wrk 输出为历史记录（原 Go 1.14 环境），升级 2.0 后框架本身更轻，完整中间件链仍取决于业务逻辑与序列化：
 
 ```go
 package main

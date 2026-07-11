@@ -360,21 +360,30 @@ func TestGetSetHeader(t *testing.T) {
 	})
 }
 
-func TestGetKeys(t *testing.T) {
+func TestKeygripCache(t *testing.T) {
 	assert := assert.New(t)
 	c := NewContext(nil, nil)
-	assert.Nil(c.getKeys())
+	// 无 elton 时无法签名
+	assert.Nil(c.elton)
+
 	e := New()
-	keys := []string{
-		"a",
-		"b",
-	}
-	ssk := &SimpleSignedKeys{
-		keys: keys,
-	}
+	assert.Nil(e.keygrip())
+
+	keys := []string{"a", "b"}
+	ssk := &SimpleSignedKeys{}
+	ssk.SetKeys(keys)
 	e.SignedKeys = ssk
-	c.elton = e
-	assert.Equal(keys, c.getKeys())
+	kg1 := e.keygrip()
+	assert.NotNil(kg1)
+	// 二次调用应命中缓存（同一实例）
+	kg2 := e.keygrip()
+	assert.Same(kg1, kg2)
+
+	// 轮换密钥后重建
+	ssk.SetKeys([]string{"c"})
+	kg3 := e.keygrip()
+	assert.NotNil(kg3)
+	assert.NotSame(kg1, kg3)
 }
 
 func TestCookie(t *testing.T) {

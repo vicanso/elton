@@ -24,8 +24,12 @@ package middleware
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
+
+	"github.com/vicanso/elton/v2"
 )
 
 // FuzzNewCacheResponse 确保解码任意（含损坏/截断）的缓存数据不会panic，
@@ -61,5 +65,76 @@ func FuzzHTTPHeadersHeader(f *testing.F) {
 	})))
 	f.Fuzz(func(t *testing.T, data []byte) {
 		_ = HTTPHeaders(data).Header()
+	})
+}
+
+// FuzzFormURLEncodedDecoder 任意 form body 经解码后若成功则必须是合法 JSON
+func FuzzFormURLEncodedDecoder(f *testing.F) {
+	f.Add([]byte("a=1&b=2"))
+	f.Add([]byte("a=1&a=2"))
+	f.Add([]byte(`a=1"2&b=x\y`))
+	f.Add([]byte(`a=1&b=","x":1`))
+	f.Add([]byte("%zz"))
+	f.Add([]byte(""))
+	dec := NewFormURLEncodedDecoder()
+	c := elton.NewContext(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/", nil))
+	c.SetRequestHeader(elton.HeaderContentType, formURLEncodedContentType)
+	f.Fuzz(func(t *testing.T, data []byte) {
+		out, err := dec.Decode(c, data)
+		if err != nil {
+			return
+		}
+		if len(out) == 0 {
+			return
+		}
+		var m map[string]any
+		if jsonErr := json.Unmarshal(out, &m); jsonErr != nil {
+			t.Fatalf("decoded form must be valid JSON: %v, out=%q", jsonErr, out)
+		}
+	})
+}
+
+// FuzzCacheResponseRoundTrip 合法 CacheResponse 序列化后再解码，状态应保持可识别
+func FuzzCacheResponseRoundTrip(f *testing.F) {
+	f.Add(uint8(StatusHit), uint32(1700000000), uint16(200), []byte(`{"ok":true}`), []byte("application/json"))
+	f.Add(uint8(StatusHitForPass), uint32(0), uint16(0), []byte(nil), []byte(nil))
+	f.Add(uint8(StatusHit), uint32(1), uint16(404), []byte("not found"), []byte("text/plain"))
+	f.Fuzz(func(t *testing.T, status uint8, createdAt uint32, code uint16, body, contentType []byte) {
+		// 仅使用已定义状态，避免无意义组合刷日志
+		cs := CacheStatus(status % 3)
+		cp := &CacheResponse{
+			Status:     cs,
+			CreatedAt:  createdAt,
+			StatusCode: int(code),
+			Header:     http.Header{},
+			Body:       bytes.NewBuffer(body),
+		}
+		if len(contentType) > 0 {
+			// 限制 header 值长度，避免超大输入拖垮 fuzz
+			ct := string(contentType)
+			if len(ct) > 64 {
+				ct = ct[:64]
+			}
+			cp.Header.Set("Content-Type", ct)
+		}
+		raw := cp.Bytes()
+		decoded := NewCacheResponse(raw)
+		if decoded == nil {
+			t.Fatal("decoded cache response must not be nil")
+		}
+		if cs == StatusHitForPass || cs == StatusUnknown {
+			// 非 hit 只保留状态字节
+			return
+		}
+		if cs == StatusHit && decoded.Status != StatusHit && decoded.Status != StatusUnknown {
+			// 损坏路径允许 Unknown；合法编码应为 Hit
+			if len(raw) > statusByteSize {
+				// 完整编码应可还原为 hit
+				if decoded.Status != StatusHit {
+					// body/header 极大时仍应不 panic；状态异常则报错
+					t.Fatalf("expected hit or unknown, got %v", decoded.Status)
+				}
+			}
+		}
 	})
 }

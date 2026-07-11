@@ -125,6 +125,11 @@ func TestFS(t *testing.T) {
 	buf, err := fs.Get(file)
 	assert.Nil(err)
 	assert.NotEmpty(buf)
+
+	r, err := fs.NewReader(file)
+	assert.Nil(err)
+	assert.NotNil(r)
+	_ = r.Close()
 }
 
 func TestStaticServe(t *testing.T) {
@@ -205,7 +210,7 @@ func TestStaticServe(t *testing.T) {
 				}
 				return c
 			},
-			err: errors.New("statusCode=500, category=elton-static-serve, message=abcd"),
+			err: errors.New("statusCode=500, category=elton-static-serve, message=abcd, exception=true"),
 		},
 		// image
 		{

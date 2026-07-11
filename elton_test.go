@@ -44,8 +44,15 @@ func TestIntranet(t *testing.T) {
 	assert := assert.New(t)
 
 	assert.True(IsIntranet("127.0.0.1"))
+	assert.True(IsIntranet("10.1.1.1"))
+	assert.True(IsIntranet("172.16.0.1"))
 	assert.True(IsIntranet("192.168.1.1"))
+	assert.True(IsIntranet("::1"))
+	assert.True(IsIntranet("fe80::1"))
+	assert.True(IsIntranet("169.254.1.1")) // IPv4 link-local
 	assert.False(IsIntranet("1.1.1.1"))
+	assert.False(IsIntranet(""))
+	assert.False(IsIntranet("not-an-ip"))
 }
 
 func TestSkipper(t *testing.T) {
@@ -327,6 +334,56 @@ func TestHandle(t *testing.T) {
 		assert.Equal(http.StatusOK, resp.Code)
 		assert.Equal(data, resp.Body.String())
 	})
+}
+
+// TestNestedGroup 覆盖 2.0 嵌套分组、父组中间件继承与链式注册
+func TestNestedGroup(t *testing.T) {
+	assert := assert.New(t)
+	e := New()
+
+	parentHits := 0
+	childHits := 0
+	api := NewGroup("/api", func(c *Context) error {
+		parentHits++
+		return c.Next()
+	})
+	// 链式 + 嵌套：/api/v1/users
+	v1 := api.NewGroup("/v1", func(c *Context) error {
+		childHits++
+		return c.Next()
+	})
+	v1.GET("/users", func(c *Context) error {
+		c.BodyBuffer = bytes.NewBufferString("users")
+		return nil
+	}).POST("/users", func(c *Context) error {
+		c.BodyBuffer = bytes.NewBufferString("created")
+		return nil
+	})
+	// 仅挂父组即可注册子组路由
+	e.AddGroup(api)
+
+	// GET
+	req := httptest.NewRequest(http.MethodGet, "https://example.com/api/v1/users", nil)
+	resp := httptest.NewRecorder()
+	e.ServeHTTP(resp, req)
+	assert.Equal(http.StatusOK, resp.Code)
+	assert.Equal("users", resp.Body.String())
+	assert.Equal(1, parentHits)
+	assert.Equal(1, childHits)
+
+	// POST（链式注册）
+	req = httptest.NewRequest(http.MethodPost, "https://example.com/api/v1/users", nil)
+	resp = httptest.NewRecorder()
+	e.ServeHTTP(resp, req)
+	assert.Equal("created", resp.Body.String())
+	assert.Equal(2, parentHits)
+	assert.Equal(2, childHits)
+
+	// 未匹配子路径
+	req = httptest.NewRequest(http.MethodGet, "https://example.com/api/v1/missing", nil)
+	resp = httptest.NewRecorder()
+	e.ServeHTTP(resp, req)
+	assert.Equal(http.StatusNotFound, resp.Code)
 }
 
 func TestErrorHandler(t *testing.T) {

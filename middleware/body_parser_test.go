@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"io"
 	"math/rand"
@@ -171,39 +172,79 @@ func TestJSONDecoder(t *testing.T) {
 }
 
 func TestFormURLEncodedDecoder(t *testing.T) {
-	assert := assert.New(t)
 	formURLEncodedDecoder := NewFormURLEncodedDecoder()
 	c := elton.NewContext(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
-	assert.False(formURLEncodedDecoder.Validate(c))
+	assert.False(t, formURLEncodedDecoder.Validate(c))
 	c.SetRequestHeader(elton.HeaderContentType, "application/x-www-form-urlencoded; charset=utf-8")
-	assert.True(formURLEncodedDecoder.Validate(c))
+	assert.True(t, formURLEncodedDecoder.Validate(c))
 
 	tests := []struct {
+		name   string
 		data   []byte
 		err    error
 		result []byte
-		size   int
+		// size 用于 map 无序导致字段顺序不定时只校验长度
+		size int
+		// contains 校验 JSON 中必须出现的子串（转义/防注入）
+		contains []string
+		// notContains 校验不得出现的子串
+		notContains []string
 	}{
 		{
+			name: "simple pair",
 			data: []byte("a=1&b=2"),
 			// 格式化后的顺序有可能不一致，因此直接校验长度
-			// result: []byte(`{"a":"1","b":"2"}`),
 			size: 17,
 		},
 		{
+			name:   "multi value",
 			data:   []byte("a=1&a=2"),
 			result: []byte(`{"a":["1","2"]}`),
+		},
+		{
+			name: "escape quotes and backslash",
+			data: []byte(`a=1"2&b=x\y`),
+			contains: []string{
+				`"a":"1\"2"`,
+				`"b":"x\\y"`,
+			},
+		},
+		{
+			name: "reject field injection via value",
+			// 旧实现手工拼接会生成: {"a":"1","b":"","x":1"} 一类非法/注入 JSON
+			data: []byte(`a=1&b=","x":1`),
+			contains: []string{
+				`"b":"\",\"x\":1"`,
+			},
+			notContains: []string{
+				`"x":1`,
+				`"x":"1"`,
+			},
 		},
 	}
 
 	for _, tt := range tests {
-		result, err := formURLEncodedDecoder.Decode(c, tt.data)
-		assert.Equal(tt.err, err)
-		if tt.result != nil {
-			assert.Equal(tt.result, result)
-		} else {
-			assert.Equal(tt.size, len(result))
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := formURLEncodedDecoder.Decode(c, tt.data)
+			assert.Equal(t, tt.err, err)
+			if tt.result != nil {
+				assert.Equal(t, string(tt.result), string(result))
+			}
+			if tt.size != 0 {
+				assert.Equal(t, tt.size, len(result))
+			}
+			for _, s := range tt.contains {
+				assert.Contains(t, string(result), s)
+			}
+			for _, s := range tt.notContains {
+				assert.NotContains(t, string(result), s)
+			}
+			// 结果必须是合法 JSON object
+			if err == nil && len(result) > 0 {
+				var m map[string]any
+				assert.NoError(t, json.Unmarshal(result, &m))
+			}
+		})
 	}
 }
 
@@ -308,7 +349,7 @@ func TestBodyParserMiddleware(t *testing.T) {
 				StatusCode: http.StatusInternalServerError,
 				Message:    readErr.Error(),
 				Category:   ErrBodyParserCategory,
-				Err:        readErr,
+				Cause:      readErr,
 			},
 		},
 		// over limit
@@ -327,7 +368,7 @@ func TestBodyParserMiddleware(t *testing.T) {
 				StatusCode: http.StatusInternalServerError,
 				Message:    "request body is too large, it should be <= 1",
 				Category:   ErrBodyParserCategory,
-				Err:        errors.New("request body is too large, it should be <= 1"),
+				Cause:      errors.New("request body is too large, it should be <= 1"),
 			},
 		},
 		// committed: true
@@ -469,6 +510,41 @@ func TestRequestBodyReader(t *testing.T) {
 	buf, err = rr.ReadAll(c)
 	assert.Nil(err)
 	assert.Equal(4000, len(buf))
+}
+
+// TestRequestBodyReaderContentLengthCap 确保恶意过大的 Content-Length
+// 不会被用于预分配超过 limit 的切片。
+func TestRequestBodyReaderContentLengthCap(t *testing.T) {
+	assert := assert.New(t)
+	limit := 64
+	rr := requestBodyReader{
+		limit:      limit,
+		bufferPool: elton.NewBufferPool(32),
+	}
+	body := []byte(`{"ok":true}`)
+	req := httptest.NewRequest("POST", "/", bytes.NewReader(body))
+	// 声明远大于实际 body 与 limit 的 CL
+	req.Header.Set(elton.HeaderContentLength, strconv.Itoa(1<<30))
+	c := elton.NewContext(httptest.NewRecorder(), req)
+	buf, err := rr.ReadAll(c)
+	// 实际 body 小于 limit，应成功读出
+	assert.Nil(err)
+	assert.Equal(body, buf)
+
+	// 非法 / 非正 Content-Length 走 buffer 路径，不 panic
+	req = httptest.NewRequest("POST", "/", bytes.NewReader(body))
+	req.Header.Set(elton.HeaderContentLength, "not-a-number")
+	c = elton.NewContext(httptest.NewRecorder(), req)
+	buf, err = rr.ReadAll(c)
+	assert.Nil(err)
+	assert.Equal(body, buf)
+
+	req = httptest.NewRequest("POST", "/", bytes.NewReader(body))
+	req.Header.Set(elton.HeaderContentLength, "-1")
+	c = elton.NewContext(httptest.NewRecorder(), req)
+	buf, err = rr.ReadAll(c)
+	assert.Nil(err)
+	assert.Equal(body, buf)
 }
 
 func BenchmarkBodyParserBufferPool(b *testing.B) {

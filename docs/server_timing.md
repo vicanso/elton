@@ -2,9 +2,11 @@
 description: HTTP Server Timing
 ---
 
-elton可以非常方便的获取各中间件的处理时长，获取统计时长之后，则可方便的写入相关的统计数据或HTTP响应的Server-Timing了。
+elton 可记录各中间件耗时，并写入统计或 HTTP `Server-Timing`。开启方式：`e.EnableTrace = true`，并注册 `e.OnTrace`；中间件建议 `UseWithName` / `SetFunctionName` 命名。
 
-如图所示在chrome中network面板所能看得到Server-Timing展示：
+注意：`TraceFromContext` / `c.Trace()` 在 context 尚无 trace 时会返回**未挂载**的新对象，不会进入 `OnTrace`；依赖框架统计时请开启 `EnableTrace`，或业务侧使用 `c.NewTrace()`。详见 [application.md EnableTrace](./application.md#enabletrace)。
+
+如图所示在 Chrome Network 面板中的 Server-Timing：
 
 ![](https://raw.githubusercontent.com/vicanso/elton/master/.data/server-timing.png)
 

@@ -49,9 +49,9 @@ func NewRecover() elton.Handler {
 					err = fmt.Errorf("%v", r)
 				}
 
-				he := hes.Wrap(err)
-				he.Category = ErrRecoverCategory
-				he.StatusCode = http.StatusInternalServerError
+				he := hes.Wrap(err,
+					hes.WithCategory(ErrRecoverCategory),
+					hes.WithStatus(http.StatusInternalServerError))
 				err = he
 				c.Elton().EmitError(c, err)
 				// 出错时清除部分响应头
@@ -68,8 +68,11 @@ func NewRecover() elton.Handler {
 				resp := c.Response
 				buf := []byte(err.Error())
 				if strings.Contains(c.GetRequestHeader("Accept"), "application/json") {
-					c.SetHeader(elton.HeaderContentType, elton.MIMEApplicationJSON)
-					buf = he.ToJSON()
+					// 序列化失败时保持 text 输出
+					if b, e := he.ToJSON(); e == nil {
+						c.SetHeader(elton.HeaderContentType, elton.MIMEApplicationJSON)
+						buf = b
+					}
 				}
 				resp.WriteHeader(he.StatusCode)
 				_, err = resp.Write(buf)

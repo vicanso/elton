@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/vicanso/elton/v2"
 )
 
 func TestNewBrotliCompress(t *testing.T) {
@@ -78,4 +79,33 @@ func TestNewZstdCompress(t *testing.T) {
 	assert.NotEqual(data, result)
 	result, _ = ZstdDecompress(result.Bytes())
 	assert.Equal(data, result)
+}
+
+// TestCacheCompressorMetadata 覆盖 Encoding / Compression / Decompress 导出路径
+func TestCacheCompressorMetadata(t *testing.T) {
+	assert := assert.New(t)
+	plain := bytes.NewBufferString("hello world!hello world!hello world!")
+
+	tests := []struct {
+		name        string
+		c           CacheCompressor
+		encoding    string
+		compression CompressionType
+	}{
+		{"gzip", NewCacheGzipCompressor(), elton.Gzip, CompressionGzip},
+		{"br", NewCacheBrCompressor(), elton.Br, CompressionBr},
+		{"zstd", NewCacheZstdCompressor(), elton.Zstd, CompressionZstd},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(tt.encoding, tt.c.Encoding())
+			assert.Equal(tt.compression, tt.c.Compression())
+			compressed, ctype, err := tt.c.Compress(plain)
+			assert.Nil(err)
+			assert.Equal(tt.compression, ctype)
+			decoded, err := tt.c.Decompress(compressed)
+			assert.Nil(err)
+			assert.Equal(plain.Bytes(), decoded.Bytes())
+		})
+	}
 }

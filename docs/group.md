@@ -6,7 +6,9 @@ description: Group的相关方法说明
 
 ## NewGroup
 
-创建一个组，它包括Path的前缀以及组内公共中间件（非全局），适用于创建有相同前置校验条件的路由处理，如用户相关的操作。返回的Group对象包括`GET`，`POST`，`PUT`等方法，与Elton类似，之后可以通过`AddGroup`将所有路由处理添加至Elton实例。
+创建一个路由组：路径前缀 + 组内公共中间件（非全局）。适用于同一资源前缀、统一鉴权等。返回的 `*Group` 提供 `GET`/`POST`/… 等方法（与 `Elton` 类似，且支持链式调用），最后用 `e.AddGroup` 一次性注册。
+
+**2.0**：`g.NewGroup(path, handlers...)` 可创建**嵌套子组**（路径与中间件继承父组），子组随父组一起 `AddGroup`，无需再单独注册。
 
 **Example**
 ```go
@@ -31,13 +33,20 @@ func main() {
 		// 从session中读取用户信息...
 		c.Body = "user info"
 		return
-	})
-	userGroup.POST("/login", func(c *elton.Context) (err error) {
+	}).POST("/login", func(c *elton.Context) (err error) {
 		// 登录验证处理...
 		c.Body = "login success"
 		return
 	})
-	e.AddGroup(userGroup)
+
+	// 嵌套：/api + auth → /api/v1/users
+	api := elton.NewGroup("/api", noop)
+	v1 := api.NewGroup("/v1")
+	v1.GET("/users", func(c *elton.Context) error {
+		c.Body = "list"
+		return nil
+	})
+	e.AddGroup(userGroup, api)
 
 	err := e.ListenAndServe(":3000")
 	if err != nil {
