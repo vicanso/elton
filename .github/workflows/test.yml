@@ -27,15 +27,12 @@ jobs:
       with:
         go-version: ${{ matrix.go }}
 
-    # lint 只在最新版本上执行一次
-    - name: Get dependencies
-      if: matrix.go == 'stable'
-      run:
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin latest
-
+    # lint 只在最新版本上执行一次，使用官方 action（自带校验与缓存）
     - name: Lint
       if: matrix.go == 'stable'
-      run: make lint
+      uses: golangci/golangci-lint-action@v9
+      with:
+        version: latest
 
     - name: Test
       run: make test
