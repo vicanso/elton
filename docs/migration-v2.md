@@ -161,4 +161,4 @@ v2 依赖 `hes v1.0.0` 与 `keygrip v1.4.0`，相关行为变化：
 ## 仓库与工具链
 
 - `go.mod`：`go 1.24`，`hes v1.0.0`、`keygrip v1.4.0`。
-- CI 测试矩阵：Go 1.24 / 1.25。
+- CI 测试矩阵：Go stable（最新稳定版）/ 1.25 / 1.24，lint 仅在 stable 上执行。
