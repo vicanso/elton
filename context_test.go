@@ -64,14 +64,16 @@ func TestReset(t *testing.T) {
 	assert.False(c.Committed)
 	assert.Equal("", c.ID)
 	assert.Equal("", c.Route)
-	assert.Nil(c.Next)
+	assert.NotNil(c.Next) // restored to boundNext for chain reuse
 	assert.Empty(params.Keys)
 	assert.Empty(params.Values)
 	assert.Equal(0, c.StatusCode)
 	assert.Nil(c.Body)
 	assert.Nil(c.BodyBuffer)
 	assert.Nil(c.RequestBody)
-	assert.Nil(c.m)
+	// store map is cleared and kept for reuse (not set to nil)
+	assert.NotNil(c.m)
+	assert.Empty(c.m)
 	assert.Equal("", c.realIP)
 	assert.Equal("", c.clientIP)
 	assert.True(c.isReuse())
@@ -156,6 +158,15 @@ func TestRealIP(t *testing.T) {
 	}
 }
 
+func TestCSVFields(t *testing.T) {
+	assert := assert.New(t)
+	assert.Equal("a", firstCSVField("a, b, c"))
+	assert.Equal("a", firstCSVField(" a "))
+	assert.Equal("2.2.2.2", lastPublicCSVField("192.168.1.1, 1.1.1.1, 2.2.2.2"))
+	assert.Equal("192.168.1.1", lastPublicCSVField("192.168.1.1, 10.0.0.1"))
+	assert.Equal("", lastPublicCSVField(""))
+}
+
 func TestGetClientIP(t *testing.T) {
 	assert := assert.New(t)
 	tests := []struct {
@@ -183,6 +194,16 @@ func TestGetClientIP(t *testing.T) {
 
 			},
 			ip: "2.2.2.2",
+		},
+		// all private hops → first hop
+		{
+			newContext: func() *Context {
+				req := httptest.NewRequest("GET", "/", nil)
+				req.Header.Set(HeaderXForwardedFor, "192.168.1.1, 10.0.0.2")
+				c := NewContext(nil, req)
+				return c
+			},
+			ip: "192.168.1.1",
 		},
 		// get from x-real-ip
 		{

@@ -82,6 +82,37 @@ e.AddGroup(api)
 
 注意：`GetHeader`/`SetHeader`/`GetRequestHeader`、`Context.Get/Set`、`GetClientIP(req)` 等**带 key 参数的查找型方法**符合标准库惯例（如 `http.Header.Get`），保持不变。另外提醒：elton 中裸名 `GetHeader`/`SetHeader` 操作的是**响应**头（与 gin 的 `c.GetHeader` 读请求头相反），读请求头请使用 `GetRequestHeader`。
 
+### 路由：改用标准库 `net/http.ServeMux`（Go 1.22+）
+
+v2 不再内嵌 chi 风格路由树，统一走官方 `http.ServeMux` 的 method + wildcard 匹配。
+
+| 能力 | v1（chi 树） | v2（ServeMux） |
+|---|---|---|
+| 命名参数 | `{id}`、`:id` | `{id}`（`:id` 仍会自动转为 `{id}`） |
+| 捕获剩余路径 | `/*`（参数名 `*`） | `{name...}`；末尾 `/*` 自动转为 `{path...}`，用 `Param("path")` 或 `Params.Values[0]` |
+| 仅匹配根路径 | `GET /` | 注册 `"/"` 时内部规范为 `/{$}`（避免 ServeMux 把 `/` 当全站前缀） |
+| 正则约束 | `{id:[0-9]+}`、段内混合 `{cat:[a-z]+}-{type}` | **不支持**，注册时 panic |
+| 段内 `@` 等字面量混合 | `/article/@{user}` | **不支持**（wildcard 必须整段） |
+| 重复注册同一 pattern | 覆盖 / 忽略 | **panic**（与标准库一致） |
+| `GET` 与 `HEAD` | 需分别注册 | 仅注册 `GET` 时，标准库也会匹配 `HEAD` |
+| 尾斜杠 | 树匹配行为 | 可能 301 到带 `/` 的路径（ServeMux 默认） |
+| 取参 | `c.Param` / `c.Params` | 仍支持；底层来自 `Request.PathValue` |
+
+```go
+// 推荐写法（与 net/http 一致）
+e.GET("/books/{id}", func(c *elton.Context) error {
+    id := c.Param("id")
+    // 等价：c.Request.PathValue("id")
+    return nil
+})
+
+// 捕获剩余路径
+e.GET("/files/{path...}", handler)
+// 兼容旧写法：e.GET("/files/*", ...) → 注册为 /files/{path...}
+```
+
+405 时会设置 `Allow` 响应头（沿用标准库探测结果），再交给 `MethodNotAllowedHandler`（若已配置）。
+
 ### 其它
 
 - 所有导出签名中的 `interface{}` 改为 `any`（源码兼容）。
@@ -126,6 +157,8 @@ compressor.Level = 6
 
 ### 行为变化
 
+- **路由中间件快照**：`Handle`/`GET`/… 注册时会把**当时**的全局 `Use` 中间件与路由 handler 合并为固定链；之后再 `Use` 的中间件**不会**作用于已注册路由（请先 `Use` 再挂路由）。请求路径使用 Context 复用的 `boundNext`，避免每请求分配 Next 闭包。
+- `NewConcurrentLimiter` 不再内置 `gjson` 解析请求体。Keys 中非 `:ip`/`h:`/`q:`/`p:` 前缀的字段需通过 `ConcurrentLimiterConfig.BodyValue` 自行取值；未配置时这些字段不处理（空字符串）。模块不再依赖 `github.com/tidwall/gjson`。
 - `NewGlobalConcurrentLimiter` 现在会应用 `Skipper` 配置（v1 中该字段被忽略）。注意其 `Max` 语义为"在途请求数达到 Max 即拒绝"，实际允许的最大并发为 `Max - 1`（与 v1 一致，文档已注明）。
 - `error`、`basic_auth`、`stats`、`static_serve` 中间件改用 `errors.As` 识别 `*hes.Error`，包装过的错误也能正确解析状态码。
 - `NewHTTPHeaders` 的忽略头匹配从子串匹配改为小写精确匹配，名称恰好是 `content-encoding` 等子串的自定义头（如 `Encoding`）不再被误删。

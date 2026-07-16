@@ -95,7 +95,7 @@ e.Method(path string, ...func(*elton.Context) error)
 
 ### 路由示例
 
-elton的路由使用[chi](https://github.com/go-chi/chi)的路由简化而来，下面是两个简单的示例。
+路由使用 Go 1.22+ 标准库 [`net/http.ServeMux`](https://pkg.go.dev/net/http#ServeMux) 的 pattern（`{name}`、`{name...}`、方法匹配）。
 
 ```go
 // 带参数路由
@@ -104,9 +104,9 @@ e.GET("/users/{type}", func(c *elton.Context) error {
 	return nil
 })
 
-// 复合参数
-e.GET("/books/{category:[a-z-]+}-{type}", func(c *elton.Context) error {
-	c.BodyBuffer = bytes.NewBufferString(c.Param("category") + c.Param("type"))
+// 捕获剩余路径
+e.GET("/files/{path...}", func(c *elton.Context) error {
+	c.BodyBuffer = bytes.NewBufferString(c.Param("path"))
 	return nil
 })
 

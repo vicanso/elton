@@ -285,13 +285,14 @@ func TestHandle(t *testing.T) {
 
 	t.Run("params", func(t *testing.T) {
 		assert := assert.New(t)
-		e.GET("/params/:id", func(c *Context) error {
+		e.GET("/params/{id}", func(c *Context) error {
 			assert.Equal("1", c.Param("id"), "get route param fail")
 			return nil
 		})
 		req := httptest.NewRequest("GET", "https://aslant.site/params/1", nil)
 		resp := httptest.NewRecorder()
 		e.ServeHTTP(resp, req)
+		assert.Equal(http.StatusOK, resp.Code)
 	})
 
 	t.Run("not found", func(t *testing.T) {
@@ -445,6 +446,86 @@ func TestNotFoundHandler(t *testing.T) {
 	assert.Equal(true, done, "custom not found handler should be called")
 }
 
+func TestMethodNotAllowed(t *testing.T) {
+	assert := assert.New(t)
+	e := New()
+	e.GET("/items/{id}", func(c *Context) error {
+		return nil
+	})
+	called := false
+	e.MethodNotAllowedHandler = func(resp http.ResponseWriter, req *http.Request) {
+		called = true
+		resp.WriteHeader(http.StatusMethodNotAllowed)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/items/1", nil)
+	resp := httptest.NewRecorder()
+	e.ServeHTTP(resp, req)
+	assert.True(called)
+	assert.Equal(http.StatusMethodNotAllowed, resp.Code)
+	assert.Contains(resp.Header().Get("Allow"), http.MethodGet)
+}
+
+func TestApplicationNotFoundStatus(t *testing.T) {
+	assert := assert.New(t)
+	e := New()
+	// Business handler intentionally returns 404 — must not be replaced by NotFoundHandler.
+	e.GET("/gone", func(c *Context) error {
+		c.StatusCode = http.StatusNotFound
+		c.BodyBuffer = bytes.NewBufferString("custom-missing")
+		return nil
+	})
+	e.NotFoundHandler = func(resp http.ResponseWriter, req *http.Request) {
+		resp.WriteHeader(http.StatusNotFound)
+		_, _ = resp.Write([]byte("framework-not-found"))
+	}
+	req := httptest.NewRequest(http.MethodGet, "/gone", nil)
+	resp := httptest.NewRecorder()
+	e.ServeHTTP(resp, req)
+	assert.Equal(http.StatusNotFound, resp.Code)
+	assert.Equal("custom-missing", resp.Body.String())
+}
+
+func TestTrailingSlashRedirect(t *testing.T) {
+	assert := assert.New(t)
+	e := New()
+	// Subtree pattern: ServeMux redirects /dir -> /dir/ when only /dir/ is registered.
+	e.GET("/dir/{path...}", func(c *Context) error {
+		c.BodyBuffer = bytes.NewBufferString("ok:" + c.Param("path"))
+		return nil
+	})
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/dir", nil)
+	resp := httptest.NewRecorder()
+	e.ServeHTTP(resp, req)
+	assert.Equal(http.StatusTemporaryRedirect, resp.Code)
+	assert.Equal("/dir/", resp.Header().Get("Location"))
+}
+
+func TestCatchAllParam(t *testing.T) {
+	assert := assert.New(t)
+	e := New()
+	e.GET("/files/{path...}", func(c *Context) error {
+		assert.Equal("a/b/c", c.Param("path"))
+		assert.Equal("a/b/c", c.Params.Values[0])
+		assert.Equal("/files/{path...}", c.Route)
+		return nil
+	})
+	// legacy /* normalizes to {path...}
+	e.GET("/assets/*", func(c *Context) error {
+		assert.Equal("x/y", c.Param("path"))
+		return nil
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/files/a/b/c", nil)
+	resp := httptest.NewRecorder()
+	e.ServeHTTP(resp, req)
+	assert.Equal(http.StatusOK, resp.Code)
+
+	req = httptest.NewRequest(http.MethodGet, "/assets/x/y", nil)
+	resp = httptest.NewRecorder()
+	e.ServeHTTP(resp, req)
+	assert.Equal(http.StatusOK, resp.Code)
+}
+
 func TestOnError(t *testing.T) {
 	assert := assert.New(t)
 	e := New()
@@ -486,6 +567,34 @@ func TestOnTrace(t *testing.T) {
 	resp := httptest.NewRecorder()
 	e.ServeHTTP(resp, req)
 	assert.Equal(true, done, "on trace should be called")
+}
+
+func TestMiddlewareSnapshotAtRegister(t *testing.T) {
+	assert := assert.New(t)
+	e := New()
+	e.GET("/early", func(c *Context) error {
+		// registered before Use — must not see post middleware
+		_, ok := c.Get("late")
+		assert.False(ok)
+		return nil
+	})
+	e.Use(func(c *Context) error {
+		c.Set("late", true)
+		return c.Next()
+	})
+	e.GET("/late", func(c *Context) error {
+		v, ok := c.Get("late")
+		assert.True(ok)
+		assert.Equal(true, v)
+		return nil
+	})
+
+	for _, path := range []string{"/early", "/late"} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		resp := httptest.NewRecorder()
+		e.ServeHTTP(resp, req)
+		assert.Equal(http.StatusOK, resp.Code, path)
+	}
 }
 
 func TestOnBefore(t *testing.T) {

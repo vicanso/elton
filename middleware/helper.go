@@ -25,7 +25,8 @@ package middleware
 import (
 	"crypto/sha1"
 	"encoding/base64"
-	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
@@ -57,7 +58,15 @@ func genETag(buf []byte) string {
 		return `"0-2jmj7l5rSw0yVb_vlWAYkK_YBwk="`
 	}
 	h := sha1.New()
-	h.Write(buf)
+	_, _ = h.Write(buf)
 	hash := base64.URLEncoding.EncodeToString(h.Sum(nil))
-	return fmt.Sprintf(`"%x-%s"`, size, hash)
+	// "hexSize-hash" without fmt
+	var b strings.Builder
+	b.Grow(2 + 16 + 1 + len(hash) + 1)
+	b.WriteByte('"')
+	b.WriteString(strconv.FormatInt(int64(size), 16))
+	b.WriteByte('-')
+	b.WriteString(hash)
+	b.WriteByte('"')
+	return b.String()
 }

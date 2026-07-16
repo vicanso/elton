@@ -25,7 +25,6 @@ package elton
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -54,7 +53,8 @@ type (
 		ID string
 		// Route route path, it's equal to the http router path with params.
 		Route string
-		// Next next function, it will be auto generated.
+		// Next advances the middleware/handler chain. Set by the framework (stable boundNext);
+		// Compose may temporarily replace it. Prefer calling Next() rather than reassigning.
 		Next func() error
 		// Params route params
 		Params *RouteParams
@@ -81,6 +81,18 @@ type (
 		reuseDisabled atomic.Bool
 		// cacheQuery the cache query
 		cacheQuery url.Values
+
+		// --- request-scoped chain state (set by framework; not for app use) ---
+		// boundNext is allocated once per Context and always points at chainNext.
+		boundNext func() error
+		// handlers is the immutable snapshot: global middleware + route handlers.
+		handlers []Handler
+		// handlerIndex is the cursor for Next; starts at -1.
+		handlerIndex int
+		// handlerNames is used when EnableTrace; reused across requests.
+		handlerNames []string
+		// activeTrace is non-nil only for the current traced request.
+		activeTrace *Trace
 	}
 )
 
@@ -111,6 +123,47 @@ func (c *Context) Value(key any) any {
 	return c.Context().Value(key)
 }
 
+// initBoundNext ensures Next has a stable function that advances the handler chain
+// without allocating a new closure on every request.
+func (c *Context) initBoundNext() {
+	if c.boundNext != nil {
+		return
+	}
+	c.boundNext = func() error { return c.chainNext() }
+	c.Next = c.boundNext
+}
+
+// chainNext implements the onion-model step for the pre-snapshotted handlers slice.
+func (c *Context) chainNext() error {
+	if c.Committed {
+		return nil
+	}
+	c.handlerIndex++
+	if c.handlerIndex >= len(c.handlers) {
+		return nil
+	}
+	fn := c.handlers[c.handlerIndex]
+	if c.activeTrace == nil {
+		return fn(c)
+	}
+	name := ""
+	if c.handlerIndex < len(c.handlerNames) {
+		name = c.handlerNames[c.handlerIndex]
+	}
+	if name == "-" {
+		return fn(c)
+	}
+	startedAt := time.Now()
+	info := &TraceInfo{
+		Name:       name,
+		Middleware: true,
+	}
+	c.activeTrace.Add(info)
+	err := fn(c)
+	info.Duration = time.Since(startedAt)
+	return err
+}
+
 // Reset all fields of context
 func (c *Context) Reset() {
 	c.Request = nil
@@ -118,13 +171,23 @@ func (c *Context) Reset() {
 	c.Committed = false
 	c.ID = ""
 	c.Route = ""
-	c.Next = nil
+	c.initBoundNext()
+	c.Next = c.boundNext
+	c.handlers = nil
+	c.handlerIndex = -1
+	if c.handlerNames != nil {
+		c.handlerNames = c.handlerNames[:0]
+	}
+	c.activeTrace = nil
 	c.Params.Reset()
 	c.StatusCode = 0
 	c.Body = nil
 	c.BodyBuffer = nil
 	c.RequestBody = nil
-	c.m = nil
+	// Reuse store map to avoid per-request make when handlers use Set/Get.
+	if c.m != nil {
+		clear(c.m)
+	}
 	c.realIP = ""
 	c.clientIP = ""
 	c.reuseDisabled.Store(false)
@@ -142,6 +205,43 @@ func (c *Context) RemoteAddr() string {
 	return GetRemoteAddr(c.Request)
 }
 
+// firstCSVField returns the first comma-separated field, trimmed, without allocating a slice.
+func firstCSVField(s string) string {
+	if i := strings.IndexByte(s, ','); i >= 0 {
+		s = s[:i]
+	}
+	return strings.TrimSpace(s)
+}
+
+// lastPublicCSVField returns the rightmost non-intranet hop in a comma-separated list
+// (X-Forwarded-For). If every hop is private, returns the first field. No slice alloc.
+func lastPublicCSVField(s string) string {
+	first, lastPublic := "", ""
+	rest := s
+	for rest != "" {
+		var part string
+		if i := strings.IndexByte(rest, ','); i >= 0 {
+			part, rest = rest[:i], rest[i+1:]
+		} else {
+			part, rest = rest, ""
+		}
+		v := strings.TrimSpace(part)
+		if v == "" {
+			continue
+		}
+		if first == "" {
+			first = v
+		}
+		if !IsIntranet(v) {
+			lastPublic = v
+		}
+	}
+	if lastPublic != "" {
+		return lastPublic
+	}
+	return first
+}
+
 // GetRealIP returns the real ip of request,
 // it will get ip from x-forwarded-for from request header,
 // if not exists then it will get ip from x-real-ip from request header,
@@ -150,7 +250,7 @@ func GetRealIP(req *http.Request) string {
 	h := req.Header
 	ip := h.Get(HeaderXForwardedFor)
 	if ip != "" {
-		return strings.TrimSpace(strings.Split(ip, ",")[0])
+		return firstCSVField(ip)
 	}
 	ip = h.Get(HeaderXRealIP)
 	if ip != "" {
@@ -178,17 +278,8 @@ func GetClientIP(req *http.Request) string {
 	h := req.Header
 	ip := h.Get(HeaderXForwardedFor)
 	if ip != "" {
-		arr := strings.Split(ip, ",")
-		// 从后往前找第一个非内网IP的则为客户IP
-		for i := len(arr) - 1; i >= 0; i-- {
-			v := strings.TrimSpace(arr[i])
-			if !IsIntranet(v) {
-				return v
-			}
-		}
-		// 如果所有IP都是内网IP，则直接取第一个
-		if len(arr) != 0 {
-			return strings.TrimSpace(arr[0])
+		if v := lastPublicCSVField(ip); v != "" {
+			return v
 		}
 	}
 	// x-real-ip为前置设置，如果有，则直接认为是客户IP
@@ -210,12 +301,18 @@ func (c *Context) ClientIP() string {
 	return c.clientIP
 }
 
-// Param returns the route param value
+// Param returns the route param value.
+// Prefer Request.PathValue (ServeMux); fall back to Params for manual/test setups.
 func (c *Context) Param(name string) string {
-	if c.Params == nil {
-		return ""
+	if c.Request != nil {
+		if v := c.Request.PathValue(name); v != "" {
+			return v
+		}
 	}
-	return c.Params.Get(name)
+	if c.Params != nil {
+		return c.Params.Get(name)
+	}
+	return ""
 }
 
 // getCacheQuery returns the cache of query
@@ -528,16 +625,24 @@ func (c *Context) NoStore() {
 // CacheMaxAge sets `Cache-Control: public, max-age=MaxAge, s-maxage=SMaxAge` to the http response header.
 // If sMaxAge is not empty, it will use the first duration as SMaxAge
 func (c *Context) CacheMaxAge(age time.Duration, sMaxAge ...time.Duration) {
-	cache := fmt.Sprintf("public, max-age=%d", int(age.Seconds()))
+	var b strings.Builder
+	b.Grow(48)
+	b.WriteString("public, max-age=")
+	b.WriteString(strconv.Itoa(int(age.Seconds())))
 	if len(sMaxAge) != 0 {
-		cache += fmt.Sprintf(", s-maxage=%d", int(sMaxAge[0].Seconds()))
+		b.WriteString(", s-maxage=")
+		b.WriteString(strconv.Itoa(int(sMaxAge[0].Seconds())))
 	}
-	c.SetHeader(HeaderCacheControl, cache)
+	c.SetHeader(HeaderCacheControl, b.String())
 }
 
 // PrivateCacheMaxAge sets `Cache-Control: private, max-age=MaxAge` to the response header.
 func (c *Context) PrivateCacheMaxAge(age time.Duration) {
-	c.SetHeader(HeaderCacheControl, fmt.Sprintf("private, max-age=%d", int(age.Seconds())))
+	var b strings.Builder
+	b.Grow(32)
+	b.WriteString("private, max-age=")
+	b.WriteString(strconv.Itoa(int(age.Seconds())))
+	c.SetHeader(HeaderCacheControl, b.String())
 }
 
 // Created sets the body to response and set the status to 201
@@ -659,5 +764,7 @@ func NewContext(resp http.ResponseWriter, req *http.Request) *Context {
 	c.Request = req
 	c.Response = resp
 	c.Params = new(RouteParams)
+	c.handlerIndex = -1
+	c.initBoundNext()
 	return c
 }

@@ -137,12 +137,10 @@ func generateRewrites(arr []string) (rewrites []*rewriteRegexp, err error) {
 	rewrites = make([]*rewriteRegexp, 0, size)
 
 	for _, value := range arr {
-		parts := strings.SplitN(value, ":", 2)
-		if len(parts) != 2 || parts[0] == "" {
+		k, v, ok := strings.Cut(value, ":")
+		if !ok || k == "" {
 			return nil, fmt.Errorf("invalid proxy rewrite rule %q, want pattern:replacement", value)
 		}
-		k := parts[0]
-		v := parts[1]
 		k = strings.ReplaceAll(k, "*", "(\\S*)")
 		reg, e := regexp.Compile(k)
 		if e != nil {

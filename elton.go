@@ -83,8 +83,8 @@ type (
 
 		// status of elton
 		status atomic.Int32
-		// route tree
-		tree *node
+		// mux is the standard library router (Go 1.22+ patterns / wildcards)
+		mux *http.ServeMux
 		// routers all router infos
 		routers []RouterInfo
 		// middlewares middleware function
@@ -160,14 +160,17 @@ func New() *Elton {
 // NewWithoutServer returns a new elton instance without http server
 func NewWithoutServer() *Elton {
 	e := &Elton{
-		tree:          new(node),
+		mux:           http.NewServeMux(),
 		functionInfos: make(map[uintptr]string),
 	}
 	e.ctxPool.New = func() any {
-		return &Context{
-			elton:  e,
-			Params: new(RouteParams),
+		c := &Context{
+			elton:        e,
+			Params:       new(RouteParams),
+			handlerIndex: -1,
 		}
+		c.initBoundNext()
+		return c
 	}
 	return e
 }
@@ -356,32 +359,28 @@ func (e *Elton) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		preHandler(req)
 	}
 
-	c := e.ctxPool.Get().(*Context)
-	c.Reset()
-	methodType := methodTypeMap[req.Method]
-	rn := e.tree.findRoute(methodType, req.URL.Path, c.Params)
-	if rn == nil {
-		if c.Params.methodNotAllowed {
+	// Single ServeMux match: PathValue is filled here. edgeWriter lets elton routes
+	// mark themselves handled; mux-internal 404/405 are replaced by elton handlers,
+	// while redirects (and other non-route mux responses) are flushed as-is.
+	// edgeWriter is pooled; handlers must detach it from Context before return
+	// (see detachEdgeFromContext in the route HandleFunc).
+	ew := acquireEdgeWriter(resp)
+	e.mux.ServeHTTP(ew, req)
+	if !ew.handled {
+		switch ew.status {
+		case http.StatusMethodNotAllowed:
+			if allow := ew.Header().Get("Allow"); allow != "" {
+				resp.Header().Set("Allow", allow)
+			}
 			e.methodNotAllowed(resp, req)
-		} else {
-			// 404处理
+		case http.StatusNotFound, 0:
 			e.notFound(resp, req)
+		default:
+			// trailing-slash redirect, sanitizing redirect, etc.
+			ew.flush()
 		}
-		// not found 与method not allowed所有context都可复用
-		e.ctxPool.Put(c)
-		return
 	}
-	c.Request = req
-	c.Response = resp
-
-	if e.GenerateID != nil {
-		c.ID = e.GenerateID()
-	}
-
-	rn.endpoints[methodType].handler(c)
-	if c.isReuse() {
-		e.ctxPool.Put(c)
-	}
+	releaseEdgeWriter(ew)
 }
 
 // Routers returns routers of elton
@@ -390,24 +389,80 @@ func (e *Elton) Routers() []RouterInfo {
 }
 
 // Handle adds http handle function.
-// 注册时将全局中间件（Use添加）与该路由的handler列表合并为一条执行链，
-// 请求到达时通过c.Next()逐个推进（洋葱模型）：
-//   - 任一环节返回error则中断，触发error监听器并输出错误响应；
-//   - c.Committed为true时Next短路，不再执行后续handler；
-//   - 链执行完成后，统一将BodyBuffer（或reader类型的Body）写出至响应。
+// 注册时将当时的全局中间件（Use）与该路由 handler 快照合并为一条固定执行链；
+// 请求到达时通过 c.Next() 推进（洋葱模型），Next 使用 Context 上复用的 boundNext，
+// 避免每请求分配闭包：
+//   - 任一环节返回 error 则中断，触发 error 监听器并输出错误响应；
+//   - c.Committed 为 true 时 Next 短路，不再执行后续 handler；
+//   - 链执行完成后，统一将 BodyBuffer（或 reader 类型的 Body）写出至响应。
 //
-// 注意：路由注册（Handle/GET/POST/Use等）应在服务启动前完成，
-// 路由树不支持与请求处理并发修改。
+// path 使用 net/http ServeMux 模式（Go 1.22+）：{name}、{name...}、{$}；
+// 仍兼容段首 :name 与末尾 /*（分别转为 {name}、{path...}）。
+// 注册 pattern 为 "METHOD path"；冲突的 pattern 会 panic（标准库行为）。
+//
+// 注意：应在 Listen 前完成 Use + 路由注册。某路由注册之后再 Use 的中间件
+// 不会作用于该路由（链在 Handle 时已快照）。
 func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 	for _, fn := range handlerList {
 		e.ensureFunctionName(fn)
 	}
 
+	path = normalizeRoutePath(path)
+	paramNames := extractParamNames(path)
+
+	// Snapshot: later e.Use does not change already-registered routes.
+	handlers := make([]Handler, 0, len(e.middlewares)+len(handlerList))
+	handlers = append(handlers, e.middlewares...)
+	handlers = append(handlers, handlerList...)
+
 	e.routers = append(e.routers, RouterInfo{
 		Method: method,
 		Route:  path,
 	})
-	e.tree.InsertRoute(methodTypeMap[method], path, func(c *Context) {
+
+	pattern := path
+	if method != "" {
+		pattern = method + " " + path
+	}
+
+	e.mux.HandleFunc(pattern, func(resp http.ResponseWriter, req *http.Request) {
+		// Mark before any write so application 404/405 is not treated as mux miss.
+		markRouteHandled(resp)
+
+		c := e.ctxPool.Get().(*Context)
+		c.Reset()
+		c.Request = req
+		c.Response = resp
+		c.handlers = handlers
+		c.handlerIndex = -1
+		// Detach edgeWriter before this func returns so ServeHTTP can pool it safely.
+		// Also returns Context to the pool when reuse is allowed.
+		defer func() {
+			detachEdgeFromContext(c)
+			if c.isReuse() {
+				e.ctxPool.Put(c)
+			}
+		}()
+
+		if e.GenerateID != nil {
+			c.ID = e.GenerateID()
+		}
+		// Fill Params in one pass with pre-sized slices (ToMap / Values[0] / tests).
+		if n := len(paramNames); n > 0 {
+			p := c.Params
+			if cap(p.Keys) < n {
+				p.Keys = make([]string, n)
+				p.Values = make([]string, n)
+			} else {
+				p.Keys = p.Keys[:n]
+				p.Values = p.Values[:n]
+			}
+			for i, name := range paramNames {
+				p.Keys[i] = name
+				p.Values[i] = req.PathValue(name)
+			}
+		}
+
 		if e.beforeListeners != nil {
 			e.emitBefore(c)
 		}
@@ -415,71 +470,30 @@ func (e *Elton) Handle(method, path string, handlerList ...Handler) *Elton {
 			defer e.emitDone(c)
 		}
 		c.Route = path
-		mids := e.middlewares
-		maxMid := len(mids)
-		maxNext := maxMid + len(handlerList)
-		index := -1
-		var trace *Trace
-		// handlerNames 在 EnableTrace 时一次性解析，避免每层 Next 加锁查名
-		var handlerNames []string
+
 		if e.EnableTrace {
-			trace = &Trace{
+			maxNext := len(handlers)
+			trace := &Trace{
 				Infos: make(TraceInfos, 0, maxNext),
 			}
+			c.activeTrace = trace
 			c.WithContext(context.WithValue(c.Context(), ContextTraceKey, trace))
-			handlerNames = make([]string, maxNext)
-			e.functionInfosMutex.RLock()
-			for i := 0; i < maxMid; i++ {
-				handlerNames[i] = e.functionNameLocked(mids[i])
+			if cap(c.handlerNames) < maxNext {
+				c.handlerNames = make([]string, maxNext)
+			} else {
+				c.handlerNames = c.handlerNames[:maxNext]
 			}
-			for i, fn := range handlerList {
-				handlerNames[maxMid+i] = e.functionNameLocked(fn)
+			e.functionInfosMutex.RLock()
+			for i := range maxNext {
+				c.handlerNames[i] = e.functionNameLocked(handlers[i])
 			}
 			e.functionInfosMutex.RUnlock()
 		}
-		c.Next = func() error {
-			// 如果已设置响应数据，则不再执行后续的中间件
-			if c.Committed {
-				return nil
-			}
-			index++
-			var fn Handler
-			// 如果调用过多的next，则直接返回
-			if index >= maxNext {
-				return nil
-			}
 
-			// 如果已执行完公共添加的中间件，执行handler list
-			if index >= maxMid {
-				fn = handlerList[index-maxMid]
-			} else {
-				fn = mids[index]
-			}
-			if trace == nil {
-				return fn(c)
-			}
-			fnName := handlerNames[index]
-			// 如果函数名字为 - ，则跳过
-			if fnName == "-" {
-				return fn(c)
-			}
-			startedAt := time.Now()
-
-			traceInfo := &TraceInfo{
-				Name:       fnName,
-				Middleware: true,
-			}
-			// 先添加至slice中，保证顺序
-			trace.Add(traceInfo)
-			err := fn(c)
-			// 完成后计算时长（前面的中间件包括后面中间件的处理时长）
-			traceInfo.Duration = time.Since(startedAt)
-			return err
-		}
 		err := c.Next()
-		if trace != nil {
-			trace.Calculate()
-			e.EmitTrace(c, trace.Infos)
+		if c.activeTrace != nil {
+			c.activeTrace.Calculate()
+			e.EmitTrace(c, c.activeTrace.Infos)
 		}
 		if err != nil {
 			e.EmitError(c, err)

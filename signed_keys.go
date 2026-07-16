@@ -23,6 +23,7 @@
 package elton
 
 import (
+	"slices"
 	"sync"
 	"sync/atomic"
 )
@@ -55,9 +56,7 @@ func (sk *SimpleSignedKeys) Keys() []string {
 
 // SetKeys sets the key list of simple signed keys
 func (sk *SimpleSignedKeys) SetKeys(values []string) {
-	keys := make([]string, len(values))
-	copy(keys, values)
-	sk.keys = keys
+	sk.keys = slices.Clone(values)
 }
 
 // Keys returns the key list of rwmutex signed keys
@@ -69,8 +68,7 @@ func (rwSk *RWMutexSignedKeys) Keys() []string {
 
 // SetKeys sets the key list of rwmutex signed keys
 func (rwSk *RWMutexSignedKeys) SetKeys(values []string) {
-	keys := make([]string, len(values))
-	copy(keys, values)
+	keys := slices.Clone(values)
 	rwSk.Lock()
 	defer rwSk.Unlock()
 	rwSk.keys = keys
@@ -87,7 +85,6 @@ func (atSk *AtomicSignedKeys) Keys() []string {
 
 // SetKeys sets the key list of atomic signed keys
 func (atSk *AtomicSignedKeys) SetKeys(values []string) {
-	keys := make([]string, len(values))
-	copy(keys, values)
+	keys := slices.Clone(values)
 	atSk.value.Store(&keys)
 }

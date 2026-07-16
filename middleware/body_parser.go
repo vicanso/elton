@@ -30,7 +30,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -80,11 +79,6 @@ type (
 )
 
 var (
-	validMethods = []string{
-		http.MethodPost,
-		http.MethodPatch,
-		http.MethodPut,
-	}
 	ErrInvalidJSON = &hes.Error{
 		Category:   ErrBodyParserCategory,
 		Message:    "invalid json format",
@@ -92,6 +86,15 @@ var (
 	}
 	jsonBytes = []byte("{}[]")
 )
+
+func isBodyMethod(method string) bool {
+	switch method {
+	case http.MethodPost, http.MethodPatch, http.MethodPut:
+		return true
+	default:
+		return false
+	}
+}
 
 func (gd *gzipDecoder) Validate(c *elton.Context) bool {
 	return c.GetRequestHeader(elton.HeaderContentEncoding) == elton.Gzip
@@ -345,7 +348,7 @@ func NewBodyParser(config BodyParserConfig) elton.Handler {
 			return c.Next()
 		}
 		// 对于非提交数据的method跳过
-		if !slices.Contains(validMethods, c.Request.Method) {
+		if !isBodyMethod(c.Request.Method) {
 			return c.Next()
 		}
 		body, err := bodyReader.ReadAll(c)

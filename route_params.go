@@ -22,41 +22,35 @@
 
 package elton
 
-// RouteParams is a structure to track URL routing parameters efficiently.
+// RouteParams tracks URL path wildcards for a request.
+// Values are filled from http.Request.PathValue after ServeMux matches a route.
 type RouteParams struct {
-	Keys, Values     []string
-	methodNotAllowed bool
+	Keys, Values []string
 }
 
-// Add a URL parameter to the end of the route param
+// Add appends a path parameter.
 func (s *RouteParams) Add(key, value string) {
 	s.Keys = append(s.Keys, key)
 	s.Values = append(s.Values, value)
 }
 
-// Reset the params
+// Reset clears all parameters for pool reuse.
 func (s *RouteParams) Reset() {
 	s.Keys = s.Keys[:0]
 	s.Values = s.Values[:0]
-	s.methodNotAllowed = false
 }
 
-// Get value from params
+// Get returns the value for key, or "" if missing.
 func (s *RouteParams) Get(key string) string {
-	index := -1
 	for i, k := range s.Keys {
 		if key == k {
-			index = i
-			break
+			return s.Values[i]
 		}
-	}
-	if index != -1 {
-		return s.Values[index]
 	}
 	return ""
 }
 
-// ToMap converts route params to map[string]string
+// ToMap converts route params to map[string]string.
 func (s *RouteParams) ToMap() map[string]string {
 	m := make(map[string]string, len(s.Keys))
 	for index, key := range s.Keys {

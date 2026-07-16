@@ -449,7 +449,7 @@ func main() {
 		return
 	})
 
-	e.GET("/files/*", func(c *elton.Context) (err error) {
+	e.GET("/files/{path...}", func(c *elton.Context) (err error) {
 		c.Body = "file content"
 		return
 	})

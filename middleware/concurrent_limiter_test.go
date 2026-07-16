@@ -23,6 +23,7 @@
 package middleware
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http/httptest"
 	"sync"
@@ -53,6 +54,13 @@ func TestConcurrentLimiter(t *testing.T) {
 			"q:type",
 			"p:id",
 			"account",
+		},
+		BodyValue: func(c *elton.Context, name string) string {
+			var data map[string]string
+			if err := json.Unmarshal(c.RequestBody, &data); err != nil {
+				return ""
+			}
+			return data[name]
 		},
 		KeyGenerator: func(c *elton.Context) (string, error) {
 			return "abc", nil

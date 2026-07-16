@@ -47,10 +47,10 @@ func etagWeakMatch(match, etag string) bool {
 	if match == etag {
 		return true
 	}
-	if strings.HasPrefix(match, weakTagPrefix) && match[2:] == etag {
+	if s, ok := strings.CutPrefix(match, weakTagPrefix); ok && s == etag {
 		return true
 	}
-	if strings.HasPrefix(etag, weakTagPrefix) && etag[2:] == match {
+	if s, ok := strings.CutPrefix(etag, weakTagPrefix); ok && s == match {
 		return true
 	}
 	return false

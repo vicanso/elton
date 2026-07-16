@@ -311,7 +311,7 @@ func main() {
 - `h:key` 从HTTP请求头中获取key的值
 - `q:key` 从HTTP的query中获取key的值
 - `p:key` 从路由的params中获取key的值
-- 其它的则从HTTP的Post data中获取key的值（只支持json)
+- 其它字段通过 `BodyValue` 回调从请求体取值；未配置 `BodyValue` 时不处理（空字符串）
 
 **Example**
 ```go
@@ -319,6 +319,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"sync"
 	"time"
 
@@ -337,6 +338,12 @@ func main() {
 			"q:type",
 			"p:id",
 			"account",
+		},
+		// Keys 中非 :ip/h:/q:/p: 前缀的字段通过 BodyValue 取值；未配置则不处理
+		BodyValue: func(c *elton.Context, name string) string {
+			var data map[string]string
+			_ = json.Unmarshal(c.RequestBody, &data)
+			return data[name]
 		},
 		Lock: func(key string, c *elton.Context) (success bool, unlock func(), err error) {
 			_, loaded := m.LoadOrStore(key, true)

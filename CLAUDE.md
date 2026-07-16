@@ -22,11 +22,11 @@ Always run tests with `-race` (CI does). Verify `gofmt -l .` is clean before fin
 
 ### Onion middleware model (do not change the .Next chaining logic)
 
-Everything is a `Handler func(*Context) error`. Handlers registered per-route are composed with global middleware (`e.Use`) into a chain; each handler calls `c.Next()` to invoke the rest of the chain, giving before/after semantics (request flows inward, response outward). Errors return up the chain instead of writing responses directly. `Context.Committed` short-circuits: once true, remaining processing is skipped and the response is considered written.
+Everything is a `Handler func(*Context) error`. At route registration, global middleware (`e.Use` at that moment) is snapshotted with route handlers into a fixed chain; each handler calls `c.Next()` (stable `boundNext` → `chainNext`, no per-request closure). Request flows inward, response outward. Errors return up the chain instead of writing responses directly. `Context.Committed` short-circuits: once true, remaining processing is skipped and the response is considered written. Call `Use` before registering routes that need those middlewares.
 
 Response contract: handlers set `c.Body` (any) and/or `c.StatusCode`; a responder middleware (e.g. `middleware.NewDefaultResponder`) converts `Body` to `c.BodyBuffer` (*bytes.Buffer), which the framework writes out in `elton.go` after the chain returns. If `Body` is an `io.Reader` it is streamed via Pipe; if it implements `io.Closer` and is *not* piped (error path, or `BodyBuffer` set), the framework closes it (`Context.closeReaderBody`).
 
-Key core files: `elton.go` (Elton instance, route registration, lifecycle `ListenAndServe/Shutdown/GracefulClose`, events `OnBefore/OnDone/OnError`, Context pooling via `sync.Pool`), `context.go` (Context; generic `GetContextValue[T]`; signed cookies via keygrip), `tree.go` (chi-derived route tree, `{param}` syntax), `fresh.go` (zero-alloc HTTP freshness check).
+Key core files: `elton.go` (Elton instance, route registration, lifecycle `ListenAndServe/Shutdown/GracefulClose`, events `OnBefore/OnDone/OnError`, Context pooling via `sync.Pool`), `context.go` (Context; generic `GetContextValue[T]`; signed cookies via keygrip), `route.go` (path normalize, param names, `edgeWriter` for single ServeMux match + custom 404/405), `fresh.go` (zero-alloc HTTP freshness check). Routing uses stdlib `http.ServeMux` (Go 1.22+ patterns: `{name}`, `{name...}`, method match); `c.Param` / `RouteParams` are filled from `Request.PathValue`. `ServeHTTP` calls `mux.ServeHTTP` once; elton routes `markHandled` so mux-internal 404/405 can be replaced without a second match.
 
 ### Middleware conventions
 

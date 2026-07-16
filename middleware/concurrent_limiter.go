@@ -28,7 +28,6 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/tidwall/gjson"
 	"github.com/vicanso/elton/v2"
 	"github.com/vicanso/hes"
 )
@@ -66,6 +65,12 @@ const (
 
 type KeyGenerator func(*elton.Context) (string, error)
 
+// ConcurrentLimiterBodyValue extracts a value from the request body by name
+// (typically a JSON path or field). Used when Keys contains a plain name
+// that is neither :ip / h: / q: / p: prefixes.
+// If ConcurrentLimiterConfig.BodyValue is nil, body keys are ignored (empty value).
+type ConcurrentLimiterBodyValue func(c *elton.Context, name string) string
+
 type (
 	// ConcurrentLimiterLock lock the key
 	ConcurrentLimiterLock func(string, *elton.Context) (bool, func(), error)
@@ -78,8 +83,10 @@ type (
 		//   - "h:name" : 请求头name的值
 		//   - "q:name" : query参数name的值
 		//   - "p:name" : 路由参数name的值
-		//   - 其它     : 视为JSON请求体的gjson路径，从RequestBody中取值
+		//   - 其它     : 通过 BodyValue 从请求体取值；未配置 BodyValue 时不处理（空字符串）
 		Keys []string
+		// BodyValue 从请求体按 name 取值。未设置时，Keys 中的 body 字段不解析。
+		BodyValue ConcurrentLimiterBodyValue
 		// Lock lock function
 		Lock    ConcurrentLimiterLock
 		Skipper elton.Skipper
@@ -120,23 +127,23 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 			})
 			continue
 		}
-		if strings.HasPrefix(key, headerKey) {
+		if name, ok := strings.CutPrefix(key, headerKey); ok {
 			keys = append(keys, &concurrentLimiterKeyInfo{
-				Name:   key[2:],
+				Name:   name,
 				Header: true,
 			})
 			continue
 		}
-		if strings.HasPrefix(key, queryKey) {
+		if name, ok := strings.CutPrefix(key, queryKey); ok {
 			keys = append(keys, &concurrentLimiterKeyInfo{
-				Name:  key[2:],
+				Name:  name,
 				Query: true,
 			})
 			continue
 		}
-		if strings.HasPrefix(key, paramKey) {
+		if name, ok := strings.CutPrefix(key, paramKey); ok {
 			keys = append(keys, &concurrentLimiterKeyInfo{
-				Name:   key[2:],
+				Name:   name,
 				Params: true,
 			})
 			continue
@@ -147,6 +154,7 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 		})
 	}
 	skipper := getSkipper(config.Skipper)
+	bodyValue := config.BodyValue
 	keyLength := len(keys)
 	return func(c *elton.Context) error {
 		if skipper(c) {
@@ -167,8 +175,8 @@ func NewConcurrentLimiter(config ConcurrentLimiterConfig) elton.Handler {
 				v = c.QueryParam(name)
 			} else if key.Params {
 				v = c.Param(name)
-			} else {
-				v = gjson.GetBytes(c.RequestBody, name).String()
+			} else if bodyValue != nil {
+				v = bodyValue(c, name)
 			}
 			if config.NotAllowEmpty && len(v) == 0 {
 				return ErrNotAllowEmpty

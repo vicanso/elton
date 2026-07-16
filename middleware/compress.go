@@ -160,8 +160,10 @@ func NewCompress(config CompressConfig) elton.Handler {
 			c.AddHeader("Vary", "Accept-Encoding")
 			etagValue := c.GetHeader(elton.HeaderETag)
 			// after compress, etag should be weak etag
-			if etagValue != "" && !strings.HasPrefix(etagValue, "W/") {
-				c.SetHeader(elton.HeaderETag, "W/"+etagValue)
+			if etagValue != "" {
+				if _, ok := strings.CutPrefix(etagValue, "W/"); !ok {
+					c.SetHeader(elton.HeaderETag, "W/"+etagValue)
+				}
 			}
 		}
 

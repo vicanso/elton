@@ -31,7 +31,6 @@ import (
 func TestRouteParams(t *testing.T) {
 	assert := assert.New(t)
 	params := new(RouteParams)
-	params.methodNotAllowed = true
 	params.Add("id", "1")
 	assert.Equal("1", params.Get("id"))
 	assert.Equal(map[string]string{
@@ -39,8 +38,26 @@ func TestRouteParams(t *testing.T) {
 	}, params.ToMap())
 
 	params.Reset()
-
-	assert.False(params.methodNotAllowed)
 	assert.Empty(params.Keys)
 	assert.Empty(params.Values)
+	assert.Equal("", params.Get("id"))
+}
+
+func TestNormalizeRoutePath(t *testing.T) {
+	assert := assert.New(t)
+	assert.Equal("/{$}", normalizeRoutePath(""))
+	assert.Equal("/{$}", normalizeRoutePath("/"))
+	assert.Equal("/{$}", normalizeRoutePath("/{$}"))
+	assert.Equal("/users/{id}", normalizeRoutePath("/users/{id}"))
+	assert.Equal("/users/{id}", normalizeRoutePath("/users/:id"))
+	assert.Equal("/files/{path...}", normalizeRoutePath("/files/*"))
+	assert.Equal("/a/{id}/b/{path...}", normalizeRoutePath("/a/:id/b/*"))
+}
+
+func TestExtractParamNames(t *testing.T) {
+	assert := assert.New(t)
+	assert.Equal([]string{"id"}, extractParamNames("/users/{id}"))
+	assert.Equal([]string{"id", "path"}, extractParamNames("/users/{id}/files/{path...}"))
+	assert.Empty(extractParamNames("/{$}"))
+	assert.Empty(extractParamNames("/static/index.html"))
 }
