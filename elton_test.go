@@ -496,7 +496,8 @@ func TestTrailingSlashRedirect(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/dir", nil)
 	resp := httptest.NewRecorder()
 	e.ServeHTTP(resp, req)
-	assert.Equal(http.StatusTemporaryRedirect, resp.Code)
+	// ServeMux 的重定向状态码随 Go 版本变化：<=1.25 为 301，1.26+ 为 307
+	assert.Contains([]int{http.StatusMovedPermanently, http.StatusTemporaryRedirect}, resp.Code)
 	assert.Equal("/dir/", resp.Header().Get("Location"))
 }
 
